@@ -1,0 +1,13 @@
+#summary System configuration
+
+= Standalone server =
+pg_rman can run on standalone server.
+
+It is recommended to put your database cluster ($PGDATA) and your backup catalog into different disk drives in case of disk crash.
+
+[http://pg-rman.googlecode.com/svn/wiki/pg_rman-standalone-ja.png]
+
+= With backup server =
+Backup can be put on dedicated backup server. The database server mounts the backup server with NFS or so in order to read and write the disk as a file system. 
+
+[http://pg-rman.googlecode.com/svn/wiki/pg_rman-remote-ja.png]
