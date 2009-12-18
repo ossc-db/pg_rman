@@ -335,5 +335,5 @@ $ make USE_PGXS=1 install
 データベースへの登録は不要です。
 
 == 動作環境 ==
-  * PostgreSQL 8.4～8.1
+  * PostgreSQL 8.4～8.2
   * OS: RHEL 5.3
