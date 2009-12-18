@@ -362,5 +362,5 @@ $ make USE_PGXS=1 install
 No need to register to databases.
 
 = Requirements =
- * PostgreSQL 8.4-8.1
+ * PostgreSQL 8.4-8.2
  * OD: RHEL 5.3
