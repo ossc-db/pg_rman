@@ -1,0 +1,17 @@
+#summary List of tested platforms and versions.
+
+Here are tested platforms of pg_rman.
+Please notice us if you can run pg_rman on another platforms or with another postgres versions.
+
+|| *OS*  || *Edition* || *PostgreSQL* || *Revision* || *Date*     ||
+|| Linux || Fedora 11 || 8.4.2        || 23         || 2009-12-18 ||
+|| Linux || Fedora 11 || 8.3.9        || 23         || 2009-12-18 ||
+|| Linux || Fedora 11 || 8.2.15       || 23         || 2009-12-18 ||
+
+== Requirements ==
+  * Linux (and some of UNIXes)
+  * PostgreSQL 8,2, 8.3, 8.4, and 8.5
+
+== Unsupported platforms ==
+  * Windows
+  * PostgreSQL 8.1 or prior versions.
