@@ -1,1 +1,0 @@
-\! sh sql/option.sh
