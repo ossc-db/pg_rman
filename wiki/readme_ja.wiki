@@ -357,7 +357,7 @@ $ </samp><kbd>${BACKUP_PATH}/snapshot_script { split | resync | mount | umount |
   * 入力
   ** 第1引数 { split | resync | mount | umount | freeze | unfreeze }
   *** 実行する操作を指示する識別子です。
-  ** 第2引数 [cleanup]
+  ** 第2引数 {{{[cleanup]}}}
   *** "cleanup" が指定された時は、エラーが発生した場合に警告メッセージを出力して処理を継続します。
   *** resync, umount, unfreeze にのみ適用します。
 
@@ -381,7 +381,7 @@ $ </samp><kbd>${BACKUP_PATH}/snapshot_script { split | resync | mount | umount |
   *** データベースクラスタがスナップショットに含まれる場合は "PG-DATA" とします。
   *** スナップショットに含まれるテーブルスペースが複数の場合は、複数行で出力します。
 
-  * resync [cleanup]
+  * resync {{{[cleanup]}}}
   ** split　で作成したスナップショットを削除する処理を実装します。
   ** スプリット・ミラー方式などのスナップショットの削除が不要な場合は空実装とします。
   ** cleanup が指定されている場合は、スナップショットの削除に失敗したとき、その旨の警告メッセージを出力し、残りのスナップショットの削除を継続します。
@@ -392,7 +392,7 @@ $ </samp><kbd>${BACKUP_PATH}/snapshot_script { split | resync | mount | umount |
   *** データベースクラスタがスナップショットに含まれる場合は、テーブルスペース名を "PG-DATA" とします。
   *** スナップショットに含まれるテーブルスペースが複数の場合は、複数行で出力します。
 
-  * umount [cleanup]
+  * umount {{{[cleanup]}}}
   ** mount で作成したファイルシステムへのマウントを削除する処理を実装します。
   ** cleanup が指定されている場合は、マウントの削除に失敗したときに、その旨の警告メッセージを出力し、残りのマウントの削除を継続します。
 
@@ -400,7 +400,7 @@ $ </samp><kbd>${BACKUP_PATH}/snapshot_script { split | resync | mount | umount |
   ** 1個以上のファイルシステムのI/Oを凍結する処理を実装します。
   ** ファイルシステムのI/Oの凍結が不要な場合は空実装とします。
 
-  * unfreeze [cleanup]
+  * unfreeze {{{[cleanup]}}}
   ** freeze で凍結したファイルシステムのI/Oを解除する処理を実装します。
   ** ファイルシステムのI/Oの凍結を解除する処理が不要な場合は空実装とします。
   ** cleanup が指定されている場合は、ファイルシステムのI/Oの凍結解除に失敗したとき、その旨の警告メッセージを出力し、残りのファイルシステムのI/Oの凍結解除を継続します。
@@ -411,8 +411,8 @@ $ </samp><kbd>${BACKUP_PATH}/snapshot_script { split | resync | mount | umount |
   {{{
 $ sudo /usr/sbin/lvcreate --snapshot --size=2G --name snap00 /dev/VolGroup00/LogVolume00
   }}}
-  *** 上記は論理ボリューム "LogVolume00" のスナップショットを作成する場合の例です。
-  *** スナップショット名、スナップショット領域のサイズ、スナップショットを作成する論理ボリュームは条件に合わせて任意に設定します。
+    ** 上記は論理ボリューム "LogVolume00" のスナップショットを作成する場合の例です。
+    ** スナップショット名、スナップショット領域のサイズ、スナップショットを作成する論理ボリュームは条件に合わせて任意に設定します。
   ** スナップショットからバックアップするテーブルスペース名を標準出力に出力します。
 
   * resync
@@ -420,11 +420,14 @@ $ sudo /usr/sbin/lvcreate --snapshot --size=2G --name snap00 /dev/VolGroup00/Log
   {{{
 $ sudo /usr/sbin/lvremove -f /dev/VolGroup00/snap00
   }}}
+
   * mount
   ** スナップショット対象とするボリュームに対して、ルートユーザ権限で mount コマンドを実行します。
-				<pre><samp>$ </samp><kbd>sudo /bin/mount /dev/VolGroup00/snap00 /mnt/snapshot_lvm/pgdata</kbd></pre>
-  *** 上記は、split で作成したスナップショットボリュームを "/mnt/snapshot_lvm/pgdata" にマウントする場合の例です。
-  *** マウントディレクトリは条件に合わせて任意に設定します。
+  {{{
+$ sudo /bin/mount /dev/VolGroup00/snap00 /mnt/snapshot_lvm/pgdata
+  }}}
+    ** 上記は、split で作成したスナップショットボリュームを "/mnt/snapshot_lvm/pgdata" にマウントする場合の例です。
+    ** マウントディレクトリは条件に合わせて任意に設定します。
   ** スナップショットからバックアップするテーブルスペース名とそのマウントディレクトリを標準出力に出力します。
 
   * umount
