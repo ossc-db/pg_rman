@@ -209,10 +209,10 @@ As a general rule, paths for data location need to be specified as absolute path
     Specify how long backuped data files will be kept. --keep-data-generations means number of backup generations. --keep-data-days means days to be kept. Only files exceeded both settings are deleted.
 
 --keep-arclog-files / --keep-arclog-days
-    Specify how long backuped archive WAL files will be kept. --keep-arclog-files means number of backup files. --keep-arclog-days means days to be kept. Only files exceeded both settings are deleted.
+    Specify how long backuped archive WAL files will be kept. --keep-arclog-files means number of backup files. --keep-arclog-days means days to be kept. When you do backup, only files exceeded both settings are deleted from archive storage.
 
 --keep-srvlog-files / --keep-srvlog-days
-    Specify how long backuped serverlog files will be kept. --keep-srvlog-files means number of backup files. --keep-srvlog-days means days to be kept. Only files exceeded both settings are deleted.
+    Specify how long backuped serverlog files will be kept. --keep-srvlog-files means number of backup files. --keep-srvlog-days means days to be kept. When you do backup, only files exceeded both settings are deleted from server log directory (log_directory).
 
 == Restore options ==
 Those parameters are same as parameters in recovery.conf.
@@ -381,93 +381,93 @@ $ ${BACKUP_PATH}/snapshot_script { split | resync | mount | umount | freeze | un
 }}}
 
   * Input
-  ** first argument { split | resync | mount | umount | freeze | unfreeze }
-    ** identifier for performing
-  ** second argument {{{[cleanup]}}}
-    ** If you specified "cleanup", error occuring doesn't stop the process. just output warning messages.
-    ** this argument is for resync, umount, unfreeze only.
+    ** first argument { split | resync | mount | umount | freeze | unfreeze }
+      ** identifier for performing
+    ** second argument {{{[cleanup]}}}
+      ** If you specified "cleanup", error occuring doesn't stop the process. just output warning messages.
+      ** this argument is for resync, umount, unfreeze only.
 
   * Output
-  ** Making snapshot volume by performing "split" operation.
-  ** Freezing filesystem I/O by performing "freeze" operation.
-  ** Mounting to snapshot volume by performing "mount" operation.
-  ** standard output
-    ** output tablespace name in the snapshot by performing "split" operation.
-    ** output tablespace name and its directory by performing "mount" operation. The template is &lt;tablespace name&gt;=&lt;path to directory for the tablespace&gt;
-    ** The command performs without any errors, output "SUCCESS", otherwise output nothing. If the command is "split" or "mount", output in last line. 
-  ** standard error output
-    ** output log messages.
-  ** return value
-    ** Not Specified. 
+    ** Making snapshot volume by performing "split" operation.
+    ** Freezing filesystem I/O by performing "freeze" operation.
+    ** Mounting to snapshot volume by performing "mount" operation.
+    ** standard output
+      ** output tablespace name in the snapshot by performing "split" operation.
+      ** output tablespace name and its directory by performing "mount" operation. The template is &lt;tablespace name&gt;=&lt;path to directory for the tablespace&gt;
+      ** The command performs without any errors, output "SUCCESS", otherwise output nothing. If the command is "split" or "mount", output in last line. 
+    ** standard error output
+      ** output log messages.
+    ** return value
+      ** Not Specified. 
 
 
 == Interface Specification ==
   * split
-  ** Making procedure for getting snapshots.
-  ** Output tablespace name in the snapshots to standard output.
-    ** If database cluster is included in a snapshot, the tablespace name should be "PG-DATA".
-    ** If some tablespaces are included in a snapshot, output them with multi lines.
+    ** Making procedure for getting snapshots.
+    ** Output tablespace name in the snapshots to standard output.
+      ** If database cluster is included in a snapshot, the tablespace name should be "PG-DATA".
+      ** If some tablespaces are included in a snapshot, output them with multi lines.
 
   * resync {{{[cleanup]}}}
-  ** Making procedure for removing snapshot made by split operation.
-  ** If you don't need to remove snapshot, like split mirror snapshot, you don't make any procedure.
-  ** If cleanup is specified and occuring errors, output warning messages and continue to get rest snapshots.
+    ** Making procedure for removing snapshot made by split operation.
+    ** If you don't need to remove snapshot, like split mirror snapshot, you don't make any procedure.
+    ** If cleanup is specified and occuring errors, output warning messages and continue to get rest snapshots.
 
   * mount
-  ** Making procedure for mounting the snapshot made by split operation to the filesystem.
-  ** output tablespace name and its direcotry(absolute path) to standard output. The template is [<tablespace name>=<directory path>].
-    ** If database cluster is included in a snapshot, the tablespace name should be "PG-DATA".
-    ** If some tablespaces are included in a snapshot, output them with multi lines.
+    ** Making procedure for mounting the snapshot made by split operation to the filesystem.
+    ** output tablespace name and its direcotry(absolute path) to standard output. The template is [<tablespace name>=<directory path>].
+      ** If database cluster is included in a snapshot, the tablespace name should be "PG-DATA".
+      ** If some tablespaces are included in a snapshot, output them with multi lines.
 
   * umount {{{[cleanup]}}}
-  ** Making procedure for unmounting the snapshot made by mount operation.
-  ** If cleanup is specified and occuring errors, output warning messages and continue to unmount rest snapshots.
+    ** Making procedure for unmounting the snapshot made by mount operation.
+    ** If cleanup is specified and occuring errors, output warning messages and continue to unmount rest snapshots.
 
   * freeze
-  ** Making procedure for freezing filesystem IO.
-  ** If your storage doesn't need to freeze filesystem IO, you don't make any procedure.
+    ** Making procedure for freezing filesystem IO.
+    ** If your storage doesn't need to freeze filesystem IO, you don't make any procedure.
 
   * unfreeze {{{[cleanup]}}}
-  ** Making procedure for unfreezing filesystem IO by performing freeze operation.
-  ** If your storage doesn't need to freeze filesystem IO, you don't make any procedure.
-  ** If cleanup is specified and occuring errors, output warning messages and continue to unfreeze rest filesystems.
+    ** Making procedure for unfreezing filesystem IO by performing freeze operation.
+    ** If your storage doesn't need to freeze filesystem IO, you don't make any procedure.
+    ** If cleanup is specified and occuring errors, output warning messages and continue to unfreeze rest filesystems.
 
 == Explanation for sample script for LVM(Logical Volume Manager) ==
   * split
-  ** perform lvcreate command as root authority against a volume for getting snapshot.
+    ** perform lvcreate command as root authority against a volume for getting snapshot.
   {{{
 $ sudo /usr/sbin/lvcreate --snapshot --size=2G --name snap00 /dev/VolGroup00/LogVolume00
   }}}
-    ** Above example is getting snapshot for logical volume "LogVolume00".
-    ** Snapshot name, snapshot size and logical volume for getting snapshot are parameterable.
-  ** Output tablespace names for backup to standard output.
+      ** Above example is getting snapshot for logical volume "LogVolume00".
+      ** Snapshot name, snapshot size and logical volume for getting snapshot are parameterable.
+    ** Output tablespace names for backup to standard output.
 
   * resync
-  ** perform lvremove command as root authority against a volume for getting snapshot.
+    ** perform lvremove command as root authority against a volume for getting snapshot.
   {{{
 $ sudo /usr/sbin/lvremove -f /dev/VolGroup00/snap00
   }}}
 
   * mount
-  ** perform mount command as root authority against a volume for getting snapshot.
+    ** perform mount command as root authority against a volume for getting snapshot.
   {{{
 $ sudo /bin/mount /dev/VolGroup00/snap00 /mnt/snapshot_lvm/pgdata
   }}}
-    ** Above example is mounting snapshot volume made by split operation to "/mnt/snapshot_lvm/pgdata".
-    ** Mounting directory name is parametarable.
-  ** Output tablespace names and corresponding mounting direcotry name to standard output.
+      ** Above example is mounting snapshot volume made by split operation to "/mnt/snapshot_lvm/pgdata".
+      ** Mounting directory name is parametarable.
+    ** Output tablespace names and corresponding mounting direcotry name to standard output.
 
   * umount
-  ** perform umount command as root authority against a volume for getting snapshot.
+    ** perform umount command as root authority against a volume for getting snapshot.
   {{{
 $ sudo /bin/umount /mnt/snapshot_lvm/pgdata
   }}}
 
   * freeze
-  ** noting to do. (not need file system freeze)
+    ** noting to do. (not need file system freeze)
 
   * unfreeze
-  ** noting to do. (not need file system freeze)
+    ** noting to do. (not need file system freeze)
 
 
 = Installations =
