@@ -15,8 +15,8 @@
 #include <sys/stat.h>
 
 const char *PROGRAM_VERSION	= "1.2.7";
-const char *PROGRAM_URL		= "http://code.google.com/p/pg-rman/";
-const char *PROGRAM_EMAIL	= "http://code.google.com/p/pg-rman/issues/list";
+const char *PROGRAM_URL		= "http://sourceforge.net/projects/pg-rman/";
+const char *PROGRAM_EMAIL	= "http://sourceforge.net/p/pg-rman/tickets/";
 
 /* path configuration */
 char *backup_path;
