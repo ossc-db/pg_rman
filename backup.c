@@ -53,7 +53,7 @@ static void get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn);
 static void get_lsn(PGresult *res, TimeLineID *timeline, PageXLogRecPtr *lsn);
 #endif
 static void get_xid(PGresult *res, uint32 *xid);
-static bool execute_restartpoint(pgBackupOption bkupopt);
+static bool execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup);
 
 static void delete_arclog_link(void);
 static void delete_online_wal_backup(void);
@@ -154,7 +154,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			pg_stop_backup(NULL);
 			elog(ERROR_SYSTEM, _("could not specified standby host or port."));
 		}
-		if (!execute_restartpoint(bkupopt))
+		if (!execute_restartpoint(bkupopt, &current))
 		{
 			pg_stop_backup(NULL);
 			elog(ERROR_SYSTEM, _("could not execute restartpoint."));
@@ -490,19 +490,43 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 }
 
 static bool
-execute_restartpoint(pgBackupOption bkupopt)
+execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 {
 	PGconn *sby_conn = NULL;
+	PGresult	*res;
+#if PG_VERSION_NUM < 90300
+	XLogRecPtr	replayed_lsn;
+#else
+	PageXLogRecPtr	replayed_lsn;
+#endif
+	int	sleep_time = 1;
 	const char *tmp_host;
 	const char *tmp_port;
+
 	tmp_host = pgut_get_host();
 	tmp_port = pgut_get_port();
 	pgut_set_host(bkupopt.standby_host);
 	pgut_set_port(bkupopt.standby_port);
 	sby_conn = reconnect_elevel(ERROR_PG_CONNECT);
 	if (!sby_conn)
+	{
+		pgut_set_host(tmp_host);
+		pgut_set_port(tmp_port);
 		return false;
+	}
+	while (1) {
+		/* waiting for standby's location to be LSN by pg_start_backup */
+		res = execute("SELECT * FROM pg_last_xlog_replay_location()", 0, NULL);
+		sscanf(PQgetvalue(res, 0, 0), "%X/%X", &replayed_lsn.xlogid, &replayed_lsn.xrecoff);
+		PQclear(res);
+		if (!XLByteLT(replayed_lsn, backup->start_lsn)) break;
+		sleep(sleep_time);
+		/* next sleep_time is increasing by 2 times.	*/
+		/* ex: 1, 2, 4, 8, 16, 32, 60, 60, 60...	*/
+		sleep_time = (sleep_time < 32) ? sleep_time * 2 : 60;
+	}
 	command("CHECKPOINT", 0, NULL);
+	disconnect();
 	pgut_set_host(tmp_host);
 	pgut_set_port(tmp_port);
 	return true;
