@@ -237,6 +237,13 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		parray		*tblspcmp_list;	/* list of mounted directory of TABLESPACE in snapshot volume */
 		PGresult	*tblspc_res;	/* contain spcname and oid in TABLESPACE */
 
+		/* if backup is from standby, snapshot backup is unsupported	*/
+		if (current.is_from_standby)
+		{
+			pg_stop_backup(NULL);
+			elog(ERROR_SYSTEM, _("snapshot backup from standby server is unsupported."));
+		}
+
 		tblspc_list = parray_new();
 		tblspcmp_list = parray_new();
 		cleanup_list = parray_new();
