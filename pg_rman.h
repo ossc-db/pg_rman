@@ -16,6 +16,7 @@
 
 #include "pgut/pgut.h"
 #include "access/xlogdefs.h"
+#include "storage/bufpage.h"
 #include "utils/pg_crc.h"
 #include "parray.h"
 
@@ -144,8 +145,13 @@ typedef struct pgBackup
 
 	/* Timestamp, etc. */
 	TimeLineID	tli;
+#if PG_VERSION_NUM < 90300
 	XLogRecPtr	start_lsn;
 	XLogRecPtr	stop_lsn;
+#else
+	PageXLogRecPtr	start_lsn;
+	PageXLogRecPtr	stop_lsn;
+#endif
 	time_t		start_time;
 	time_t		end_time;
 	time_t		recovery_time;
@@ -195,7 +201,11 @@ typedef struct pgBackupOption
 typedef struct pgTimeLine
 {
 	TimeLineID	tli;
+#if PG_VERSION_NUM < 90300
 	XLogRecPtr	end;
+#else
+	PageXLogRecPtr	end;
+#endif
 } pgTimeLine;
 
 typedef struct pgRecoveryTarget
@@ -306,12 +316,22 @@ extern int pgFileCompareMtimeDesc(const void *f1, const void *f2);
 
 /* in xlog.c */
 extern bool xlog_is_complete_wal(const pgFile *file, int server_version);
+#if PG_VERSION_NUM < 90300
 extern bool xlog_logfname2lsn(const char *logfname, XLogRecPtr *lsn);
 extern void xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn);
+#else
+extern bool xlog_logfname2lsn(const char *logfname, PageXLogRecPtr *lsn);
+extern void xlog_fname(char *fname, size_t len, TimeLineID tli, PageXLogRecPtr *lsn);
+#endif
 
 /* in data.c */
+#if PG_VERSION_NUM < 90300
 extern bool backup_data_file(const char *from_root, const char *to_root,
 							 pgFile *file, const XLogRecPtr *lsn, bool compress);
+#else
+extern bool backup_data_file(const char *from_root, const char *to_root,
+							 pgFile *file, const PageXLogRecPtr *lsn, bool compress);
+#endif
 extern void restore_data_file(const char *from_root, const char *to_root,
 							  pgFile *file, bool compress);
 extern bool copy_file(const char *from_root, const char *to_root,
@@ -343,7 +363,19 @@ extern bool is_pg_running(void);
 	} while (0)
 
 #define MAXFNAMELEN		64
+
+#if PG_VERSION_NUM < 90300
 #define XLogFileName(fname, tli, log, seg)	\
 	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X", tli, log, seg)
+#else
+#define PageXLogFileName(fname, tli, log, seg)	\
+	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X", tli, log, seg)
+#endif
+
+#if PG_VERSION_NUM >= 90300
+#define XLByteLT(a, b)          \
+                        ((a).xlogid < (b).xlogid || \
+                         ((a).xlogid == (b).xlogid && (a).xrecoff < (b).xrecoff))
+#endif
 
 #endif /* PG_RMAN_H */

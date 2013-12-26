@@ -20,6 +20,8 @@
 
 #if PG_VERSION_NUM < 80300
 #define XLogRecPtrIsInvalid(r)	((r).xrecoff == 0)
+#elif PG_VERSION_NUM >= 90300
+#define PageXLogRecPtrIsInvalid(r)	((r).xrecoff == 0)
 #endif
 
 #ifdef HAVE_LIBZ
@@ -163,7 +165,11 @@ doInflate(z_stream *zp, size_t in_size, size_t out_size,void *inbuf,
 /* 80000 <= PG_VERSION_NUM < 80300 */
 typedef struct PageHeaderData_v80
 {
+#if PG_VERSION_NUM < 90300
 	XLogRecPtr		pd_lsn;
+#else
+	PageXLogRecPtr		pd_lsn;
+#endif
 	TimeLineID		pd_tli;
 	LocationIndex	pd_lower;
 	LocationIndex	pd_upper;
@@ -181,7 +187,11 @@ typedef struct PageHeaderData_v80
 /* 80300 <= PG_VERSION_NUM */
 typedef struct PageHeaderData_v83
 {
+#if PG_VERSION_NUM < 90300
 	XLogRecPtr		pd_lsn;
+#else
+	PageXLogRecPtr		pd_lsn;
+#endif
 	uint16			pd_tli;
 	uint16			pd_flags;
 	LocationIndex	pd_lower;
@@ -214,8 +224,13 @@ typedef struct BackupPageHeader
 } BackupPageHeader;
 
 static bool
+#if PG_VERSION_NUM < 90300
 parse_page(const DataPage *page, int server_version,
 		   XLogRecPtr *lsn, uint16 *offset, uint16 *length)
+#else
+parse_page(const DataPage *page, int server_version,
+		   PageXLogRecPtr *lsn, uint16 *offset, uint16 *length)
+#endif
 {
 	uint16		page_layout_version;
 
@@ -239,7 +254,11 @@ parse_page(const DataPage *page, int server_version,
 			v80->pd_upper <= v80->pd_special &&
 			v80->pd_special <= BLCKSZ &&
 			v80->pd_special == MAXALIGN(v80->pd_special) &&
+#if PG_VERSION_NUM < 90300
 			!XLogRecPtrIsInvalid(*lsn = v80->pd_lsn))
+#else
+			!PageXLogRecPtrIsInvalid(*lsn = v80->pd_lsn))
+#endif
 		{
 			*offset = v80->pd_lower;
 			*length = v80->pd_upper - v80->pd_lower;
@@ -258,7 +277,11 @@ parse_page(const DataPage *page, int server_version,
 			v83->pd_upper <= v83->pd_special &&
 			v83->pd_special <= BLCKSZ &&
 			v83->pd_special == MAXALIGN(v83->pd_special) &&
+#if PG_VERSION_NUM < 90300
 			!XLogRecPtrIsInvalid(*lsn = v83->pd_lsn))
+#else
+			!PageXLogRecPtrIsInvalid(*lsn = v83->pd_lsn))
+#endif
 		{
 			*offset = v83->pd_lower;
 			*length = v83->pd_upper - v83->pd_lower;
@@ -277,8 +300,13 @@ parse_page(const DataPage *page, int server_version,
  * copied.
  */
 bool
+#if PG_VERSION_NUM < 90300
 backup_data_file(const char *from_root, const char *to_root,
 				 pgFile *file, const XLogRecPtr *lsn, bool compress)
+#else
+backup_data_file(const char *from_root, const char *to_root,
+				 pgFile *file, const PageXLogRecPtr *lsn, bool compress)
+#endif
 {
 	char				to_path[MAXPGPATH];
 	FILE			   *in;
@@ -358,7 +386,11 @@ backup_data_file(const char *from_root, const char *to_root,
 		 (read_len = fread(&page, 1, sizeof(page), in)) == sizeof(page);
 		 ++blknum)
 	{
+#if PG_VERSION_NUM < 90300
 		XLogRecPtr	page_lsn;
+#else
+		PageXLogRecPtr	page_lsn;
+#endif
 		int		upper_offset;
 		int		upper_length;
 
@@ -382,7 +414,11 @@ backup_data_file(const char *from_root, const char *to_root,
 		file->read_size += read_len;
 
 		/* if the page has not been modified since last backup, skip it */
+#if PG_VERSION_NUM < 90300
 		if (lsn && !XLogRecPtrIsInvalid(page_lsn) && XLByteLT(page_lsn, *lsn))
+#else
+		if (lsn && !PageXLogRecPtrIsInvalid(page_lsn) && XLByteLT(page_lsn, *lsn))
+#endif
 			continue;
 
 		upper_offset = header.hole_offset + header.hole_length;

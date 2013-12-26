@@ -16,7 +16,9 @@
 
 #if PG_VERSION_NUM >= 80400
 typedef unsigned long Datum;
+#if PG_VERSION_NUM < 90300
 typedef struct MemoryContextData *MemoryContext;
+#endif
 #endif
 
 #include "access/xlog_internal.h"
@@ -110,7 +112,11 @@ xlog_is_complete_wal(const pgFile *file, int server_version)
 }
 
 bool
+#if PG_VERSION_NUM < 90300
 xlog_logfname2lsn(const char *logfname, XLogRecPtr *lsn)
+#else
+xlog_logfname2lsn(const char *logfname, PageXLogRecPtr *lsn)
+#endif
 {
 	uint32 tli;
 
@@ -126,7 +132,11 @@ xlog_logfname2lsn(const char *logfname, XLogRecPtr *lsn)
  * based on XLogFileName() in xlog_internal.h
  */
 void
+#if PG_VERSION_NUM < 90300
 xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn)
+#else
+xlog_fname(char *fname, size_t len, TimeLineID tli, PageXLogRecPtr *lsn)
+#endif
 {
 	snprintf(fname, len, "%08X%08X%08X", tli,
 		lsn->xlogid, lsn->xrecoff / XLogSegSize);

@@ -491,7 +491,11 @@ catalog_read_ini(const char *path)
 
 	if (start_lsn)
 	{
+#if PG_VERSION_NUM < 90300
 		XLogRecPtr lsn;
+#else
+		PageXLogRecPtr lsn;
+#endif
 		if (sscanf(start_lsn, "%X/%X", &lsn.xlogid, &lsn.xrecoff) == 2)
 			backup->start_lsn = lsn;
 		else
@@ -501,7 +505,11 @@ catalog_read_ini(const char *path)
 
 	if (stop_lsn)
 	{
+#if PG_VERSION_NUM < 90300
 		XLogRecPtr lsn;
+#else
+		PageXLogRecPtr lsn;
+#endif
 		if (sscanf(stop_lsn, "%X/%X", &lsn.xlogid, &lsn.xrecoff) == 2)
 			backup->stop_lsn = lsn;
 		else

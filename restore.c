@@ -808,9 +808,14 @@ readTimeLineHistory(TimeLineID targetTLI)
 			elog(ERROR_CORRUPTED,
 			   _("End logfile must follow Timeline ID."));
 
+#if PG_VERSION_NUM < 90300
 		if (!xlog_logfname2lsn(ptr, &timeline->end))
+#else
+		if (sscanf(ptr, "%X/%X", &timeline->end.xlogid, &timeline->end.xrecoff) != 2)
+#endif
 			elog(ERROR_CORRUPTED,
 					_("syntax error(endfname) in history file: %s"), fline);
+
 		/* we ignore the remainder of each line */
 	}
 
@@ -999,7 +1004,11 @@ search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timel
 		{
 			pgTimeLine *timeline = (pgTimeLine *) parray_get(timelines, i);
 
+#if PG_VERSION_NUM < 90300
 			XLogFileName(xlogfname, timeline->tli, *needId, *needSeg);
+#else
+			PageXLogFileName(xlogfname, timeline->tli, *needId, *needSeg);
+#endif
 			join_path_components(xlogpath, path, xlogfname);
 
 			if (stat(xlogpath, &st) == 0)

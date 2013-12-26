@@ -31,8 +31,13 @@ static parray	*cleanup_list;		/* list of command to execute at error processing 
 static void backup_cleanup(bool fatal, void *userdata);
 static void delete_old_files(const char *root, parray *files, int keep_files,
 							 int keep_days, int server_version, bool is_arclog);
+#if PG_VERSION_NUM < 90300
 static void backup_files(const char *from_root, const char *to_root,
 	parray *files, parray *prev_files, const XLogRecPtr *lsn, bool compress, const char *prefix);
+#else
+static void backup_files(const char *from_root, const char *to_root,
+	parray *files, parray *prev_files, const PageXLogRecPtr *lsn, bool compress, const char *prefix);
+#endif
 static parray *do_backup_database(parray *backup_list, pgBackupOption bkupopt);
 static parray *do_backup_arclog(parray *backup_list);
 static parray *do_backup_srvlog(parray *backup_list);
@@ -42,7 +47,11 @@ static void confirm_block_size(const char *name, int blcksz);
 static void pg_start_backup(const char *label, bool smooth, pgBackup *backup);
 static void pg_stop_backup(pgBackup *backup);
 static void pg_switch_xlog(pgBackup *backup);
+#if PG_VERSION_NUM < 90300
 static void get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn);
+#else
+static void get_lsn(PGresult *res, TimeLineID *timeline, PageXLogRecPtr *lsn);
+#endif
 static void get_xid(PGresult *res, uint32 *xid);
 static bool execute_restartpoint(pgBackupOption bkupopt);
 
@@ -75,7 +84,11 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	FILE	   *fp;
 	char		path[MAXPGPATH];
 	char		label[1024];
+#if PG_VERSION_NUM < 90300
 	XLogRecPtr *lsn = NULL;
+#else
+	PageXLogRecPtr *lsn = NULL;
+#endif
 	char		prev_file_txt[MAXPGPATH];	/* path of the previous backup list file */
 	bool		has_backup_label  = true;	/* flag if backup_label is there  */
 	bool		has_recovery_conf = false;	/* flag if recovery.conf is there */
@@ -1111,7 +1124,11 @@ pg_switch_xlog(pgBackup *backup)
  * Get TimeLineID and LSN from result of pg_xlogfile_name_offset().
  */
 static void
+#if PG_VERSION_NUM < 90300
 get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
+#else
+get_lsn(PGresult *res, TimeLineID *timeline, PageXLogRecPtr *lsn)
+#endif
 {
 	uint32 off_upper;
 
@@ -1226,6 +1243,7 @@ backup_cleanup(bool fatal, void *userdata)
 
 /* take incremental backup. */
 static void
+#if PG_VERSION_NUM < 90300
 backup_files(const char *from_root,
 			 const char *to_root,
 			 parray *files,
@@ -1233,6 +1251,15 @@ backup_files(const char *from_root,
 			 const XLogRecPtr *lsn,
 			 bool compress,
 			 const char *prefix)
+#else
+backup_files(const char *from_root,
+			 const char *to_root,
+			 parray *files,
+			 parray *prev_files,
+			 const PageXLogRecPtr *lsn,
+			 bool compress,
+			 const char *prefix)
+#endif
 {
 	int				i;
 	struct timeval	tv;
