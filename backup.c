@@ -41,8 +41,8 @@ static void backup_files(const char *from_root, const char *to_root,
 static parray *do_backup_database(parray *backup_list, pgBackupOption bkupopt);
 static parray *do_backup_arclog(parray *backup_list);
 static parray *do_backup_srvlog(parray *backup_list);
-static void remove_stopinfo_from_backup_label(char *history_file, char *bkup_label);
-static void make_backup_label(parray *backup_list);
+static void remove_stopinfo_from_backup_label(char *arclog_path, char *dest_path, pgFile *current_arc_file, bool is_compress);
+static void make_backup_label(parray *backup_list, bool is_compress);
 static void confirm_block_size(const char *name, int blcksz);
 static void pg_start_backup(const char *label, bool smooth, pgBackup *backup);
 static void pg_stop_backup(pgBackup *backup);
@@ -454,7 +454,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		/* if backup is from standby, making backup_label from	*/
 		/* backup.history file.					*/
 		if (current.is_from_standby)
-			make_backup_label(files);
+			make_backup_label(files, current.compress_data);
 
 		/* create file list */
 		create_file_list(files, pgdata, NULL, false);
@@ -890,18 +890,22 @@ do_backup(pgBackupOption bkupopt)
 }
 
 void
-remove_stopinfo_from_backup_label(char *history_file, char *bkup_label)
+remove_stopinfo_from_backup_label(char *arclog_path, char *dest_path, pgFile *current_arc_file, bool is_compress)
 {
 	FILE	*read;
 	FILE	*write;
+	char	tmp_bkup_label[MAXPGPATH];
 	char	buf[MAXPGPATH * 2];
+	parray	*bkup_label_file = NULL;
+	pgFile	*src_label_file;
 
-	if ((read  = fopen(history_file, "r")) == NULL)
+	if ((read  = fopen(current_arc_file->path, "r")) == NULL)
 		elog(ERROR_SYSTEM,
 			_("can't open backup history file for standby backup."));
-	if ((write = fopen(bkup_label, "w")) == NULL)
+	join_path_components(tmp_bkup_label, arclog_path, PG_BACKUP_LABEL_FILE);
+	if ((write = fopen(tmp_bkup_label, "w")) == NULL)
 		elog(ERROR_SYSTEM,
-			_("can't open backup_label file for standby backup."));
+			_("can't open temporary backup label file for standby backup."));
 	while (fgets(buf, lengthof(buf), read) != NULL)
 	{
 		if (strstr(buf, "STOP") - buf == 0)
@@ -910,20 +914,27 @@ remove_stopinfo_from_backup_label(char *history_file, char *bkup_label)
 	}
 	fclose(write);
 	fclose(read);
+	bkup_label_file = parray_new();
+	dir_list_file(bkup_label_file, tmp_bkup_label, NULL, true, true);
+	src_label_file = (pgFile *) parray_get(bkup_label_file, parray_num(bkup_label_file) - 1);
+	copy_file(arclog_path, dest_path, src_label_file, is_compress);
+
+	unlink(src_label_file->path);
 }
 
 /*
  *  creating backup_label from backup.history for standby backup.
  */
 void
-make_backup_label(parray *backup_list)
+make_backup_label(parray *backup_list, bool is_compress)
 {
 	char dest_path[MAXPGPATH];
-	char src_bkup_history_file[MAXPGPATH];
 	char dst_bkup_label_file[MAXPGPATH];
 	char original_bkup_label_file[MAXPGPATH];
 	parray *bkuped_arc_files = NULL;
 	int i;
+	CompressionMode cm = NO_COMPRESSION;
+	if (is_compress) cm = COMPRESSION;
 
 	pgBackupGetPath(&current, dest_path, lengthof(dest_path), DATABASE_DIR);
 	bkuped_arc_files = parray_new();
@@ -939,11 +950,10 @@ make_backup_label(parray *backup_list)
 
 		if(strlen(current_arc_fname) <= 24) continue;
 
-		copy_file(arclog_path, dest_path, current_arc_file, NO_COMPRESSION);
-		join_path_components(src_bkup_history_file, dest_path, current_arc_fname);
+		remove_stopinfo_from_backup_label(arclog_path, dest_path, current_arc_file, cm);
+
 		join_path_components(dst_bkup_label_file, dest_path, PG_BACKUP_LABEL_FILE);
 		join_path_components(original_bkup_label_file, pgdata, PG_BACKUP_LABEL_FILE);
-		remove_stopinfo_from_backup_label(src_bkup_history_file, dst_bkup_label_file);
 
 		dir_list_file(backup_list, dst_bkup_label_file, NULL, false, true);
 		for (i = 0; i < parray_num(backup_list); i++)
