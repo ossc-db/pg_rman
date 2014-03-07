@@ -112,9 +112,9 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 ///				elog(INFO, _("no previous full backup, performing a full backup instead"));
 ///				current.backup_mode = BACKUP_MODE_FULL;
 			}
+			else
+				return NULL;
 		}
-		else
-			return NULL;
 	}
 
 	elog(INFO, _("database backup start"));
