@@ -98,7 +98,6 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 
 	if (!HAVE_DATABASE(&current)) {
 		/* check if arclog backup. if arclog backup and no suitable full backup, */
-		/* take full backup instead. */
 		if (HAVE_ARCLOG(&current)) {
 			pgBackup   *prev_backup;
 
@@ -107,8 +106,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			if (prev_backup == NULL)
 			{
 				elog(ERROR_SYSTEM, _("There is indeed a full backup but it is not validated."
-							"So I can't take any arclog backup."
-							"Please validate it and retry."));
+					"Please take a full backup and validate it before doing an arclog backup."));
 ///				elog(INFO, _("no previous full backup, performing a full backup instead"));
 ///				current.backup_mode = BACKUP_MODE_FULL;
 			}
@@ -202,9 +200,8 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		prev_backup = catalog_get_last_data_backup(backup_list);
 		if (prev_backup == NULL || prev_backup->tli != current.tli)
 		{
-			elog(ERROR_SYSTEM, _("There is indeed a full backup but it is not validated."
-						"So I can't take any incremental backup."
-						"Please validate it and retry."));
+			elog(ERROR_SYSTEM, _("There is no validated full backup with current timeline."
+					"Please take a full backup and validate it before doing an incremental backup."));
 ///			elog(INFO, _("no previous full backup, performing a full backup instead"));
 ///			current.backup_mode = BACKUP_MODE_FULL;
 		}
