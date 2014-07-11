@@ -42,3 +42,16 @@ LIBS := $(filter-out -lxml2, $(LIBS))
 LIBS := $(filter-out -lxslt, $(LIBS))
 
 $(OBJS): pg_rman.h
+
+installcheck: myinstallcheck
+
+myinstallcheck:
+	@if [ `expr "$(MAJORVERSION) < 9.0" | bc` -eq 1 ]; \
+	 then \
+		sed -i 's/^wal_level/#wal_level/g' sql/backup_restore.sh; \
+	 fi
+
+clean: myclean
+
+myclean:
+	-@sed -i 's/^#wal_level/wal_level/g' sql/backup_restore.sh;
