@@ -92,12 +92,13 @@ catalog_get_backup(time_t timestamp)
 static bool
 IsDir(const char *dirpath, const DIR *dir, const struct dirent *ent)
 {
-#if defined(DT_DIR)
-	return ent->d_type == DT_DIR;
-#elif defined(_finddata_t)
+#if defined(_finddata_t)
 	/* Optimization for VC++ on Windows. */
 	return (dir->dd_dta.attrib & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
+#elif defined(_DIRENT_HAVE_D_TYPE)
+	if(ent->d_type != DT_UNKNOWN)
+		return ent->d_type == DT_DIR;
+
 	/* Portable implementation because dirent.d_type is not in POSIX. */
 	char		path[MAXPGPATH];
 	struct stat	st;
