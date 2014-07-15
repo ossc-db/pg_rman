@@ -320,7 +320,11 @@ extern void xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn)
 extern bool backup_data_file(const char *from_root, const char *to_root,
 							 pgFile *file, const XLogRecPtr *lsn, bool compress);
 extern void restore_data_file(const char *from_root, const char *to_root,
+#if PG_VERSION_NUM >= 90300
+							  pgFile *file, bool compress, bool data_checksum_enabled);
+#else
 							  pgFile *file, bool compress);
+#endif
 extern bool copy_file(const char *from_root, const char *to_root,
 					  pgFile *file, CompressionMode compress);
 

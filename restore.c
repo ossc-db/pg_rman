@@ -38,6 +38,11 @@ static TimeLineID get_fullbackup_timeline(parray *backups, const pgRecoveryTarge
 static void print_backup_id(const pgBackup *backup);
 static void search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timelines);
 
+#if PG_VERSION_NUM >= 90300
+static int get_data_checksum_version(void);
+static int data_checksum_version;
+#endif
+
 int
 do_restore(const char *target_time,
 		   const char *target_xid,
@@ -101,6 +106,9 @@ do_restore(const char *target_time,
 	}
 
 	cur_tli = get_current_timeline();
+#if PG_VERSION_NUM >= 90300
+	data_checksum_version = get_data_checksum_version();
+#endif
 	backup_tli = get_fullbackup_timeline(backups, rt);
 
 	/* determine target timeline */
@@ -423,7 +431,11 @@ restore_database(pgBackup *backup)
 
 		/* restore file */
 		if (!check)
+#if PG_VERSION_NUM >= 90300
+			restore_data_file(from_root, pgdata, file, backup->compress_data, (data_checksum_version > 0));
+#else
 			restore_data_file(from_root, pgdata, file, backup->compress_data);
+#endif
 
 		/* print size of restored file */
 		if (verbose && !check)
@@ -1077,3 +1089,28 @@ get_current_timeline(void)
 #endif
 	return result;
 }
+
+#if PG_VERSION_NUM >= 90300
+/*
+ * get datapage checksum version of the current database.
+ */
+static int
+get_data_checksum_version(void)
+{
+	int			result;
+	char		*buffer;
+
+	buffer = read_control_file();
+
+	if(buffer != NULL)
+		result = (int) ((ControlFileData *) buffer)->data_checksum_version;
+	else
+		return -1;
+#if PG_VERSION_NUM >= 90300
+	pg_free(buffer);
+#else
+	free(buffer);
+#endif
+	return result;
+}
+#endif

@@ -19,6 +19,11 @@
 #include "storage/block.h"
 #include "storage/bufpage.h"
 
+#if PG_VERSION_NUM >= 90300
+#include "storage/checksum.h"
+#include "storage/checksum_impl.h"
+#endif
+
 #if PG_VERSION_NUM < 80300
 #define XLogRecPtrIsInvalid(r)  ((r).xrecoff == 0)
 #endif
@@ -513,7 +518,11 @@ void
 restore_data_file(const char *from_root,
 				  const char *to_root,
 				  pgFile *file,
+#if PG_VERSION_NUM >= 90300
+				  bool compress, bool data_checksum_enabled)
+#else
 				  bool compress)
+#endif
 {
 	char				to_path[MAXPGPATH];
 	FILE			   *in;
@@ -679,6 +688,11 @@ restore_data_file(const char *from_root,
 		if (fseek(out, blknum * BLCKSZ, SEEK_SET) < 0)
 			elog(ERROR_SYSTEM, _("can't seek block %u of \"%s\": %s"),
 				blknum, to_path, strerror(errno));
+
+#if PG_VERSION_NUM >= 90300
+		if(data_checksum_enabled)
+			((PageHeader) page.data)->pd_checksum = pg_checksum_page((char *) page.data, blknum);
+#endif
 
 		if (fwrite(page.data, 1, sizeof(page), out) != sizeof(page))
 			elog(ERROR_SYSTEM, _("can't write block %u of \"%s\": %s"),
