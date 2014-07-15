@@ -14,6 +14,10 @@
 #include <limits.h>
 #include "libpq-fe.h"
 
+#if PG_VERSION_NUM >= 90300
+#include "access/xlog_internal.h"
+#endif
+
 #include "pgut/pgut.h"
 #include "access/xlogdefs.h"
 #include "storage/bufpage.h"
@@ -145,13 +149,10 @@ typedef struct pgBackup
 
 	/* Timestamp, etc. */
 	TimeLineID	tli;
-#if PG_VERSION_NUM < 90300
+
 	XLogRecPtr	start_lsn;
 	XLogRecPtr	stop_lsn;
-#else
-	PageXLogRecPtr	start_lsn;
-	PageXLogRecPtr	stop_lsn;
-#endif
+
 	time_t		start_time;
 	time_t		end_time;
 	time_t		recovery_time;
@@ -201,11 +202,7 @@ typedef struct pgBackupOption
 typedef struct pgTimeLine
 {
 	TimeLineID	tli;
-#if PG_VERSION_NUM < 90300
 	XLogRecPtr	end;
-#else
-	PageXLogRecPtr	end;
-#endif
 } pgTimeLine;
 
 typedef struct pgRecoveryTarget
@@ -316,22 +313,12 @@ extern int pgFileCompareMtimeDesc(const void *f1, const void *f2);
 
 /* in xlog.c */
 extern bool xlog_is_complete_wal(const pgFile *file, int server_version);
-#if PG_VERSION_NUM < 90300
 extern bool xlog_logfname2lsn(const char *logfname, XLogRecPtr *lsn);
 extern void xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn);
-#else
-extern bool xlog_logfname2lsn(const char *logfname, PageXLogRecPtr *lsn);
-extern void xlog_fname(char *fname, size_t len, TimeLineID tli, PageXLogRecPtr *lsn);
-#endif
 
 /* in data.c */
-#if PG_VERSION_NUM < 90300
 extern bool backup_data_file(const char *from_root, const char *to_root,
 							 pgFile *file, const XLogRecPtr *lsn, bool compress);
-#else
-extern bool backup_data_file(const char *from_root, const char *to_root,
-							 pgFile *file, const PageXLogRecPtr *lsn, bool compress);
-#endif
 extern void restore_data_file(const char *from_root, const char *to_root,
 							  pgFile *file, bool compress);
 extern bool copy_file(const char *from_root, const char *to_root,
@@ -346,14 +333,40 @@ extern void remove_not_digit(char *buf, size_t len, const char *str);
 /* in pgsql_src/pg_ctl.c */
 extern bool is_pg_running(void);
 
-/* access/xlog_internal.h */
+/*
+ * Using "access/xlog_internal.h" directly in pre-9.3 servers seems
+ * difficult as it invites including "postgres.h" as well which is
+ * not possible due to quite a large number of conflicts
+ */
+#if PG_VERSION_NUM < 90300
 #define XLogSegSize		((uint32) XLOG_SEG_SIZE)
 #define XLogSegsPerFile (((uint32) 0xffffffff) / XLogSegSize)
 #define XLogFileSize	(XLogSegsPerFile * XLogSegSize)
 
+#define MAXFNAMELEN		64
+
+#define XLOG_DATA_FNAME_LEN 24
+#define XLogFileName(fname, tli, log, seg)  \
+	snprintf(fname, XLOG_DATA_FNAME_LEN + 1, "%08X%08X%08X", tli, log, seg)
+
+#define XLByteLT(a, b)          \
+                        ((a).xlogid < (b).xlogid || \
+                         ((a).xlogid == (b).xlogid && (a).xrecoff < (b).xrecoff))
+
 #define NextLogSeg(logId, logSeg)	\
 	do { \
-		if ((logSeg) >= XLogSegsPerFile-1) \
+		if ((logSeg) >= XLogSegsPerFile - 1) \
+		{ \
+			(logId)++; \
+			(logSeg) = 0; \
+		} \
+		else \
+			(logSeg)++; \
+	} while (0)
+#else /* 9.3 got rid of NextLogSeg() so explicitly declare it here */
+#define NextLogSeg(logId, logSeg)	\
+	do { \
+		if ((logSeg) >= XLogSegmentsPerXLogId - 1) \
 		{ \
 			(logId)++; \
 			(logSeg) = 0; \
@@ -362,20 +375,5 @@ extern bool is_pg_running(void);
 			(logSeg)++; \
 	} while (0)
 
-#define MAXFNAMELEN		64
-
-#if PG_VERSION_NUM < 90300
-#define XLogFileName(fname, tli, log, seg)	\
-	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X", tli, log, seg)
-#else
-#define PageXLogFileName(fname, tli, log, seg)	\
-	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X", tli, log, seg)
 #endif
-
-#if PG_VERSION_NUM >= 90300
-#define XLByteLT(a, b)          \
-                        ((a).xlogid < (b).xlogid || \
-                         ((a).xlogid == (b).xlogid && (a).xrecoff < (b).xrecoff))
-#endif
-
 #endif /* PG_RMAN_H */

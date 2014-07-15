@@ -52,57 +52,9 @@ static Reader *BackupReader(Reader *inner);
 #define inner_write(self, buf, len) \
 	((self)->inner->write((self)->inner, (buf), (len)))
 
-/* ----------------------------------------------------------------
- *	PostgreSQL data files
- * ----------------------------------------------------------------
- */
-#define PG_PAGE_LAYOUT_VERSION_v81		3	/* 8.1 - 8.2 */
-#define PG_PAGE_LAYOUT_VERSION_v83		4	/* 8.3 - */
-
-/* 80000 <= PG_VERSION_NUM < 80300 */
-typedef struct PageHeaderData_v80
-{
-	XLogRecPtr		pd_lsn;
-	TimeLineID		pd_tli;
-	LocationIndex	pd_lower;
-	LocationIndex	pd_upper;
-	LocationIndex	pd_special;
-	uint16			pd_pagesize_version;
-	ItemIdData		pd_linp[1];
-} PageHeaderData_v80;
-
-#define PageGetPageSize_v80(page) \
-	((Size) ((page)->pd_pagesize_version & (uint16) 0xFF00))
-#define PageGetPageLayoutVersion_v80(page) \
-	((page)->pd_pagesize_version & 0x00FF)
-#define SizeOfPageHeaderData_v80	(offsetof(PageHeaderData_v80, pd_linp))
-
-/* 80300 <= PG_VERSION_NUM */
-typedef struct PageHeaderData_v83
-{
-	XLogRecPtr		pd_lsn;
-	uint16			pd_tli;
-	uint16			pd_flags;
-	LocationIndex	pd_lower;
-	LocationIndex	pd_upper;
-	LocationIndex	pd_special;
-	uint16			pd_pagesize_version;
-	TransactionId	pd_prune_xid;
-	ItemIdData		pd_linp[1];
-} PageHeaderData_v83;
-
-#define PageGetPageSize_v83(page) \
-	((Size) ((page)->pd_pagesize_version & (uint16) 0xFF00))
-#define PageGetPageLayoutVersion_v83(page) \
-	((page)->pd_pagesize_version & 0x00FF)
-#define SizeOfPageHeaderData_v83	(offsetof(PageHeaderData_v83, pd_linp))
-#define PD_VALID_FLAG_BITS_v83		0x0007
-
 typedef union DataPage
 {
-	XLogRecPtr			pd_lsn;
-	PageHeaderData_v80	v80;	/* 8.0 - 8.2 */
-	PageHeaderData_v83	v83;	/* 8.3 - */
+	PageHeaderData		page_data;
 	char				data[1];
 } DataPage;
 
@@ -622,23 +574,18 @@ Backup_read(DReader *self, DataPage *buf, size_t len)
 
 	Assert(len >= block_size);
 
-	if (server_version < 80300)
-		header_size = SizeOfPageHeaderData_v80;
-	else
-		header_size = SizeOfPageHeaderData_v83;
-
 	/* read each page and write the page excluding hole */
-	if ((sz = inner_read(self, buf, header_size)) == 0)
+	if ((sz = inner_read(self, buf, SizeOfPageHeaderData)) == 0)
 		return 0;
-	if (sz != header_size ||
+	if (sz != SizeOfPageHeaderData ||
 		!parse_header(buf, &pd_lower, &pd_upper))
 		goto bad_file;
 
-	lower_remain = pd_lower - header_size;
+	lower_remain = pd_lower - SizeOfPageHeaderData;
 	upper_length = block_size - pd_upper;
 
 	/* read remain lower and upper, and fill the hole with zero. */
-	if (inner_read(self, buf + header_size, lower_remain) != lower_remain ||
+	if (inner_read(self, buf + SizeOfPageHeaderData, lower_remain) != lower_remain ||
 		inner_read(self, buf + pd_upper, upper_length) != upper_length)
 		goto bad_file;
 	memset(buf + pd_lower, 0, pd_upper - pd_lower);
@@ -653,53 +600,34 @@ bad_file:
 static bool
 parse_header(const DataPage *page, uint16 *lower, uint16 *upper)
 {
-	uint16		page_layout_version;
+	const PageHeaderData *page_data = &page->page_data;
+	XLogRecPtr *lsn;
+/*
+ * Combine 2-part LSN into a single 64-bit value to match the new
+ * XLogRecPtr definition in 9.3+
+ */
+#if PG_VERSION_NUM >= 90300
+	*lsn = PageXLogRecPtrGet(page_data->pd_lsn);
+#else
+	*lsn = page_data->pd_lsn;
+#endif
 
-	/* Determine page layout version */
-	if (server_version < 80300)
-		page_layout_version = PG_PAGE_LAYOUT_VERSION_v81;
-	else
-		page_layout_version = PG_PAGE_LAYOUT_VERSION_v83;
-
-	/* Check normal case */
-	if (server_version < 80300)
+	if (PageGetPageSize(page_data) == block_size &&
+		PageGetPageLayoutVersion() == PG_PAGE_LAYOUT_VERSION &&
+#if PG_VERSION_NUM >= 80300
+		(page_data->pd_flags & ~PD_VALID_FLAG_BITS) == 0 &&
+#endif
+		page_data->pd_lower >= SizeOfPageHeaderData &&
+		page_data->pd_lower <= page_data->pd_upper &&
+		page_data->pd_upper <= page_data->pd_special &&
+		page_data->pd_special <= block_size &&
+		page_data->pd_special == MAXALIGN(page_data->pd_special) &&
+		!XLogRecPtrIsInvalid(lsn))
 	{
-		const PageHeaderData_v80 *v80 = &page->v80;
-
-		if (PageGetPageSize_v80(v80) == block_size &&
-			PageGetPageLayoutVersion_v80(v80) == page_layout_version &&
-			v80->pd_lower >= SizeOfPageHeaderData_v80 &&
-			v80->pd_lower <= v80->pd_upper &&
-			v80->pd_upper <= v80->pd_special &&
-			v80->pd_special <= block_size &&
-			v80->pd_special == MAXALIGN(v80->pd_special) &&
-			!XLogRecPtrIsInvalid(v80->pd_lsn))
-		{
-			*lower = v80->pd_lower;
-			*upper = v80->pd_upper;
-			return true;
-		}
+		*lower = page_data->pd_lower;
+		*upper = page_data->pd_upper;
+		return true;
 	}
-	else
-	{
-		const PageHeaderData_v83 *v83 = &page->v83;
-
-		if (PageGetPageSize_v83(v83) == block_size &&
-			PageGetPageLayoutVersion_v83(v83) == page_layout_version &&
-			(v83->pd_flags & ~PD_VALID_FLAG_BITS_v83) == 0 &&
-			v83->pd_lower >= SizeOfPageHeaderData_v83 &&
-			v83->pd_lower <= v83->pd_upper &&
-			v83->pd_upper <= v83->pd_special &&
-			v83->pd_special <= block_size &&
-			v83->pd_special == MAXALIGN(v83->pd_special) &&
-			!XLogRecPtrIsInvalid(v83->pd_lsn))
-		{
-			*lower = v83->pd_lower;
-			*upper = v83->pd_upper;
-			return true;
-		}
-	}
-	
 	*lower = *upper = 0;
 	return false;
 }

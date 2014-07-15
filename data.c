@@ -10,6 +10,7 @@
 #include "pg_rman.h"
 
 #include <unistd.h>
+#include <string.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -19,9 +20,7 @@
 #include "storage/bufpage.h"
 
 #if PG_VERSION_NUM < 80300
-#define XLogRecPtrIsInvalid(r)	((r).xrecoff == 0)
-#elif PG_VERSION_NUM >= 90300
-#define PageXLogRecPtrIsInvalid(r)	((r).xrecoff == 0)
+#define XLogRecPtrIsInvalid(r)  ((r).xrecoff == 0)
 #endif
 
 #ifdef HAVE_LIBZ
@@ -158,61 +157,9 @@ doInflate(z_stream *zp, size_t in_size, size_t out_size,void *inbuf,
 }
 #endif
 
-#define PG_PAGE_LAYOUT_VERSION_v80		2	/* 8.0 */
-#define PG_PAGE_LAYOUT_VERSION_v81		3	/* 8.1 - 8.2 */
-#define PG_PAGE_LAYOUT_VERSION_v83		4	/* 8.3 - */
-
-/* 80000 <= PG_VERSION_NUM < 80300 */
-typedef struct PageHeaderData_v80
-{
-#if PG_VERSION_NUM < 90300
-	XLogRecPtr		pd_lsn;
-#else
-	PageXLogRecPtr		pd_lsn;
-#endif
-	TimeLineID		pd_tli;
-	LocationIndex	pd_lower;
-	LocationIndex	pd_upper;
-	LocationIndex	pd_special;
-	uint16			pd_pagesize_version;
-	ItemIdData		pd_linp[1];
-} PageHeaderData_v80;
-
-#define PageGetPageSize_v80(page) \
-	((Size) ((page)->pd_pagesize_version & (uint16) 0xFF00))
-#define PageGetPageLayoutVersion_v80(page) \
-	((page)->pd_pagesize_version & 0x00FF)
-#define SizeOfPageHeaderData_v80	(offsetof(PageHeaderData_v80, pd_linp))
-
-/* 80300 <= PG_VERSION_NUM */
-typedef struct PageHeaderData_v83
-{
-#if PG_VERSION_NUM < 90300
-	XLogRecPtr		pd_lsn;
-#else
-	PageXLogRecPtr		pd_lsn;
-#endif
-	uint16			pd_tli;
-	uint16			pd_flags;
-	LocationIndex	pd_lower;
-	LocationIndex	pd_upper;
-	LocationIndex	pd_special;
-	uint16			pd_pagesize_version;
-	TransactionId	pd_prune_xid;
-	ItemIdData		pd_linp[1];
-} PageHeaderData_v83;
-
-#define PageGetPageSize_v83(page) \
-	((Size) ((page)->pd_pagesize_version & (uint16) 0xFF00))
-#define PageGetPageLayoutVersion_v83(page) \
-	((page)->pd_pagesize_version & 0x00FF)
-#define SizeOfPageHeaderData_v83	(offsetof(PageHeaderData_v83, pd_linp))
-#define PD_VALID_FLAG_BITS_v83		0x0007
-
 typedef union DataPage
 {
-	PageHeaderData_v80	v80;	/* 8.0 - 8.2 */
-	PageHeaderData_v83	v83;	/* 8.3 - */
+	PageHeaderData		page_data;
 	char				data[BLCKSZ];
 } DataPage;
 
@@ -224,69 +171,37 @@ typedef struct BackupPageHeader
 } BackupPageHeader;
 
 static bool
-#if PG_VERSION_NUM < 90300
-parse_page(const DataPage *page, int server_version,
-		   XLogRecPtr *lsn, uint16 *offset, uint16 *length)
-#else
-parse_page(const DataPage *page, int server_version,
-		   PageXLogRecPtr *lsn, uint16 *offset, uint16 *length)
-#endif
+parse_page(const DataPage *page,
+			XLogRecPtr *lsn,
+			uint16 *offset,
+			uint16 *length)
 {
-	uint16		page_layout_version;
-
-	/* Determine page layout version */
-	if (server_version < 80100)
-		page_layout_version = PG_PAGE_LAYOUT_VERSION_v80;
-	else if (server_version < 80300)
-		page_layout_version = PG_PAGE_LAYOUT_VERSION_v81;
-	else
-		page_layout_version = PG_PAGE_LAYOUT_VERSION_v83;
-
-	/* Check normal case */
-	if (server_version < 80300)
-	{
-		const PageHeaderData_v80 *v80 = &page->v80;
-
-		if (PageGetPageSize_v80(v80) == BLCKSZ &&
-			PageGetPageLayoutVersion_v80(v80) == page_layout_version &&
-			v80->pd_lower >= SizeOfPageHeaderData_v80 &&
-			v80->pd_lower <= v80->pd_upper &&
-			v80->pd_upper <= v80->pd_special &&
-			v80->pd_special <= BLCKSZ &&
-			v80->pd_special == MAXALIGN(v80->pd_special) &&
-#if PG_VERSION_NUM < 90300
-			!XLogRecPtrIsInvalid(*lsn = v80->pd_lsn))
+	const PageHeaderData *page_data = (PageHeaderData *) &page->page_data;
+/*
+ * Combine 2-part LSN into a single 64-bit value to match the new
+ * XLogRecPtr definition in 9.3+
+ */
+#if PG_VERSION_NUM >= 90300
+	*lsn = PageXLogRecPtrGet(page_data->pd_lsn);
 #else
-			!PageXLogRecPtrIsInvalid(*lsn = v80->pd_lsn))
+	*lsn = page_data->pd_lsn;
 #endif
-		{
-			*offset = v80->pd_lower;
-			*length = v80->pd_upper - v80->pd_lower;
-			return true;
-		}
-	}
-	else
-	{
-		const PageHeaderData_v83 *v83 = &page->v83;
 
-		if (PageGetPageSize_v83(v83) == BLCKSZ &&
-			PageGetPageLayoutVersion_v83(v83) == page_layout_version &&
-			(v83->pd_flags & ~PD_VALID_FLAG_BITS_v83) == 0 &&
-			v83->pd_lower >= SizeOfPageHeaderData_v83 &&
-			v83->pd_lower <= v83->pd_upper &&
-			v83->pd_upper <= v83->pd_special &&
-			v83->pd_special <= BLCKSZ &&
-			v83->pd_special == MAXALIGN(v83->pd_special) &&
-#if PG_VERSION_NUM < 90300
-			!XLogRecPtrIsInvalid(*lsn = v83->pd_lsn))
-#else
-			!PageXLogRecPtrIsInvalid(*lsn = v83->pd_lsn))
+	if (PageGetPageSize(page_data) == BLCKSZ &&
+		PageGetPageLayoutVersion(page_data) == PG_PAGE_LAYOUT_VERSION &&
+#if PG_VERSION_NUM >= 80300
+		(page_data->pd_flags & ~PD_VALID_FLAG_BITS) == 0 &&
 #endif
-		{
-			*offset = v83->pd_lower;
-			*length = v83->pd_upper - v83->pd_lower;
+		page_data->pd_lower >= SizeOfPageHeaderData &&
+		page_data->pd_lower <= page_data->pd_upper &&
+		page_data->pd_upper <= page_data->pd_special &&
+		page_data->pd_special <= BLCKSZ &&
+		page_data->pd_special == MAXALIGN(page_data->pd_special) &&
+		!XLogRecPtrIsInvalid(*lsn))
+	{
+			*offset = page_data->pd_lower;
+			*length = page_data->pd_upper - page_data->pd_lower;
 			return true;
-		}
 	}
 	
 	*offset = *length = 0;
@@ -300,13 +215,11 @@ parse_page(const DataPage *page, int server_version,
  * copied.
  */
 bool
-#if PG_VERSION_NUM < 90300
-backup_data_file(const char *from_root, const char *to_root,
-				 pgFile *file, const XLogRecPtr *lsn, bool compress)
-#else
-backup_data_file(const char *from_root, const char *to_root,
-				 pgFile *file, const PageXLogRecPtr *lsn, bool compress)
-#endif
+backup_data_file(const char *from_root,
+					const char *to_root,
+					pgFile *file,
+					const XLogRecPtr *lsn,
+					bool compress)
 {
 	char				to_path[MAXPGPATH];
 	FILE			   *in;
@@ -317,7 +230,6 @@ backup_data_file(const char *from_root, const char *to_root,
 	size_t				read_len;
 	int					errno_tmp;
 	pg_crc32			crc;
-	int					server_version;
 #ifdef HAVE_LIBZ
 	z_stream			z;
 	char				outbuf[zlibOutSize];
@@ -330,6 +242,7 @@ backup_data_file(const char *from_root, const char *to_root,
 
 	/* open backup mode file for read */
 	in = fopen(file->path, "r");
+
 	if (in == NULL)
 	{
 		FIN_CRC32(crc);
@@ -378,19 +291,12 @@ backup_data_file(const char *from_root, const char *to_root,
 	}
 #endif
 
-	/* confirm server version */
-	server_version = get_server_version();
-
 	/* read each page and write the page excluding hole */
 	for (blknum = 0;
 		 (read_len = fread(&page, 1, sizeof(page), in)) == sizeof(page);
 		 ++blknum)
 	{
-#if PG_VERSION_NUM < 90300
 		XLogRecPtr	page_lsn;
-#else
-		PageXLogRecPtr	page_lsn;
-#endif
 		int		upper_offset;
 		int		upper_length;
 
@@ -400,8 +306,8 @@ backup_data_file(const char *from_root, const char *to_root,
 		 * If a invalid data page was found, fallback to simple copy to ensure
 		 * all pages in the file don't have BackupPageHeader.
 		 */
-		if (!parse_page(&page, server_version, &page_lsn,
-						&header.hole_offset, &header.hole_length))
+		if (!parse_page(&page, &page_lsn, &header.hole_offset,
+						&header.hole_length))
 		{
 			elog(LOG, "%s fall back to simple copy", file->path);
 			fclose(in);
@@ -414,10 +320,10 @@ backup_data_file(const char *from_root, const char *to_root,
 		file->read_size += read_len;
 
 		/* if the page has not been modified since last backup, skip it */
-#if PG_VERSION_NUM < 90300
-		if (lsn && !XLogRecPtrIsInvalid(page_lsn) && XLByteLT(page_lsn, *lsn))
+#if PG_VERSION_NUM >= 90300
+		if (lsn && !XLogRecPtrIsInvalid(page_lsn) && page_lsn < *lsn)
 #else
-		if (lsn && !PageXLogRecPtrIsInvalid(page_lsn) && XLByteLT(page_lsn, *lsn))
+		if (lsn && !XLogRecPtrIsInvalid(page_lsn) && XLByteLT(page_lsn, *lsn))
 #endif
 			continue;
 
@@ -645,6 +551,7 @@ restore_data_file(const char *from_root,
 	 */
 	join_path_components(to_path, to_root, file->path + strlen(from_root) + 1);
 	out = fopen(to_path, "r+");
+
 	if (out == NULL && errno == ENOENT)
 		out = fopen(to_path, "w");
 	if (out == NULL)
@@ -772,6 +679,7 @@ restore_data_file(const char *from_root,
 		if (fseek(out, blknum * BLCKSZ, SEEK_SET) < 0)
 			elog(ERROR_SYSTEM, _("can't seek block %u of \"%s\": %s"),
 				blknum, to_path, strerror(errno));
+
 		if (fwrite(page.data, 1, sizeof(page), out) != sizeof(page))
 			elog(ERROR_SYSTEM, _("can't write block %u of \"%s\": %s"),
 				blknum, file->path, strerror(errno));

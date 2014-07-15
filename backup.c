@@ -31,13 +31,8 @@ static parray	*cleanup_list;		/* list of command to execute at error processing 
 static void backup_cleanup(bool fatal, void *userdata);
 static void delete_old_files(const char *root, parray *files, int keep_files,
 							 int keep_days, int server_version, bool is_arclog);
-#if PG_VERSION_NUM < 90300
 static void backup_files(const char *from_root, const char *to_root,
 	parray *files, parray *prev_files, const XLogRecPtr *lsn, bool compress, const char *prefix);
-#else
-static void backup_files(const char *from_root, const char *to_root,
-	parray *files, parray *prev_files, const PageXLogRecPtr *lsn, bool compress, const char *prefix);
-#endif
 static parray *do_backup_database(parray *backup_list, pgBackupOption bkupopt);
 static parray *do_backup_arclog(parray *backup_list);
 static parray *do_backup_srvlog(parray *backup_list);
@@ -47,11 +42,7 @@ static void confirm_block_size(const char *name, int blcksz);
 static void pg_start_backup(const char *label, bool smooth, pgBackup *backup);
 static void pg_stop_backup(pgBackup *backup);
 static void pg_switch_xlog(pgBackup *backup);
-#if PG_VERSION_NUM < 90300
 static void get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn);
-#else
-static void get_lsn(PGresult *res, TimeLineID *timeline, PageXLogRecPtr *lsn);
-#endif
 static void get_xid(PGresult *res, uint32 *xid);
 static bool execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup);
 
@@ -84,11 +75,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	FILE	   *fp;
 	char		path[MAXPGPATH];
 	char		label[1024];
-#if PG_VERSION_NUM < 90300
 	XLogRecPtr *lsn = NULL;
-#else
-	PageXLogRecPtr *lsn = NULL;
-#endif
 	char		prev_file_txt[MAXPGPATH];	/* path of the previous backup list file */
 	bool		has_backup_label  = true;	/* flag if backup_label is there  */
 	bool		has_recovery_conf = false;	/* flag if recovery.conf is there */
@@ -195,6 +182,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	if (current.backup_mode < BACKUP_MODE_FULL)
 	{
 		pgBackup   *prev_backup;
+		uint32		xlogid, xrecoff;
 
 		/* find last completed database backup */
 		prev_backup = catalog_get_last_data_backup(backup_list);
@@ -215,8 +203,15 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			 * Do backup only pages having larger LSN than previous backup.
 			 */
 			lsn = &prev_backup->start_lsn;
+#if PG_VERSION_NUM >= 90300
+			xlogid = (uint32) (*lsn >> 32);
+			xrecoff = (uint32) *lsn;
+#else
+			xlogid = lsn->xlogid;
+			xrecoff = lsn->xrecoff;
+#endif
 			elog(LOG, _("backup only the page that there was of the update from LSN(%X/%08X).\n"),
-				lsn->xlogid, lsn->xrecoff);
+							xlogid, xrecoff);
 		}
 	}
 
@@ -491,11 +486,7 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 {
 	PGconn *sby_conn = NULL;
 	PGresult	*res;
-#if PG_VERSION_NUM < 90300
 	XLogRecPtr	replayed_lsn;
-#else
-	PageXLogRecPtr	replayed_lsn;
-#endif
 	int	sleep_time = 1;
 	const char *tmp_host;
 	const char *tmp_port;
@@ -505,18 +496,30 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 	pgut_set_host(bkupopt.standby_host);
 	pgut_set_port(bkupopt.standby_port);
 	sby_conn = reconnect_elevel(ERROR_PG_CONNECT);
+
 	if (!sby_conn)
 	{
 		pgut_set_host(tmp_host);
 		pgut_set_port(tmp_port);
 		return false;
 	}
-	while (1) {
+
+	while (1)
+	{
+		uint32 xlogid, xrecoff;
 		/* waiting for standby's location to be LSN by pg_start_backup */
 		res = execute("SELECT * FROM pg_last_xlog_replay_location()", 0, NULL);
-		sscanf(PQgetvalue(res, 0, 0), "%X/%X", &replayed_lsn.xlogid, &replayed_lsn.xrecoff);
+		sscanf(PQgetvalue(res, 0, 0), "%X/%X", &xlogid, &xrecoff);
 		PQclear(res);
-		if (!XLByteLT(replayed_lsn, backup->start_lsn)) break;
+#if PG_VERSION_NUM >= 90300
+		replayed_lsn = (XLogRecPtr) ((uint64) xlogid >> 32) | xrecoff;
+		if (!(replayed_lsn < backup->start_lsn))
+#else
+		replayed_lsn.xlogid = xlogid;
+		replayed_lsn.xrecoff = xrecoff;
+		if (!XLByteLT(replayed_lsn, backup->start_lsn))
+#endif
+			break;
 		sleep(sleep_time);
 		/* next sleep_time is increasing by 2 times.	*/
 		/* ex: 1, 2, 4, 8, 16, 32, 60, 60, 60...	*/
@@ -559,7 +562,11 @@ do_backup_arclog(parray *backup_list)
 	current.read_arclog_bytes = 0;
 
 	/* switch xlog if database is not backed up */
+#if PG_VERSION_NUM >= 90300
+	if (((uint32) current.stop_lsn)  == 0)
+#else
 	if (current.stop_lsn.xrecoff == 0)
+#endif
 		pg_switch_xlog(&current);
 
 	/*
@@ -812,10 +819,14 @@ do_backup(pgBackupOption bkupopt)
 	/* initialize backup result */
 	current.status = BACKUP_STATUS_RUNNING;
 	current.tli = 0;		/* get from result of pg_start_backup() */
+#if PG_VERSION_NUM >= 90300
+	current.start_lsn = current.stop_lsn = (XLogRecPtr) 0;
+#else
 	current.start_lsn.xlogid = 0;
 	current.start_lsn.xrecoff = 0;
 	current.stop_lsn.xlogid = 0;
 	current.stop_lsn.xrecoff = 0;
+#endif
 	current.start_time = time(NULL);
 	current.end_time = (time_t) 0;
 	current.total_data_bytes = BYTES_INVALID;
@@ -1104,7 +1115,11 @@ wait_for_archive(pgBackup *backup, const char *sql)
 	{
 		get_lsn(res, &backup->tli, &backup->stop_lsn);
 		elog(LOG, _("%s(): tli=%X lsn=%X/%08X"), __FUNCTION__, backup->tli,
+#if PG_VERSION_NUM >= 90300
+			(uint32) (backup->stop_lsn >> 32), (uint32) backup->stop_lsn);
+#else
 			backup->stop_lsn.xlogid, backup->stop_lsn.xrecoff);
+#endif
 	}
 
 	/* get filename from the result of pg_xlogfile_name_offset() */
@@ -1162,13 +1177,10 @@ pg_switch_xlog(pgBackup *backup)
  * Get TimeLineID and LSN from result of pg_xlogfile_name_offset().
  */
 static void
-#if PG_VERSION_NUM < 90300
 get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
-#else
-get_lsn(PGresult *res, TimeLineID *timeline, PageXLogRecPtr *lsn)
-#endif
 {
 	uint32 off_upper;
+	uint32 xlogid, xrecoff;
 
 	if (res == NULL || PQntuples(res) != 1 || PQnfields(res) != 2)
 		elog(ERROR_PG_COMMAND,
@@ -1177,17 +1189,25 @@ get_lsn(PGresult *res, TimeLineID *timeline, PageXLogRecPtr *lsn)
 
 	/* get TimeLineID, LSN from result of pg_stop_backup() */
 	if (sscanf(PQgetvalue(res, 0, 0), "%08X%08X%08X",
-			timeline, &lsn->xlogid, &off_upper) != 3 ||
-		sscanf(PQgetvalue(res, 0, 1), "%u", &lsn->xrecoff) != 1)
+			timeline, &xlogid, &off_upper) != 3 ||
+		sscanf(PQgetvalue(res, 0, 1), "%u", &xrecoff) != 1)
 	{
 		elog(ERROR_PG_COMMAND,
 			_("result of pg_xlogfile_name_offset() is invalid: %s"),
 			PQerrorMessage(connection));
 	}
 
+	xrecoff += off_upper << 24;
+
+#if PG_VERSION_NUM >= 90300
+	*lsn = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
+#else
+	lsn->xlogid = xlogid;
+	lsn->xrecoff = xrecoff;
+#endif
+
 	elog(LOG, "%s():%s %s",
 		__FUNCTION__, PQgetvalue(res, 0, 0), PQgetvalue(res, 0, 1));
-	lsn->xrecoff += off_upper << 24;
 }
 
 /*
@@ -1281,7 +1301,6 @@ backup_cleanup(bool fatal, void *userdata)
 
 /* take incremental backup. */
 static void
-#if PG_VERSION_NUM < 90300
 backup_files(const char *from_root,
 			 const char *to_root,
 			 parray *files,
@@ -1289,15 +1308,6 @@ backup_files(const char *from_root,
 			 const XLogRecPtr *lsn,
 			 bool compress,
 			 const char *prefix)
-#else
-backup_files(const char *from_root,
-			 const char *to_root,
-			 parray *files,
-			 parray *prev_files,
-			 const PageXLogRecPtr *lsn,
-			 bool compress,
-			 const char *prefix)
-#endif
 {
 	int				i;
 	struct timeval	tv;

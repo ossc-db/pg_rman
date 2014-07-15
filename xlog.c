@@ -21,17 +21,15 @@ typedef struct MemoryContextData *MemoryContext;
 #endif
 #endif
 
+/*
+ * These unfortunate undefs are here to prevent annoying compiler warnings
+ * when compiling on pre-9.3 servers
+ */
+#if PG_VERSION_NUM < 90300
+#undef XLogFileName
+#undef NextLogSeg
+#endif
 #include "access/xlog_internal.h"
-
-#define XLOG_PAGE_MAGIC_v80		0xD05C	/* 8.0 */
-#define XLOG_PAGE_MAGIC_v81		0xD05D	/* 8.1 */
-#define XLOG_PAGE_MAGIC_v82		0xD05E	/* 8.2 */
-#define XLOG_PAGE_MAGIC_v83		0xD062	/* 8.3 */
-#define XLOG_PAGE_MAGIC_v84		0xD063	/* 8.4 */
-#define XLOG_PAGE_MAGIC_v90		0xD064	/* 9.0 */
-#define XLOG_PAGE_MAGIC_v91		0xD066	/* 9.1 */
-#define XLOG_PAGE_MAGIC_v92		0xD071	/* 9.2 */
-#define XLOG_PAGE_MAGIC_v93		0xD075	/* 9.2 */
 
 /*
  * XLogLongPageHeaderData is modified in 8.3, but the layout is compatible
@@ -53,7 +51,6 @@ xlog_is_complete_wal(const pgFile *file, int server_version)
 {
 	FILE		   *fp;
 	XLogPage		page;
-	uint16			xlog_page_magic;
 
 	fp = fopen(file->path, "r");
 	if (!fp)
@@ -65,32 +62,8 @@ xlog_is_complete_wal(const pgFile *file, int server_version)
 	}
 	fclose(fp);
 
-	/* xlog_page_magic from server version */
-	if (server_version < 80000)
-		return false;	/* never happen */
-	else if (server_version < 80100)
-		xlog_page_magic = XLOG_PAGE_MAGIC_v80;
-	else if (server_version < 80200)
-		xlog_page_magic = XLOG_PAGE_MAGIC_v81;
-	else if (server_version < 80300)
-		xlog_page_magic = XLOG_PAGE_MAGIC_v82;
-	else if (server_version < 80400)
-		xlog_page_magic = XLOG_PAGE_MAGIC_v83;
-	else if (server_version < 90000)
-		xlog_page_magic = XLOG_PAGE_MAGIC_v84;
-	else if (server_version < 90100)
-		xlog_page_magic = XLOG_PAGE_MAGIC_v90;
-	else if (server_version < 90200)
-		xlog_page_magic = XLOG_PAGE_MAGIC_v91;
-	else if (server_version < 90300)
-		xlog_page_magic = XLOG_PAGE_MAGIC_v92;
-	else if (server_version < 90400)
-		xlog_page_magic = XLOG_PAGE_MAGIC_v93;
-	else
-		return false;	/* not supported */
-
 	/* check header */
-	if (page.header.xlp_magic != xlog_page_magic)
+	if (page.header.xlp_magic != XLOG_PAGE_MAGIC)
 		return false;
 	if ((page.header.xlp_info & ~XLP_ALL_FLAGS) != 0)
 		return false;
@@ -112,19 +85,31 @@ xlog_is_complete_wal(const pgFile *file, int server_version)
 }
 
 bool
-#if PG_VERSION_NUM < 90300
 xlog_logfname2lsn(const char *logfname, XLogRecPtr *lsn)
-#else
-xlog_logfname2lsn(const char *logfname, PageXLogRecPtr *lsn)
-#endif
 {
 	uint32 tli;
+	uint32 xlogid, xrecoff;
 
 	if (sscanf(logfname, "%08X%08X%08X",
-			&tli, &lsn->xlogid, &lsn->xrecoff) != 3)
+			&tli, &xlogid, &xrecoff) != 3)
+	{
+#if PG_VERSION_NUM >= 90300
+		*lsn = (XLogRecPtr) ((uint64) xlogid) >> 32 | xrecoff;
+#else
+		lsn->xlogid = xlogid;
+		lsn->xrecoff = xrecoff;
+#endif
 		return false;
+	}
 
-	lsn->xrecoff *= XLogSegSize;
+	xrecoff *= XLogSegSize;
+
+#if PG_VERSION_NUM >= 90300
+	*lsn = (XLogRecPtr) ((uint64) xlogid >> 32) | xrecoff;
+#else
+	lsn->xlogid = xlogid;
+	lsn->xrecoff = xrecoff;
+#endif
 	return true;
 }
 
@@ -132,12 +117,17 @@ xlog_logfname2lsn(const char *logfname, PageXLogRecPtr *lsn)
  * based on XLogFileName() in xlog_internal.h
  */
 void
-#if PG_VERSION_NUM < 90300
 xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn)
-#else
-xlog_fname(char *fname, size_t len, TimeLineID tli, PageXLogRecPtr *lsn)
-#endif
 {
+	uint32 xlogid, xrecoff;
+
+#if PG_VERSION_NUM >= 90300
+	xlogid = (uint32) (*lsn >> 32);
+	xrecoff = (uint32) *lsn;
+#else
+	xlogid = lsn->xlogid;
+	xrecoff = lsn->xrecoff;
+#endif
 	snprintf(fname, len, "%08X%08X%08X", tli,
-		lsn->xlogid, lsn->xrecoff / XLogSegSize);
+		xlogid, xrecoff / XLogSegSize);
 }

@@ -224,9 +224,14 @@ base_backup_found:
 	if (check)
 	{
 		pgBackup *backup = (pgBackup *) parray_get(backups, last_restored_index);
+#if PG_VERSION_NUM >= 90300
+		needId = (uint32) (backup->start_lsn >> 32);
+		needSeg = (uint32) backup->start_lsn / XLogSegSize;
+#else
 		/* XLByteToSeg(xlrp, logId, logSeg) */
 		needId = backup->start_lsn.xlogid;
 		needSeg = backup->start_lsn.xrecoff / XLogSegSize;
+#endif
 	}
 
 	for (i = last_restored_index; i >= 0; i--)
@@ -780,8 +785,12 @@ readTimeLineHistory(TimeLineID targetTLI)
 
 		timeline = pgut_new(pgTimeLine);
 		timeline->tli = 0;
+#if PG_VERSION_NUM >= 90300
+	timeline->end = 0;
+#else
 		timeline->end.xlogid = 0;
 		timeline->end.xrecoff = 0;
+#endif
 
 		/* expect a numeric timeline ID as first field of line */
 		timeline->tli = (TimeLineID) strtoul(ptr, &endptr, 0);
@@ -807,15 +816,9 @@ readTimeLineHistory(TimeLineID targetTLI)
 		if (*ptr == '\0' || *ptr == '#')
 			elog(ERROR_CORRUPTED,
 			   _("End logfile must follow Timeline ID."));
-
-#if PG_VERSION_NUM < 90300
 		if (!xlog_logfname2lsn(ptr, &timeline->end))
-#else
-		if (sscanf(ptr, "%X/%X", &timeline->end.xlogid, &timeline->end.xrecoff) != 2)
-#endif
 			elog(ERROR_CORRUPTED,
 					_("syntax error(endfname) in history file: %s"), fline);
-
 		/* we ignore the remainder of each line */
 	}
 
@@ -829,8 +832,12 @@ readTimeLineHistory(TimeLineID targetTLI)
 	/* append target timeline */
 	timeline = pgut_new(pgTimeLine);
 	timeline->tli = targetTLI;
+#if PG_VERSION_NUM >= 90300
+	timeline->end = (uint64) -1;
+#else
 	timeline->end.xlogid = (uint32) -1; /* lsn in target timelie is valid */
 	timeline->end.xrecoff = (uint32) -1; /* lsn target timelie is valid */
+#endif
 	parray_insert(result, 0, timeline);
 
 	/* dump timeline branches for debug */
@@ -841,7 +848,11 @@ readTimeLineHistory(TimeLineID targetTLI)
 		{
 			pgTimeLine *timeline = parray_get(result, i);
 			elog(LOG, "%s() result[%d]: %08X/%08X/%08X", __FUNCTION__, i,
+#if PG_VERSION_NUM >= 90300
+				timeline->tli, (uint32) (timeline->end >> 32), (uint32) timeline->end);
+#else
 				timeline->tli, timeline->end.xlogid, timeline->end.xrecoff);
+#endif
 		}
 	}
 
@@ -878,7 +889,11 @@ satisfy_timeline(const parray *timelines, const pgBackup *backup)
 	{
 		pgTimeLine *timeline = (pgTimeLine *) parray_get(timelines, i);
 		if (backup->tli == timeline->tli &&
+#if PG_VERSION_NUM >= 90300
+				backup->stop_lsn < timeline->end)
+#else
 				XLByteLT(backup->stop_lsn, timeline->end))
+#endif
 			return true;
 	}
 	return false;
@@ -982,8 +997,12 @@ print_backup_id(const pgBackup *backup)
 {
 	char timestamp[100];
 	time2iso(timestamp, lengthof(timestamp), backup->start_time);
-	printf(_("  %s (%X/%08X)\n"), timestamp, backup->stop_lsn.xlogid,
-		backup->stop_lsn.xrecoff);
+	printf(_("  %s (%X/%08X)\n"), timestamp,
+#if PG_VERSION_NUM >= 90300
+			(uint32) (backup->stop_lsn >> 32), (uint32) backup->stop_lsn);
+#else
+			backup->stop_lsn.xlogid, backup->stop_lsn.xrecoff);
+#endif
 }
 
 static void
@@ -1003,11 +1022,10 @@ search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timel
 		for (i = 0; i < parray_num(timelines); i++)
 		{
 			pgTimeLine *timeline = (pgTimeLine *) parray_get(timelines, i);
-
-#if PG_VERSION_NUM < 90300
-			XLogFileName(xlogfname, timeline->tli, *needId, *needSeg);
+#if PG_VERSION_NUM >= 90300
+			XLogFileName(xlogfname, timeline->tli, *needId * XLogSegmentsPerXLogId + *needSeg);
 #else
-			PageXLogFileName(xlogfname, timeline->tli, *needId, *needSeg);
+			XLogFileName(xlogfname, timeline->tli, *needId, *needSeg);
 #endif
 			join_path_components(xlogpath, path, xlogfname);
 

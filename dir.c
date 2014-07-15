@@ -296,12 +296,10 @@ dir_list_file_internal(parray *files, const char *root, const char *exclude[],
 		if (linked[0] != '/')
 		{
 			char	dname[MAXPGPATH];
-			char   *dnamep;
 			char	absolute[MAXPGPATH];
 
 			strncpy(dname, file->path, lengthof(dname));
-			dnamep = dirname(dname);
-			join_path_components(absolute, dname, linked);
+			join_path_components(absolute, dirname(dname), linked);
 			file = pgFileNew(absolute, omit_symlink);
 		}
 		else
