@@ -774,7 +774,9 @@ readTimeLineHistory(TimeLineID targetTLI)
 		/* skip leading whitespaces and check for # comment */
 		char	   *ptr;
 		char	   *endptr;
-
+#if PG_VERSION_NUM >= 90300
+		uint32		xlogid, xrecoff;
+#endif
 		for (ptr = fline; *ptr; ptr++)
 		{
 			if (!IsSpace(*ptr))
@@ -786,7 +788,7 @@ readTimeLineHistory(TimeLineID targetTLI)
 		timeline = pgut_new(pgTimeLine);
 		timeline->tli = 0;
 #if PG_VERSION_NUM >= 90300
-	timeline->end = 0;
+		timeline->end = 0;
 #else
 		timeline->end.xlogid = 0;
 		timeline->end.xrecoff = 0;
@@ -816,9 +818,15 @@ readTimeLineHistory(TimeLineID targetTLI)
 		if (*ptr == '\0' || *ptr == '#')
 			elog(ERROR_CORRUPTED,
 			   _("End logfile must follow Timeline ID."));
+
+#if PG_VERSION_NUM >= 90300
+		sscanf(ptr, "%X/%08X", &xlogid, &xrecoff);
+		timeline->end = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
+#else
 		if (!xlog_logfname2lsn(ptr, &timeline->end))
 			elog(ERROR_CORRUPTED,
 					_("syntax error(endfname) in history file: %s"), fline);
+#endif
 		/* we ignore the remainder of each line */
 	}
 
