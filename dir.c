@@ -44,7 +44,7 @@ dir_create_dir(const char *dir, mode_t mode)
 	parent = dirname(copy);
 	if (access(parent, F_OK) == -1)
 		dir_create_dir(parent, mode);
-#ifdef MACOS
+#ifdef __darwin__
 	if (mkdir(copy, mode) == -1)
 #else
 	if (mkdir(dir, mode) == -1)
@@ -238,7 +238,7 @@ dir_list_file(parray *files, const char *root, const char *exclude[], bool omit_
 		black_list = parray_new();
 		black_list_file = fopen(path, "r");
 		if (black_list_file == NULL)
-			elog(ERROR_SYSTEM, _("can't open black_list: %s"), 
+			elog(ERROR_SYSTEM, _("can't open black_list: %s"),
 				strerror(errno));
 		while (fgets(buf, lengthof(buf), black_list_file) != NULL)
 		{
