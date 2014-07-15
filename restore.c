@@ -15,6 +15,9 @@
 #include <unistd.h>
 
 #include "catalog/pg_control.h"
+#if PG_VERSION_NUM >= 90300
+#include "common/fe_memutils.h"
+#endif
 
 static void backup_online_files(bool re_recovery);
 static void restore_online_files(void);
@@ -907,62 +910,6 @@ satisfy_timeline(const parray *timelines, const pgBackup *backup)
 	return false;
 }
 
-/* get TLI of the current database */
-static TimeLineID
-get_current_timeline(void)
-{
-	ControlFileData ControlFile;
-	int			fd;
-	char		ControlFilePath[MAXPGPATH];
-	pg_crc32	crc;
-	TimeLineID	ret;
-
-	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
-
-	if ((fd = open(ControlFilePath, O_RDONLY | PG_BINARY, 0)) == -1)
-	{
-		elog(WARNING, _("can't open pg_controldata file \"%s\": %s"),
-			ControlFilePath, strerror(errno));
-		return 0;
-	}
-
-	if (read(fd, &ControlFile, sizeof(ControlFileData)) != sizeof(ControlFileData))
-	{
-		elog(WARNING, _("can't read pg_controldata file \"%s\": %s"),
-			ControlFilePath, strerror(errno));
-		return 0;
-	}
-	close(fd);
-
-	/* Check the CRC. */
-	INIT_CRC32(crc);
-	COMP_CRC32(crc,
-		   	(char *) &ControlFile,
-		   	offsetof(ControlFileData, crc));
-	FIN_CRC32(crc);
-
-	if (!EQ_CRC32(crc, ControlFile.crc))
-	{
-		elog(WARNING, _("Calculated CRC checksum does not match value stored in file.\n"
-			"Either the file is corrupt, or it has a different layout than this program\n"
-			"is expecting.  The results below are untrustworthy.\n"));
-		return 0;
-	}
-
-	if (ControlFile.pg_control_version % 65536 == 0 && ControlFile.pg_control_version / 65536 != 0)
-	{
-		elog(WARNING, _("possible byte ordering mismatch\n"
-			"The byte ordering used to store the pg_control file might not match the one\n"
-			"used by this program.  In that case the results below would be incorrect, and\n"
-			"the PostgreSQL installation would be incompatible with this data directory.\n"));
-		return 0;
-	}
-
-	ret = ControlFile.checkPointCopy.ThisTimeLineID;
-
-	return ret;
-}
-
 /* get TLI of the latest full backup */
 static TimeLineID
 get_fullbackup_timeline(parray *backups, const pgRecoveryTarget *rt)
@@ -1108,4 +1055,25 @@ checkIfCreateRecoveryConf(const char *target_time,
 
 	return rt;
 
+}
+
+/* get TLI of the current database */
+static TimeLineID
+get_current_timeline(void)
+{
+	TimeLineID	result;
+	char		*buffer;
+
+	buffer = read_control_file();
+
+	if(buffer != NULL)
+		result = (TimeLineID) ((ControlFileData *) buffer)->checkPointCopy.ThisTimeLineID;
+	else
+		return 0;
+#if PG_VERSION_NUM >= 90300
+	pg_free(buffer);
+#else
+	free(buffer);
+#endif
+	return result;
 }

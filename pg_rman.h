@@ -333,6 +333,9 @@ extern void remove_not_digit(char *buf, size_t len, const char *str);
 /* in pgsql_src/pg_ctl.c */
 extern bool is_pg_running(void);
 
+/* In pg_ctl.c */
+extern char *read_control_file(void);
+
 /*
  * Using "access/xlog_internal.h" directly in pre-9.3 servers seems
  * difficult as it invites including "postgres.h" as well which is
