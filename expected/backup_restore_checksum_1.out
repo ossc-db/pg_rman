@@ -1,0 +1,3 @@
+\! sh sql/backup_restore.sh "--with-checksum"
+initdb did not succeed (--data-checksum not supported on this PostgreSQL version).
+Aborting regression tests...

@@ -18,6 +18,7 @@ SCALE=1
 DURATION=10
 ISOLATE_SRVLOG=0
 ISOLATE_WAL=0
+USE_DATA_CHECKSUM=""
 
 while [ $# -gt 0 ]; do
 	case $1 in
@@ -45,6 +46,10 @@ while [ $# -gt 0 ]; do
 			fi
 			shift 2
 			;;
+		"--with-checksum")
+			USE_DATA_CHECKSUM="--data-checksum"
+			shift
+			;;
 		*)
 			shift
 			;;
@@ -71,7 +76,12 @@ cat << EOF > $BACKUP_PATH/pg_rman.ini
 EOF
 
 # create new database cluster
-initdb --no-locale > $BASE_PATH/results/initdb.log 2>&1
+initdb $USE_DATA_CHECKSUM --no-locale >> $BASE_PATH/results/initdb.log 2>&1
+if [ $? = "1" ]; then
+	echo "initdb did not succeed (--data-checksum not supported on this PostgreSQL version)."
+	echo "Aborting regression tests..."
+	exit
+fi
 cat << EOF >> $PGDATA/postgresql.conf
 port = $TEST_PGPORT
 logging_collector = on
@@ -115,7 +125,6 @@ EOF
 export KEEP_DATA_GENERATIONS=2
 export KEEP_DATA_DAYS=0
 for i in `seq 1 5`; do
-#	pg_rman -p $TEST_PGPORT backup --verbose -d postgres > $BASE_PATH/results/log_full_0_$i 2>&1
 	pg_rman -w -p $TEST_PGPORT backup --verbose -d postgres > $BASE_PATH/results/log_full_0_$i 2>&1
 done
 pg_rman -p $TEST_PGPORT show `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show_d_1 2>&1
@@ -126,13 +135,11 @@ pgbench -p $TEST_PGPORT -i -s $SCALE pgbench > $BASE_PATH/results/pgbench.log 2>
 
 echo "full database backup"
 psql --no-psqlrc -p $TEST_PGPORT postgres -c "checkpoint"
-#pg_rman -p $TEST_PGPORT backup --verbose -d postgres > $BASE_PATH/results/log_full_1 2>&1
 pg_rman -w -p $TEST_PGPORT backup --verbose -d postgres > $BASE_PATH/results/log_full_1 2>&1
 
 pgbench -p $TEST_PGPORT -T $DURATION -c 10 pgbench >> $BASE_PATH/results/pgbench.log 2>&1
 echo "incremental database backup"
 psql --no-psqlrc -p $TEST_PGPORT postgres -c "checkpoint"
-#pg_rman -p $TEST_PGPORT backup -b i --verbose -d postgres > $BASE_PATH/results/log_incr1 2>&1
 pg_rman -w -p $TEST_PGPORT backup -b i --verbose -d postgres > $BASE_PATH/results/log_incr1 2>&1
 
 # validate all backup
@@ -141,12 +148,10 @@ pg_rman -p $TEST_PGPORT show `date +%Y` -a --verbose -d postgres > $BASE_PATH/re
 pg_dumpall > $BASE_PATH/results/dump_before_rtx.sql
 target_xid=`psql --no-psqlrc -p $TEST_PGPORT pgbench -tAq -c "INSERT INTO pgbench_history VALUES (1) RETURNING(xmin);"`
 psql --no-psqlrc -p $TEST_PGPORT postgres -c "checkpoint"
-#pg_rman -p $TEST_PGPORT backup -b i --verbose -d postgres > $BASE_PATH/results/log_incr2 2>&1
 pg_rman -w -p $TEST_PGPORT backup -b i --verbose -d postgres > $BASE_PATH/results/log_incr2 2>&1
 
 pgbench -p $TEST_PGPORT -T $DURATION -c 10 pgbench >> $BASE_PATH/results/pgbench.log 2>&1
 echo "archived WAL and serverlog backup"
-#pg_rman -p $TEST_PGPORT backup -b a --verbose -d postgres > $BASE_PATH/results/log_arclog 2>&1
 pg_rman -w -p $TEST_PGPORT backup -b a --verbose -d postgres > $BASE_PATH/results/log_arclog 2>&1
 
 # stop PG during transaction and get commited info for verifing
@@ -170,7 +175,6 @@ pg_rman validate `date +%Y` --verbose > $BASE_PATH/results/log_validate2 2>&1
 pg_rman restore -! --verbose --check > $BASE_PATH/results/log_restore_check_1 2>&1
 
 # restore with pg_rman
-#CUR_TLI=`pg_controldata | grep TimeLineID | awk '{print $4}'`
 CUR_TLI=`pg_controldata | grep " TimeLineID:" | awk '{print $4}'`
 pg_rman restore -! --verbose > $BASE_PATH/results/log_restore1_1 2>&1
 CUR_TLI_R=`grep "current timeline ID = " $BASE_PATH/results/log_restore1_1 | awk '{print $5}'`
@@ -194,7 +198,6 @@ pg_ctl stop -m immediate > /dev/null 2>&1
 # restore check with pg_rman
 pg_rman restore -! --verbose --check > $BASE_PATH/results/log_restore_check_2 2>&1
 
-#CUR_TLI=`pg_controldata | grep TimeLineID | awk '{print $4}'`
 CUR_TLI=`pg_controldata | grep " TimeLineID:" | awk '{print $4}'`
 pg_rman restore -! --verbose > $BASE_PATH/results/log_restore1_2 2>&1
 CUR_TLI_R=`grep "current timeline ID = " $BASE_PATH/results/log_restore1_2 | awk '{print $5}'`
@@ -220,7 +223,6 @@ diff $BASE_PATH/results/dump_before.sql $BASE_PATH/results/dump_after.sql
 # incrementa backup can't find last full backup because new timeline started.
 echo "full database backup after recovery"
 psql --no-psqlrc -p $TEST_PGPORT postgres -c "checkpoint"
-#pg_rman -p $TEST_PGPORT backup -b f --verbose -d postgres > $BASE_PATH/results/log_full2 2>&1
 pg_rman -w -p $TEST_PGPORT backup -b f --verbose -d postgres > $BASE_PATH/results/log_full2 2>&1
 
 # Backup of online-WAL should been deleted, but serverlog remain.
@@ -243,7 +245,6 @@ pg_ctl stop -m immediate > /dev/null 2>&1
 # restore check with pg_rman
 pg_rman restore -! --verbose --check > $BASE_PATH/results/log_restore_check_3 2>&1
 
-#CUR_TLI=`pg_controldata | grep TimeLineID | awk '{print $4}'`
 CUR_TLI=`pg_controldata | grep " TimeLineID:" | awk '{print $4}'`
 pg_rman restore -! --recovery-target-xid $target_xid --recovery-target-inclusive false --verbose > $BASE_PATH/results/log_restore2 2>&1
 CUR_TLI_R=`grep "current timeline ID = " $BASE_PATH/results/log_restore2 | awk '{print $5}'`
