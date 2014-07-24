@@ -13,7 +13,7 @@ SRCS = \
 	util.c \
 	validate.c \
 	xlog.c \
-	pg_ctl.c \
+	controlfile.c \
 	pgsql_src/pg_ctl.c \
 	pgsql_src/pg_crc.c \
 	pgut/pgut.c \

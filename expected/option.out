@@ -23,11 +23,21 @@ Backup options:
   -Z, --compress-data       compress data backup with zlib
   -C, --smooth-checkpoint   do smooth checkpoint before backup
   --keep-data-generations=N keep GENERATION of full data backup
+      NOTE: This number does not include the latest full backup in a count.
   --keep-data-days=DAY      keep enough data backup to recover to DAY days age
+      NOTE: Need to use the above two options together. 
+            Full backups older than both condition are deleted automatically.
+                ex.) --keep-data-generations=10 --keep-data-days=100 
   --keep-arclog-files=NUM   keep NUM of archived WAL
   --keep-arclog-days=DAY    keep archived WAL modified in DAY days
+      NOTE: Need to use the above two options together. 
+            Archive log files older than both condition are deleted automatically.
+                ex.) --keep-arclog-files=100 --keep-arclog-days=10 
   --keep-srvlog-files=NUM   keep NUM of serverlogs
   --keep-srvlog-days=DAY    keep serverlog modified in DAY days
+      NOTE: Need to use the above two options together. 
+            Server log files older than both condition are deleted automatically.
+                ex.) --keep-arclog-files=100 --keep-arclog-days=10 
   --standby-host=HOSTNAME   standby host when taking backup from standby
   --standby-port=PORT       standby port when taking backup from standby
 

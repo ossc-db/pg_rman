@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * pg_ctl.c: operations for control file
+ * controlfile.c: operations for control file
  *
  * Copyright (c) 2009-2011, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
  *
