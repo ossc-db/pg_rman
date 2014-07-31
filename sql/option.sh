@@ -66,7 +66,7 @@ echo "TIMELINEID=-1" > $BACKUP_PATH/pg_rman.ini
 pg_rman backup --verbose -B $BACKUP_PATH
 echo "BACKUP_TARGETS=F" > $BACKUP_PATH/pg_rman.ini
 pg_rman backup --verbose -B $BACKUP_PATH
-echo "BACKUP_MODE='F''\'\\\F'" > $BACKUP_PATH/pg_rman.ini
+echo "BACKUP_MODE='Z'" > $BACKUP_PATH/pg_rman.ini
 pg_rman backup --verbose -B $BACKUP_PATH
 
 # configuration priorityfile check
