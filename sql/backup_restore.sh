@@ -11,7 +11,7 @@ XLOG_PATH=$PGDATA/pg_xlog
 TBLSPC_PATH=$BASE_PATH/results/tblspc
 
 # Port used for test database cluster
-TEST_PGPORT=54321
+export PGPORT=54321
 
 # configuration
 SCALE=1
@@ -83,7 +83,7 @@ if [ $? = "1" ]; then
 	exit
 fi
 cat << EOF >> $PGDATA/postgresql.conf
-port = $TEST_PGPORT
+port = $PGPORT
 logging_collector = on
 wal_level = archive
 archive_mode = on
@@ -116,7 +116,7 @@ pg_ctl start -w -t 3600 > /dev/null 2>&1
 
 # create tablespace and database for pgbench
 mkdir -p $TBLSPC_PATH/pgbench
-psql --no-psqlrc -p $TEST_PGPORT postgres <<EOF
+psql --no-psqlrc postgres <<EOF
 CREATE TABLESPACE pgbench LOCATION '$TBLSPC_PATH/pgbench';
 CREATE DATABASE pgbench TABLESPACE = pgbench;
 EOF
@@ -125,38 +125,47 @@ EOF
 export KEEP_DATA_GENERATIONS=2
 export KEEP_DATA_DAYS=0
 for i in `seq 1 5`; do
-	pg_rman -w -p $TEST_PGPORT backup --verbose -d postgres > $BASE_PATH/results/log_full_0_$i 2>&1
+	pg_rman -w backup --verbose -d postgres > $BASE_PATH/results/log_full_0_$i 2>&1
 done
-pg_rman -p $TEST_PGPORT show `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show_d_1 2>&1
+pg_rman show `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show_d_1 2>&1
 echo "# of deleted backups"
 grep -c DELETED $BASE_PATH/results/log_show_d_1
 
-pgbench -p $TEST_PGPORT -i -s $SCALE pgbench > $BASE_PATH/results/pgbench.log 2>&1
+# Check presence of pgbench command and initialize environment
+which pgbench > /dev/null 2>&1
+ERR_NUM=$?
+if [ $ERR_NUM != 0 ]
+then
+	echo "pgbench is not installed in this environment."
+	echo "It is needed in PATH for those regression tests."
+	exit 1
+fi
+pgbench -i -s $SCALE pgbench > $BASE_PATH/results/pgbench.log 2>&1
 
 echo "full database backup"
-psql --no-psqlrc -p $TEST_PGPORT postgres -c "checkpoint"
-pg_rman -w -p $TEST_PGPORT backup --verbose -d postgres > $BASE_PATH/results/log_full_1 2>&1
+psql --no-psqlrc postgres -c "checkpoint"
+pg_rman -w backup --verbose -d postgres > $BASE_PATH/results/log_full_1 2>&1
 
-pgbench -p $TEST_PGPORT -T $DURATION -c 10 pgbench >> $BASE_PATH/results/pgbench.log 2>&1
+pgbench -T $DURATION -c 10 pgbench >> $BASE_PATH/results/pgbench.log 2>&1
 echo "incremental database backup"
-psql --no-psqlrc -p $TEST_PGPORT postgres -c "checkpoint"
-pg_rman -w -p $TEST_PGPORT backup -b i --verbose -d postgres > $BASE_PATH/results/log_incr1 2>&1
+psql --no-psqlrc postgres -c "checkpoint"
+pg_rman -w backup -b i --verbose -d postgres > $BASE_PATH/results/log_incr1 2>&1
 
 # validate all backup
 pg_rman validate `date +%Y` --verbose > $BASE_PATH/results/log_validate1 2>&1
-pg_rman -p $TEST_PGPORT show `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show0 2>&1
+pg_rman show `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show0 2>&1
 pg_dumpall > $BASE_PATH/results/dump_before_rtx.sql
-target_xid=`psql --no-psqlrc -p $TEST_PGPORT pgbench -tAq -c "INSERT INTO pgbench_history VALUES (1) RETURNING(xmin);"`
-psql --no-psqlrc -p $TEST_PGPORT postgres -c "checkpoint"
-pg_rman -w -p $TEST_PGPORT backup -b i --verbose -d postgres > $BASE_PATH/results/log_incr2 2>&1
+target_xid=`psql -p 54321 --no-psqlrc pgbench -tAq -c "INSERT INTO pgbench_history VALUES (1) RETURNING(xmin);"`
+psql --no-psqlrc postgres -c "checkpoint"
+pg_rman -w backup -b i --verbose -d postgres > $BASE_PATH/results/log_incr2 2>&1
 
-pgbench -p $TEST_PGPORT -T $DURATION -c 10 pgbench >> $BASE_PATH/results/pgbench.log 2>&1
+pgbench -T $DURATION -c 10 pgbench >> $BASE_PATH/results/pgbench.log 2>&1
 echo "archived WAL and serverlog backup"
-pg_rman -w -p $TEST_PGPORT backup -b a --verbose -d postgres > $BASE_PATH/results/log_arclog 2>&1
+pg_rman -w backup -b a --verbose -d postgres > $BASE_PATH/results/log_arclog 2>&1
 
 # stop PG during transaction and get commited info for verifing
 echo "stop DB during running pgbench"
-pgbench -p $TEST_PGPORT -T $DURATION -c 10 pgbench >> $BASE_PATH/results/pgbench.log 2>&1 &
+pgbench -T $DURATION -c 10 pgbench >> $BASE_PATH/results/pgbench.log 2>&1 &
 sleep `expr $DURATION / 2`
 pg_ctl stop -m immediate > /dev/null 2>&1
 cp -rp $PGDATA $PGDATA.bak
@@ -179,7 +188,7 @@ CUR_TLI=`pg_controldata | grep " TimeLineID:" | awk '{print $4}'`
 pg_rman restore -! --verbose > $BASE_PATH/results/log_restore1_1 2>&1
 CUR_TLI_R=`grep "current timeline ID = " $BASE_PATH/results/log_restore1_1 | awk '{print $5}'`
 TARGET_TLI=`grep "target timeline ID = " $BASE_PATH/results/log_restore1_1 | awk '{print $5}'`
-if [ "$CUR_TLI" != "$CUR_TLI_R" -o "$CUR_TLI" != "$CUR_TLI_R" ]; then
+if [ "$CUR_TLI" != "$CUR_TLI_R" ]; then
 	echo "failed: bad timeline ID" CUR_TLI=$CUR_TLI CUR_TLI_R=$CUR_TLI_R
 fi
 
@@ -202,7 +211,7 @@ CUR_TLI=`pg_controldata | grep " TimeLineID:" | awk '{print $4}'`
 pg_rman restore -! --verbose > $BASE_PATH/results/log_restore1_2 2>&1
 CUR_TLI_R=`grep "current timeline ID = " $BASE_PATH/results/log_restore1_2 | awk '{print $5}'`
 TARGET_TLI=`grep "target timeline ID = " $BASE_PATH/results/log_restore1_2 | awk '{print $5}'`
-if [ "$CUR_TLI" != "$CUR_TLI_R" -o "$CUR_TLI" != "$CUR_TLI_R" ]; then
+if [ "$CUR_TLI" != "$CUR_TLI_R" ]; then
 	echo "failed: bad timeline ID" CUR_TLI=$CUR_TLI CUR_TLI_R=$CUR_TLI_R
 fi
 
@@ -222,8 +231,8 @@ diff $BASE_PATH/results/dump_before.sql $BASE_PATH/results/dump_after.sql
 # take a backup and delete backed up online files
 # incrementa backup can't find last full backup because new timeline started.
 echo "full database backup after recovery"
-psql --no-psqlrc -p $TEST_PGPORT postgres -c "checkpoint"
-pg_rman -w -p $TEST_PGPORT backup -b f --verbose -d postgres > $BASE_PATH/results/log_full2 2>&1
+psql --no-psqlrc postgres -c "checkpoint"
+pg_rman -w backup -b f --verbose -d postgres > $BASE_PATH/results/log_full2 2>&1
 
 # Backup of online-WAL should been deleted, but serverlog remain.
 echo "# of files in BACKUP_PATH/backup/pg_xlog"
@@ -249,7 +258,7 @@ CUR_TLI=`pg_controldata | grep " TimeLineID:" | awk '{print $4}'`
 pg_rman restore -! --recovery-target-xid $target_xid --recovery-target-inclusive false --verbose > $BASE_PATH/results/log_restore2 2>&1
 CUR_TLI_R=`grep "current timeline ID = " $BASE_PATH/results/log_restore2 | awk '{print $5}'`
 TARGET_TLI=`grep "target timeline ID = " $BASE_PATH/results/log_restore2 | awk '{print $5}'`
-if [ "$CUR_TLI" != "$CUR_TLI_R" -o "$CUR_TLI" != "$CUR_TLI_R" ]; then
+if [ "$CUR_TLI" != "$CUR_TLI_R" ]; then
 	echo "failed: bad timeline ID" CUR_TLI=$CUR_TLI CUR_TLI_R=$CUR_TLI_R
 fi
 echo "# of recovery target option in recovery.conf"
@@ -262,24 +271,24 @@ pg_dumpall > $BASE_PATH/results/dump_after_rtx.sql
 diff $BASE_PATH/results/dump_before_rtx.sql $BASE_PATH/results/dump_after_rtx.sql
 
 # show timeline
-pg_rman -p $TEST_PGPORT show timeline --verbose -a -d postgres > $BASE_PATH/results/log_show_timeline_1 2>&1
-pg_rman -p $TEST_PGPORT show timeline `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show_timeline_2 2>&1
-pg_rman -p $TEST_PGPORT show timeline `date +%Y` --verbose -d postgres > $BASE_PATH/results/log_show_timeline_3 2>&1
+pg_rman show timeline --verbose -a -d postgres > $BASE_PATH/results/log_show_timeline_1 2>&1
+pg_rman show timeline `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show_timeline_2 2>&1
+pg_rman show timeline `date +%Y` --verbose -d postgres > $BASE_PATH/results/log_show_timeline_3 2>&1
 echo "# of deleted backups (show all)"
 grep -c DELETED $BASE_PATH/results/log_show_timeline_2
 echo "# of deleted backups"
 grep -c DELETED $BASE_PATH/results/log_show_timeline_3
 
 echo "delete backup"
-pg_rman -p $TEST_PGPORT delete --debug -d postgres > $BASE_PATH/results/log_delete1 2>&1
-pg_rman -p $TEST_PGPORT show `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show1 2>&1
+pg_rman delete --debug -d postgres > $BASE_PATH/results/log_delete1 2>&1
+pg_rman show `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show1 2>&1
 echo "# of deleted backups"
 grep -c DELETED $BASE_PATH/results/log_show1
-pg_rman -p $TEST_PGPORT delete `date "+%Y-%m-%d %T"` --debug -d postgres > $BASE_PATH/results/log_delete2 2>&1
-pg_rman -p $TEST_PGPORT show `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show2 2>&1
+pg_rman delete `date "+%Y-%m-%d %T"` --debug -d postgres > $BASE_PATH/results/log_delete2 2>&1
+pg_rman show `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show2 2>&1
 echo "# of deleted backups"
 grep -c DELETED $BASE_PATH/results/log_show2
-pg_rman -p $TEST_PGPORT show timeline `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show_timeline_4 2>&1
+pg_rman show timeline `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show_timeline_4 2>&1
 
 # cleanup
 pg_ctl stop -m immediate > /dev/null 2>&1
