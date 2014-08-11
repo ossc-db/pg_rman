@@ -1180,7 +1180,7 @@ static void
 get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
 {
 	uint32 off_upper;
-	uint32 xlogid, xrecoff;
+	uint32 xlogid, xrecoff = 0;
 
 	if (res == NULL || PQntuples(res) != 1 || PQnfields(res) != 2)
 		elog(ERROR_PG_COMMAND,
