@@ -512,7 +512,7 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 		sscanf(PQgetvalue(res, 0, 0), "%X/%X", &xlogid, &xrecoff);
 		PQclear(res);
 #if PG_VERSION_NUM >= 90300
-		replayed_lsn = (XLogRecPtr) ((uint64) xlogid >> 32) | xrecoff;
+		replayed_lsn = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
 		if (!(replayed_lsn < backup->start_lsn))
 #else
 		replayed_lsn.xlogid = xlogid;

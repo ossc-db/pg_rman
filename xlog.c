@@ -84,6 +84,8 @@ xlog_is_complete_wal(const pgFile *file, int server_version)
 	return true;
 }
 
+/* Being used only with servers of version < 9.3 */
+#if PG_VERSION_NUM < 90300
 bool
 xlog_logfname2lsn(const char *logfname, XLogRecPtr *lsn)
 {
@@ -92,26 +94,15 @@ xlog_logfname2lsn(const char *logfname, XLogRecPtr *lsn)
 
 	if (sscanf(logfname, "%08X%08X%08X",
 			&tli, &xlogid, &xrecoff) != 3)
-	{
-#if PG_VERSION_NUM >= 90300
-		*lsn = (XLogRecPtr) ((uint64) xlogid) >> 32 | xrecoff;
-#else
-		lsn->xlogid = xlogid;
-		lsn->xrecoff = xrecoff;
-#endif
 		return false;
-	}
 
 	xrecoff *= XLogSegSize;
 
-#if PG_VERSION_NUM >= 90300
-	*lsn = (XLogRecPtr) ((uint64) xlogid >> 32) | xrecoff;
-#else
 	lsn->xlogid = xlogid;
 	lsn->xrecoff = xrecoff;
-#endif
 	return true;
 }
+#endif
 
 /*
  * based on XLogFileName() in xlog_internal.h
