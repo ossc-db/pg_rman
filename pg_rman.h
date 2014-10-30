@@ -254,7 +254,7 @@ extern bool fileExists(const char *path);
 extern int do_restore(const char *target_time,
 					  const char *target_xid,
 					  const char *target_inclusive,
-					  TimeLineID target_tli,
+					  const char *target_tli_string,
 					  bool is_hard_copy);
 
 /* in init.c */

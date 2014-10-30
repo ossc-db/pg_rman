@@ -46,7 +46,7 @@ static char		*standby_port = NULL;
 static char		   *target_time;
 static char		   *target_xid;
 static char		   *target_inclusive;
-static TimeLineID	target_tli;
+static char		   *target_tli_string;
 static bool		is_hard_copy = false;
 
 /* delete configuration */
@@ -88,7 +88,7 @@ static pgut_option options[] =
 	{ 's',  7, "recovery-target-time"		, &target_time		, SOURCE_ENV },
 	{ 's',  8, "recovery-target-xid"		, &target_xid		, SOURCE_ENV },
 	{ 's',  9, "recovery-target-inclusive"	, &target_inclusive	, SOURCE_ENV },
-	{ 'u', 10, "recovery-target-timeline"	, &target_tli		, SOURCE_ENV },
+	{ 's', 10, "recovery-target-timeline"	, &target_tli_string, SOURCE_ENV },
 	{ 'b', 11, "hard-copy"	, &is_hard_copy		, SOURCE_ENV },
 	/* catalog options */
 	{ 'b', 'a', "show-all"		, &show_all },
@@ -204,7 +204,7 @@ main(int argc, char *argv[])
 	}
 	else if (pg_strcasecmp(cmd, "restore") == 0){
 		return do_restore(target_time, target_xid,
-					target_inclusive, target_tli, is_hard_copy);
+					target_inclusive, target_tli_string, is_hard_copy);
 	}
 	else if (pg_strcasecmp(cmd, "show") == 0)
 		return do_show(&range, show_timeline, show_all);

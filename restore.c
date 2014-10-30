@@ -26,7 +26,8 @@ static void restore_archive_logs(pgBackup *backup, bool is_hard_copy);
 static void create_recovery_conf(const char *target_time,
 								 const char *target_xid,
 								 const char *target_inclusive,
-								 TimeLineID target_tli);
+								 TimeLineID target_tli,
+								 bool target_tli_latest);
 static pgRecoveryTarget *checkIfCreateRecoveryConf(const char *target_time,
 								 const char *target_xid,
 								 const char *target_inclusive);
@@ -35,6 +36,10 @@ static bool satisfy_timeline(const parray *timelines, const pgBackup *backup);
 static bool satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt);
 static TimeLineID get_current_timeline(void);
 static TimeLineID get_fullbackup_timeline(parray *backups, const pgRecoveryTarget *rt);
+static TimeLineID parse_target_timeline(const char *target_tli_string, TimeLineID cur_tli,
+											bool *target_tli_latest);
+static TimeLineID findNewestTimeLine(TimeLineID startTLI);
+static bool existsTimeLineHistory(TimeLineID probeTLI);
 static void print_backup_id(const pgBackup *backup);
 static void search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timelines);
 
@@ -47,13 +52,15 @@ int
 do_restore(const char *target_time,
 		   const char *target_xid,
 		   const char *target_inclusive,
-		   TimeLineID target_tli,
+		   const char *target_tli_string,
 		   bool is_hard_copy)
 {
 	int i;
 	int base_index;				/* index of base (full) backup */
 	int last_restored_index;	/* index of last restored database backup */
 	int ret;
+	TimeLineID	target_tli;
+	bool		target_tli_latest = false;
 	TimeLineID	cur_tli;
 	TimeLineID	backup_tli;
 	parray *backups;
@@ -111,7 +118,17 @@ do_restore(const char *target_time,
 #endif
 	backup_tli = get_fullbackup_timeline(backups, rt);
 
-	/* determine target timeline */
+	/*
+	 * determine target timeline;
+	 * first parse the user specified string value for the target timeline
+	 * passed in via --recovery-target-timeline option. Need this because
+	 * the value 'latest' is also supported.
+	 */
+	if(target_tli_string)
+		target_tli = parse_target_timeline(target_tli_string, cur_tli, &target_tli_latest);
+	else
+		target_tli = 0;
+
 	if (target_tli == 0)
 		target_tli = cur_tli != 0 ? cur_tli : backup_tli;
 
@@ -293,7 +310,7 @@ base_backup_found:
 	}
 
 	/* create recovery.conf */
-	create_recovery_conf(target_time, target_xid, target_inclusive, target_tli);
+	create_recovery_conf(target_time, target_xid, target_inclusive, target_tli, target_tli_latest);
 
 	/* release catalog lock */
 	catalog_unlock();
@@ -603,7 +620,8 @@ static void
 create_recovery_conf(const char *target_time,
 					 const char *target_xid,
 					 const char *target_inclusive,
-					 TimeLineID target_tli)
+					 TimeLineID target_tli,
+					 bool target_tli_latest)
 {
 	char path[MAXPGPATH];
 	FILE *fp;
@@ -631,7 +649,10 @@ create_recovery_conf(const char *target_time,
 			fprintf(fp, "recovery_target_xid = '%s'\n", target_xid);
 		if (target_inclusive)
 			fprintf(fp, "recovery_target_inclusive = '%s'\n", target_inclusive);
-		fprintf(fp, "recovery_target_timeline = '%u'\n", target_tli);
+		if(target_tli_latest)
+			fprintf(fp, "recovery_target_timeline = 'latest'\n");
+		else
+			fprintf(fp, "recovery_target_timeline = '%u'\n", target_tli);
 
 		fclose(fp);
 	}
@@ -1114,3 +1135,105 @@ get_data_checksum_version(void)
 	return result;
 }
 #endif
+
+/*
+ * Parse the string value passed via --recovery-target-timeline.
+ * We need this to support 'latest' as a value for the above
+ * parameter.
+ *
+ * returns an appropriate TimeLineID value and additionally sets
+ * *target_tli_latest to 'true' if the input value is 'latest'
+ */
+
+static TimeLineID
+parse_target_timeline(const char *target_tli_string, TimeLineID cur_tli,
+						bool *target_tli_latest)
+{
+	int32 tmp;
+	TimeLineID	result;
+
+	if(strcmp(target_tli_string, "latest") != 0)
+	{
+		*target_tli_latest = false;
+		if(parse_int32(target_tli_string, &tmp))
+			result = (TimeLineID) tmp;
+		else
+			elog(ERROR_ARGS, "--recovery-target-timeline, timeline value should be "
+							 "either an unsigned 32bit integer or the string literal "
+							 "'latest'"	);
+		}
+	else
+	{
+		*target_tli_latest = true;
+		result = findNewestTimeLine(cur_tli);
+	}
+
+	return result;
+}
+
+/*
+ * From PostgreSQL source tree:
+ *   src/backend/access/transam/timeline.c
+ */
+static TimeLineID
+findNewestTimeLine(TimeLineID startTLI)
+{
+	TimeLineID  newestTLI;
+	TimeLineID  probeTLI;
+
+	/*
+	 * The algorithm is just to probe for the existence of timeline history
+	 * files.  XXX is it useful to allow gaps in the sequence?
+	 */
+	newestTLI = startTLI;
+
+	for (probeTLI = startTLI + 1;; probeTLI++)
+	{
+		if (existsTimeLineHistory(probeTLI))
+		{
+			newestTLI = probeTLI;       /* probeTLI exists */
+		}
+		else
+		{
+			/* doesn't exist, assume we're done */
+			break;
+		}
+	}
+
+	return newestTLI;
+}
+
+/*
+ * Similar to a function with the same name from PostgreSQL source tree:
+ *   src/backend/access/transam/timeline.c
+ */
+
+static bool
+existsTimeLineHistory(TimeLineID probeTLI)
+{
+	FILE	   *fd;
+	char		path[MAXPGPATH];
+
+	/* Timeline 1 does not have a history file, so no need to check */
+	if (probeTLI == 1)
+		return false;
+
+	snprintf(path, lengthof(path), "%s/%08X.history", arclog_path, probeTLI);
+	fd = fopen(path, "rt");
+
+	if(fd != NULL)
+	{
+		fclose(fd);
+		return true;
+	}
+	else
+	{
+		if (errno != ENOENT)
+		{
+			elog(ERROR_SYSTEM, _("could not open file \"%s\": %s"), path,
+				strerror(errno));
+		}
+	}
+
+	return false;
+}
