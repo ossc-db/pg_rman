@@ -143,30 +143,6 @@ do_restore(const char *target_time,
 	backup_online_files(cur_tli != 0 && cur_tli != backup_tli);
 
 	/*
-	 * Clear restore destination, but don't remove $PGDATA.
-	 * To remove symbolic link, get file list with "omit_symlink = false".
-	 */
-	if (!check)
-	{
-		if (verbose)
-		{
-			printf(_("----------------------------------------\n"));
-			printf(_("clearing restore destination\n"));
-		}
-		files = parray_new();
-		dir_list_file(files, pgdata, NULL, false, false);
-		parray_qsort(files, pgFileComparePathDesc);	/* delete from leaf */
-
-		for (i = 0; i < parray_num(files); i++)
-		{
-			pgFile *file = (pgFile *) parray_get(files, i);
-			pgFileDelete(file);
-		}
-		parray_walk(files, pgFileFree);
-		parray_free(files);
-	}
-
-	/*
 	 * restore timeline history files and get timeline branches can reach
 	 * recovery target point.
 	 */
@@ -203,6 +179,40 @@ do_restore(const char *target_time,
 	elog(ERROR_NO_BACKUP, _("no full backup found, can't restore."));
 
 base_backup_found:
+
+	/*
+	 * Clear restore destination, but don't remove $PGDATA.
+	 * To remove symbolic link, get file list with "omit_symlink = false".
+	 *
+	 * Doing it *after* a good base backup is found so that we don't end up
+	 * in a situation where the target data directory is already deleted
+	 * but we could not find a valid base backup based on user specified
+	 * restore options (perhaps a mistake on user's part but we should be
+	 * cautious.)
+	 */
+	if (!check)
+	{
+		int i;
+
+		if (verbose)
+		{
+			printf(_("----------------------------------------\n"));
+			printf(_("clearing restore destination\n"));
+		}
+		files = parray_new();
+		dir_list_file(files, pgdata, NULL, false, false);
+		parray_qsort(files, pgFileComparePathDesc);	/* delete from leaf */
+
+		for (i = 0; i < parray_num(files); i++)
+		{
+			pgFile *file = (pgFile *) parray_get(files, i);
+			pgFileDelete(file);
+		}
+		parray_walk(files, pgFileFree);
+		parray_free(files);
+	}
+
+	/* OK, now proceed to restoring the backup */
 	base_index = i;
 
 	if (verbose)
