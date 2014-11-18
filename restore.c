@@ -1160,7 +1160,7 @@ parse_target_timeline(const char *target_tli_string, TimeLineID cur_tli,
 						bool *target_tli_latest)
 {
 	int32 tmp;
-	TimeLineID	result;
+	TimeLineID	result = 0;
 
 	if(strcmp(target_tli_string, "latest") != 0)
 	{
@@ -1171,7 +1171,7 @@ parse_target_timeline(const char *target_tli_string, TimeLineID cur_tli,
 			elog(ERROR_ARGS, "--recovery-target-timeline, timeline value should be "
 							 "either an unsigned 32bit integer or the string literal "
 							 "'latest'"	);
-		}
+	}
 	else
 	{
 		*target_tli_latest = true;
