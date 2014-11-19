@@ -199,8 +199,12 @@ pgBackupValidateFiles(parray *files, const char *root, bool size_only)
 			crc = pgFileGetCRC(file);
 			if (crc != file->crc)
 			{
-				elog(WARNING, _("CRC of backup file \"%s\" must be %X but %X"),
-					get_relative_path(file->path, root), file->crc, crc);
+				elog(WARNING, _("CRC calculation showed incorrect result"));
+				if(verbose)
+				{
+					elog(WARNING, _("CRC of backup file \"%s\" must be %X but %X"),
+						get_relative_path(file->path, root), file->crc, crc);
+				}
 				return false;
 			}
 		}

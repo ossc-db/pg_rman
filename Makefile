@@ -15,7 +15,6 @@ SRCS = \
 	xlog.c \
 	controlfile.c \
 	pgsql_src/pg_ctl.c \
-	pgsql_src/pg_crc.c \
 	pgut/pgut.c \
 	pgut/pgut-port.c
 OBJS = $(SRCS:.c=.o)

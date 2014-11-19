@@ -59,13 +59,13 @@ read_control_file()
 	close(fd);
 
 	/* Check the CRC. */
-	INIT_CRC32(crc);
-	COMP_CRC32(crc,
+	PGRMAN_INIT_CRC32(crc);
+	PGRMAN_COMP_CRC32(crc,
 			buffer,
 			offsetof(ControlFileData, crc));
-	FIN_CRC32(crc);
+	PGRMAN_FIN_CRC32(crc);
 
-	if (!EQ_CRC32(crc, ((ControlFileData *) buffer)->crc))
+	if (!PGRMAN_EQ_CRC32(crc, ((ControlFileData *) buffer)->crc))
 	{
 		elog(WARNING, _("Calculated CRC checksum does not match value stored in file.\n"
 			"Either the file is corrupt, or it has a different layout than this program\n"

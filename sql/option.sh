@@ -43,9 +43,8 @@ pg_rman backup --verbose -B $BACKUP_PATH -b a
 # bad arguments check
 pg_rman backup --verbose -B $BACKUP_PATH -b bad
 
-# delete or validate requires DATE
+# delete requires DATE
 pg_rman delete -B $BACKUP_PATH
-pg_rman validate -B $BACKUP_PATH
 
 # invalid configuration file check
 echo " = INFINITE" > $BACKUP_PATH/pg_rman.ini

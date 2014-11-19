@@ -12,8 +12,9 @@ Start                Time   Total    Data     WAL     Log  Backup   Status
 INFO: validate: 2009-05-31 17:05:53 backup and archive log files by CRC
 LOG: database files...
 LOG: (1/1) PG_VERSION
+WARNING: CRC calculation showed incorrect result
 LOG: archive WAL files...
-LOG: backup 2009-05-31 17:05:53 is valid
+WARNING: backup 2009-05-31 17:05:53 is corrupted
 \! pg_rman validate -B ${PWD}/results/sample_backup 2009-06-01 17:05:53 --debug
 INFO: validate: 2009-06-01 17:05:53 backup and archive log files by CRC
 LOG: database files...
@@ -28,7 +29,7 @@ Start                Time   Total    Data     WAL     Log  Backup   Status
 2009-06-03 17:05:53    0m    ----    ----    ----    ----    ----   RUNNING
 2009-06-02 17:05:03    0m    ----    ----    ----  4335kB   162MB   DELETED
 2009-06-01 17:05:53    3m    ----  9223PB    16MB    ----   162MB   CORRUPT
-2009-05-31 17:05:53    3m  1242MB    ----  9223PB    ----   242MB   OK
+2009-05-31 17:05:53    3m  1242MB    ----  9223PB    ----   242MB   CORRUPT
 \! pg_rman show 2009-06-01 17:05:53 -B ${PWD}/results/sample_backup
 # configuration
 BACKUP_MODE=INCREMENTAL

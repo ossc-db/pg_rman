@@ -341,6 +341,24 @@ extern bool is_pg_running(void);
 extern char *read_control_file(void);
 
 /*
+ * Set of macros for CRC calculations. Updates of upstream Postgres
+ * in this area would result in if/else/endif garbage with PG_VERSION_NUM
+ * in many parts of the code, so let's define generic macros for the CRC
+ * calculation.
+ */
+#if PG_VERSION_NUM >= 90500
+#define PGRMAN_INIT_CRC32(crc) INIT_CRC32C(crc)
+#define PGRMAN_FIN_CRC32(crc) FIN_CRC32C(crc)
+#define PGRMAN_COMP_CRC32(crc, data, len) COMP_CRC32C(crc, data, len)
+#define PGRMAN_EQ_CRC32(c1, c2) EQ_CRC32C(c1, c2)
+#else
+#define PGRMAN_INIT_CRC32(crc) INIT_CRC32(crc)
+#define PGRMAN_FIN_CRC32(crc) FIN_CRC32(crc)
+#define PGRMAN_COMP_CRC32(crc, data, len) COMP_CRC32(crc, data, len)
+#define PGRMAN_EQ_CRC32(c1, c2) EQ_CRC32(c1, c2)
+#endif
+
+/*
  * Using "access/xlog_internal.h" directly in pre-9.3 servers seems
  * difficult as it invites including "postgres.h" as well which is
  * not possible due to quite a large number of conflicts
