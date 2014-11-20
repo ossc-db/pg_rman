@@ -290,5 +290,24 @@ echo "# of deleted backups"
 grep -c DELETED $BASE_PATH/results/log_show2
 pg_rman show timeline `date +%Y` -a --verbose -d postgres > $BASE_PATH/results/log_show_timeline_4 2>&1
 
+## do an incremental backup after database creation
+# do full backup
+pg_rman -w backup --verbose -d postgres > $BASE_PATH/results/log_full_2 2>&1
+pg_rman validate `date +%Y` --verbose > $BASE_PATH/results/log_validate_2 2>&1
+# create a database and create tables by pgbench
+createdb db1;
+pgbench -i -s $SCALE db1 > $BASE_PATH/results/pgbench_2.log 2>&1
+# do incremental backup
+pg_rman -w backup -b i --verbose -d postgres > $BASE_PATH/results/log_incr_2 2>&1
+pg_rman validate `date +%Y` --verbose >> $BASE_PATH/results/log_validate_2 2>&1
+# do some update and restore
+pgbench -T 30 db1 >> $BASE_PATH/results/pgbench_2.log 2>&1
+psql --no-psqlrc db1 -c "SELECT * FROM pgbench_branches" > $BASE_PATH/results/branches_1.out
+pg_ctl stop -w -t 600 > /dev/null 2>&1
+pg_rman restore --verbose --debug > $BASE_PATH/results/log_restore_check_2 2>&1
+pg_ctl start -w -t 3600 > /dev/null 2>&1
+psql --no-psqlrc db1 -c "SELECT * FROM pgbench_branches" > $BASE_PATH/results/branches_2.out
+diff $BASE_PATH/results/branches_1.out $BASE_PATH/results/branches_2.out
+
 # cleanup
 pg_ctl stop -m immediate > /dev/null 2>&1

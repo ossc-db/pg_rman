@@ -318,7 +318,7 @@ extern void xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn)
 
 /* in data.c */
 extern bool backup_data_file(const char *from_root, const char *to_root,
-							 pgFile *file, const XLogRecPtr *lsn, bool compress);
+							 pgFile *file, const XLogRecPtr *lsn, bool compress, bool prev_file_not_found);
 extern void restore_data_file(const char *from_root, const char *to_root,
 #if PG_VERSION_NUM >= 90300
 							  pgFile *file, bool compress, bool data_checksum_enabled);
