@@ -1311,7 +1311,7 @@ backup_files(const char *from_root,
 {
 	int				i;
 	struct timeval	tv;
-
+	bool			prev_file_not_found = false;
 	/* sort pathname ascending */
 	parray_qsort(files, pgFileComparePath);
 
@@ -1419,14 +1419,19 @@ backup_files(const char *from_root,
 						prev_file = *p;
 				}
 
-				if (prev_file && prev_file->mtime == file->mtime)
+				if (prev_file)
 				{
-					/* record as skipped file in file_xxx.txt */
-					file->write_size = BYTES_INVALID;
-					if (verbose)
-						printf(_("skip\n"));
-					continue;
+					if(prev_file->mtime == file->mtime)
+					{
+						/* record as skipped file in file_xxx.txt */
+							file->write_size = BYTES_INVALID;
+						if (verbose)
+							printf(_("skip\n"));
+						continue;
+					}
 				}
+				else
+					prev_file_not_found = true;
 			}
 
 			/*
@@ -1448,7 +1453,7 @@ backup_files(const char *from_root,
 
 			/* copy the file into backup */
 			if (!(file->is_datafile
-					? backup_data_file(from_root, to_root, file, lsn, compress)
+					? backup_data_file(from_root, to_root, file, lsn, compress, prev_file_not_found)
 					: copy_file(from_root, to_root, file,
 								compress ? COMPRESSION : NO_COMPRESSION)))
 			{

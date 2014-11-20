@@ -224,7 +224,8 @@ backup_data_file(const char *from_root,
 					const char *to_root,
 					pgFile *file,
 					const XLogRecPtr *lsn,
-					bool compress)
+					bool compress,
+					bool prev_file_not_found)
 {
 	char				to_path[MAXPGPATH];
 	FILE			   *in;
@@ -326,9 +327,9 @@ backup_data_file(const char *from_root,
 
 		/* if the page has not been modified since last backup, skip it */
 #if PG_VERSION_NUM >= 90300
-		if (lsn && !XLogRecPtrIsInvalid(page_lsn) && page_lsn < *lsn)
+		if (!prev_file_not_found && lsn && !XLogRecPtrIsInvalid(page_lsn) && page_lsn < *lsn)
 #else
-		if (lsn && !XLogRecPtrIsInvalid(page_lsn) && XLByteLT(page_lsn, *lsn))
+		if (!prev_file_not_found && lsn && !XLogRecPtrIsInvalid(page_lsn) && XLByteLT(page_lsn, *lsn))
 #endif
 			continue;
 
