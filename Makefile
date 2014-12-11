@@ -24,7 +24,7 @@ OBJS = $(SRCS:.c=.o)
 PG_CPPFLAGS = -I$(libpq_srcdir)
 PG_LIBS = $(libpq_pgport)
 
-REGRESS = option init show_validate backup_restore backup_restore_checksum
+REGRESS = init option show delete backup restore restore_checksum backup_from_standby
 
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
@@ -35,16 +35,3 @@ LIBS := $(filter-out -lxml2, $(LIBS))
 LIBS := $(filter-out -lxslt, $(LIBS))
 
 $(OBJS): pg_rman.h
-
-installcheck: myinstallcheck
-
-myinstallcheck:
-	@if [ `expr "$(MAJORVERSION) < 9.0" | bc` -eq 1 ]; \
-	 then \
-		sed -i 's/^wal_level/#wal_level/g' sql/backup_restore.sh; \
-	 fi
-
-clean: myclean
-
-myclean:
-	-@sed -i 's/^#wal_level/wal_level/g' sql/backup_restore.sh;

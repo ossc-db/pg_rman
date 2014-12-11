@@ -1,0 +1,17 @@
+\! bash sql/backup_from_standby.sh
+###### BACKUP COMMAND FROM STANDBY SERVER TEST-0001 ######
+###### full backup mode ######
+NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+0
+0
+0
+
+###### BACKUP COMMAND FROM STANDBY SERVER TEST-0002 ######
+###### full + incremental backup mode ######
+NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+0
+0
+NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+0
+0
+0
