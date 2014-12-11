@@ -1,0 +1,14 @@
+\! bash sql/backup_from_standby.sh
+###### BACKUP COMMAND FROM STANDBY SERVER TEST-0001 ######
+###### full backup mode ######
+0
+0
+0
+
+###### BACKUP COMMAND FROM STANDBY SERVER TEST-0002 ######
+###### full + incremental backup mode ######
+0
+0
+0
+0
+0

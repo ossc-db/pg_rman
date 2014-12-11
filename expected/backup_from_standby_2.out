@@ -1,0 +1,3 @@
+\! bash sql/backup_from_standby.sh
+The target PostgreSQL version does not support Streaming Replication.
+Aborting regression tests...
