@@ -22,7 +22,7 @@ OBJS = $(SRCS:.c=.o)
 # pg_crc.c and are copied from PostgreSQL source tree.
 
 # XXX for debug, add -g and disable optimization
-PG_CPPFLAGS = -I$(libpq_srcdir)
+PG_CPPFLAGS = -I$(libpq_srcdir) -lm
 PG_LIBS = $(libpq_pgport)
 
 REGRESS = init option show delete backup restore backup_from_standby

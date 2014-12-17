@@ -16,11 +16,13 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <time.h>
+#include <math.h>
 
 #include "libpq/pqsignal.h"
 #include "pgut/pgut-port.h"
 
 #define TIMEOUT_ARCHIVE		10		/* wait 10 sec until WAL archive complete */
+#define XLogSegOffsetBits	((uint32) log2(XLogSegSize))
 
 static bool		 in_backup = false;	/* TODO: more robust logic */
 static parray	*cleanup_list;		/* list of command to execute at error processing for snapshot */
@@ -1197,7 +1199,7 @@ get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
 			PQerrorMessage(connection));
 	}
 
-	xrecoff += off_upper << 24;
+	xrecoff += off_upper << XLogSegOffsetBits;
 
 #if PG_VERSION_NUM >= 90300
 	*lsn = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
