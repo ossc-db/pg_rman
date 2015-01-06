@@ -1,5 +1,5 @@
 # SPEC file for pg_rman
-# Copyright(C) 2009-2013 NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+# Copyright(C) 2009-2015 NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 
 %define _pgdir   /usr/pgsql-9.0
 %define _bindir  %{_pgdir}/bin
