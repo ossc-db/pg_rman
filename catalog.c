@@ -362,17 +362,10 @@ pgBackupWriteResultSection(FILE *out, pgBackup *backup)
 	fprintf(out, "# result\n");
 	fprintf(out, "TIMELINEID=%d\n", backup->tli);
 
-#if PG_VERSION_NUM >= 90300
-	start_xlogid = (uint32) (backup->start_lsn >> 32);
-	start_xrecoff = (uint32) backup->start_lsn;
-	stop_xlogid = (uint32) (backup->stop_lsn >> 32);
-	stop_xrecoff = (uint32) backup->stop_lsn;
-#else
 	start_xlogid = backup->start_lsn.xlogid;
 	start_xrecoff = backup->start_lsn.xrecoff;
 	stop_xlogid = backup->stop_lsn.xlogid;
 	stop_xrecoff = backup->stop_lsn.xrecoff;
-#endif
 	fprintf(out, "START_LSN=%x/%08x\n",
 					start_xlogid, start_xrecoff);
 	fprintf(out, "STOP_LSN=%x/%08x\n",
@@ -516,12 +509,8 @@ catalog_read_ini(const char *path)
 
 		if (sscanf(start_lsn, "%X/%X", &xlogid, &xrecoff) == 2)
 		{
-#if PG_VERSION_NUM >= 90300
-			backup->start_lsn = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
-#else
 			backup->start_lsn.xlogid = xlogid;
 			backup->start_lsn.xrecoff = xrecoff;
-#endif
 		}
 		else
 			elog(WARNING, _("invalid START_LSN \"%s\""), start_lsn);
@@ -534,12 +523,8 @@ catalog_read_ini(const char *path)
 
 		if (sscanf(stop_lsn, "%X/%X", &xlogid, &xrecoff) == 2)
 		{
-#if PG_VERSION_NUM >= 90300
-			backup->stop_lsn = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
-#else
 			backup->stop_lsn.xlogid = xlogid;
 			backup->stop_lsn.xrecoff = xrecoff;
-#endif
 		}
 		else
 			elog(WARNING, _("invalid STOP_LSN \"%s\""), stop_lsn);
@@ -646,14 +631,10 @@ catalog_init_config(pgBackup *backup)
 	backup->compress_data = false;
 	backup->status = BACKUP_STATUS_INVALID;
 	backup->tli = 0;
-#if PG_VERSION_NUM >= 90300
-	backup->start_lsn = backup->stop_lsn = (XLogRecPtr) 0;
-#else
 	backup->start_lsn.xlogid = 0;
 	backup->start_lsn.xrecoff = 0;
 	backup->stop_lsn.xlogid = 0;
 	backup->stop_lsn.xrecoff = 0;
-#endif
 	backup->start_time = (time_t) 0;
 	backup->end_time = (time_t) 0;
 	backup->recovery_xid = 0;

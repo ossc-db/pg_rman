@@ -19,10 +19,6 @@
 #include "storage/block.h"
 #include "storage/bufpage.h"
 
-#if PG_VERSION_NUM >= 90300
-#include "storage/checksum.h"
-#include "storage/checksum_impl.h"
-#endif
 
 #if PG_VERSION_NUM < 80300
 #define XLogRecPtrIsInvalid(r)  ((r).xrecoff == 0)
@@ -182,15 +178,8 @@ parse_page(const DataPage *page,
 			uint16 *length)
 {
 	const PageHeaderData *page_data = (PageHeaderData *) &page->page_data;
-/*
- * Combine 2-part LSN into a single 64-bit value to match the new
- * XLogRecPtr definition in 9.3+
- */
-#if PG_VERSION_NUM >= 90300
-	*lsn = PageXLogRecPtrGet(page_data->pd_lsn);
-#else
+
 	*lsn = page_data->pd_lsn;
-#endif
 
 	if (PageGetPageSize(page_data) == BLCKSZ &&
 		PageGetPageLayoutVersion(page_data) == PG_PAGE_LAYOUT_VERSION &&
@@ -326,11 +315,7 @@ backup_data_file(const char *from_root,
 		file->read_size += read_len;
 
 		/* if the page has not been modified since last backup, skip it */
-#if PG_VERSION_NUM >= 90300
-		if (!prev_file_not_found && lsn && !XLogRecPtrIsInvalid(page_lsn) && page_lsn < *lsn)
-#else
 		if (!prev_file_not_found && lsn && !XLogRecPtrIsInvalid(page_lsn) && XLByteLT(page_lsn, *lsn))
-#endif
 			continue;
 
 		upper_offset = header.hole_offset + header.hole_length;
@@ -519,11 +504,7 @@ void
 restore_data_file(const char *from_root,
 				  const char *to_root,
 				  pgFile *file,
-#if PG_VERSION_NUM >= 90300
-				  bool compress, bool data_checksum_enabled)
-#else
 				  bool compress)
-#endif
 {
 	char				to_path[MAXPGPATH];
 	FILE			   *in;
@@ -689,11 +670,6 @@ restore_data_file(const char *from_root,
 		if (fseek(out, blknum * BLCKSZ, SEEK_SET) < 0)
 			elog(ERROR_SYSTEM, _("can't seek block %u of \"%s\": %s"),
 				blknum, to_path, strerror(errno));
-
-#if PG_VERSION_NUM >= 90300
-		if(data_checksum_enabled)
-			((PageHeader) page.data)->pd_checksum = pg_checksum_page((char *) page.data, blknum);
-#endif
 
 		if (fwrite(page.data, 1, sizeof(page), out) != sizeof(page))
 			elog(ERROR_SYSTEM, _("can't write block %u of \"%s\": %s"),

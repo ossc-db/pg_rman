@@ -13,11 +13,6 @@
 
 #include <limits.h>
 #include "libpq-fe.h"
-
-#if PG_VERSION_NUM >= 90300
-#include "access/xlog_internal.h"
-#endif
-
 #include "pgut/pgut.h"
 #include "access/xlogdefs.h"
 #include "storage/bufpage.h"
@@ -320,11 +315,7 @@ extern void xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn)
 extern bool backup_data_file(const char *from_root, const char *to_root,
 							 pgFile *file, const XLogRecPtr *lsn, bool compress, bool prev_file_not_found);
 extern void restore_data_file(const char *from_root, const char *to_root,
-#if PG_VERSION_NUM >= 90300
-							  pgFile *file, bool compress, bool data_checksum_enabled);
-#else
 							  pgFile *file, bool compress);
-#endif
 extern bool copy_file(const char *from_root, const char *to_root,
 					  pgFile *file, CompressionMode compress);
 
@@ -345,7 +336,6 @@ extern char *read_control_file(void);
  * difficult as it invites including "postgres.h" as well which is
  * not possible due to quite a large number of conflicts
  */
-#if PG_VERSION_NUM < 90300
 #define XLogSegSize		((uint32) XLOG_SEG_SIZE)
 #define XLogSegsPerFile (((uint32) 0xffffffff) / XLogSegSize)
 #define XLogFileSize	(XLogSegsPerFile * XLogSegSize)
@@ -370,17 +360,5 @@ extern char *read_control_file(void);
 		else \
 			(logSeg)++; \
 	} while (0)
-#else /* 9.3 got rid of NextLogSeg() so explicitly declare it here */
-#define NextLogSeg(logId, logSeg)	\
-	do { \
-		if ((logSeg) >= XLogSegmentsPerXLogId - 1) \
-		{ \
-			(logId)++; \
-			(logSeg) = 0; \
-		} \
-		else \
-			(logSeg)++; \
-	} while (0)
 
-#endif
 #endif /* PG_RMAN_H */
