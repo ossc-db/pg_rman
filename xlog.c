@@ -14,11 +14,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#if PG_VERSION_NUM >= 80400
 typedef unsigned long Datum;
+
 #if PG_VERSION_NUM < 90300
 typedef struct MemoryContextData *MemoryContext;
-#endif
 #endif
 
 /*

@@ -24,16 +24,7 @@
 #include "utils/pg_crc.h"
 #include "parray.h"
 
-#if PG_VERSION_NUM < 80200
-#define XLOG_BLCKSZ		BLCKSZ
-#endif
-
-#if PG_VERSION_NUM < 80300
-#define TXID_CURRENT_SQL	"SELECT transactionid FROM pg_locks WHERE locktype = 'transactionid' AND pid = pg_backend_pid();"
-#include <sys/stat.h>
-#else
 #define TXID_CURRENT_SQL	"SELECT txid_current();"
-#endif
 
 /* Directory/File names */
 #define DATABASE_DIR			"database"

@@ -24,10 +24,6 @@
 #include "storage/checksum_impl.h"
 #endif
 
-#if PG_VERSION_NUM < 80300
-#define XLogRecPtrIsInvalid(r)  ((r).xrecoff == 0)
-#endif
-
 #ifdef HAVE_LIBZ
 #include <zlib.h>
 
