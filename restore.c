@@ -2,7 +2,7 @@
  *
  * restore.c: restore DB cluster and archived WAL.
  *
- * Copyright (c) 2009-2013, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+ * Copyright (c) 2009-2015, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
  *
  *-------------------------------------------------------------------------
  */
