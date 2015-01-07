@@ -9,9 +9,7 @@
 
 #include "postgres_fe.h"
 #include "catalog/pg_control.h"
-#if PG_VERSION_NUM >= 90300
 #include "common/fe_memutils.h"
-#endif
 
 #include <unistd.h>
 
@@ -43,11 +41,7 @@ read_control_file()
 		return NULL;
 	}
 
-#if PG_VERSION_NUM >= 90300
 	buffer = (char *) pg_malloc(PG_CONTROL_SIZE);
-#else
-	buffer = (char *) malloc(PG_CONTROL_SIZE);
-#endif
 
 	if (read(fd, buffer, PG_CONTROL_SIZE) != PG_CONTROL_SIZE)
 	{
