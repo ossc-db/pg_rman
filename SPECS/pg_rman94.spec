@@ -1,7 +1,7 @@
 # SPEC file for pg_rman
 # Copyright(C) 2009-2015 NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 
-%define _pgdir   /usr/pgsql-9.3
+%define _pgdir   /usr/pgsql-9.4
 %define _bindir  %{_pgdir}/bin
 %define _libdir  %{_pgdir}/lib
 %define _datadir %{_pgdir}/share
@@ -19,8 +19,8 @@ BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-%(%{__id_u} -n)
 Vendor:	    NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 
 ## We use postgresql-devel package
-BuildRequires:  postgresql93-devel, zlib-devel
-Requires:  postgresql93-libs
+BuildRequires:  postgresql94-devel, zlib-devel
+Requires:  postgresql94-libs
 
 ## Description for "pg_rman"
 %description
@@ -58,18 +58,5 @@ rm -rf %{buildroot}
 
 # History of pg_rman.
 %changelog
-* Fri Sep  5 2014 - NTT OSS Center <onishi_takashi_d5@lab.ntt.co.jp> 1.2.10-1
-* Tue Aug 12 2014 - NTT OSS Center <onishi_takashi_d5@lab.ntt.co.jp> 1.2.9-1
-* Sun Apr 20 2014 - The pg_rman Development Group <otsuka.knj@gmail.com> 1.2.8-2
-- Fixed the URL.
-* Mon Mar 31 2014 - NTT OSS Center <otsuka.kenji@lab.ntt.co.jp> 1.2.8-1
-- Update to 1.2.8.
-* Fri Dec 28 2013 - NTT OSS Center <otsuka.kenji@lab.ntt.co.jp> 1.2.7-1
-- Update to 1.2.7.
-- Supporting PostgreSQL 9.3.
-- Added required build dependencies. Thanks to Ulrich Habel.
-* Mon Sep 2  2013 - NTT OSS Center <otsuka.kenji@lab.ntt.co.jp> 1.2.6-1
-- Update to 1.2.6
-* Wed Nov 10  2010 - NTT OSS Center <tomonari.katsumata@oss.ntt.co.jp> 1.2.0-1
-* Wed Dec 9  2009 - NTT OSS Center <itagaki.takahiro@oss.ntt.co.jp> 1.1.1-1
-- Initial cut for 1.1.1
+* Tue Jan  6 2015 - NTT OSS Center <onishi_takashi_d5@lab.ntt.co.jp> 1.2.10-2
+- Initial cut for 1.2.10
