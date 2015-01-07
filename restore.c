@@ -15,9 +15,6 @@
 #include <unistd.h>
 
 #include "catalog/pg_control.h"
-#if PG_VERSION_NUM >= 90300
-#include "common/fe_memutils.h"
-#endif
 
 static void backup_online_files(bool re_recovery);
 static void restore_online_files(void);
@@ -42,11 +39,6 @@ static TimeLineID findNewestTimeLine(TimeLineID startTLI);
 static bool existsTimeLineHistory(TimeLineID probeTLI);
 static void print_backup_id(const pgBackup *backup);
 static void search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timelines);
-
-#if PG_VERSION_NUM >= 90300
-static int get_data_checksum_version(void);
-static int data_checksum_version;
-#endif
 
 int
 do_restore(const char *target_time,
@@ -113,9 +105,6 @@ do_restore(const char *target_time,
 	}
 
 	cur_tli = get_current_timeline();
-#if PG_VERSION_NUM >= 90300
-	data_checksum_version = get_data_checksum_version();
-#endif
 	backup_tli = get_fullbackup_timeline(backups, rt);
 
 	/*
@@ -262,14 +251,10 @@ base_backup_found:
 	if (check)
 	{
 		pgBackup *backup = (pgBackup *) parray_get(backups, last_restored_index);
-#if PG_VERSION_NUM >= 90300
-		needId = (uint32) (backup->start_lsn >> 32);
-		needSeg = (uint32) backup->start_lsn / XLogSegSize;
-#else
+
 		/* XLByteToSeg(xlrp, logId, logSeg) */
 		needId = backup->start_lsn.xlogid;
 		needSeg = backup->start_lsn.xrecoff / XLogSegSize;
-#endif
 	}
 
 	for (i = last_restored_index; i >= 0; i--)
@@ -458,11 +443,7 @@ restore_database(pgBackup *backup)
 
 		/* restore file */
 		if (!check)
-#if PG_VERSION_NUM >= 90300
-			restore_data_file(from_root, pgdata, file, backup->compress_data, (data_checksum_version > 0));
-#else
 			restore_data_file(from_root, pgdata, file, backup->compress_data);
-#endif
 
 		/* print size of restored file */
 		if (verbose && !check)
@@ -820,9 +801,7 @@ readTimeLineHistory(TimeLineID targetTLI)
 		/* skip leading whitespaces and check for # comment */
 		char	   *ptr;
 		char	   *endptr;
-#if PG_VERSION_NUM >= 90300
-		uint32		xlogid, xrecoff;
-#endif
+
 		for (ptr = fline; *ptr; ptr++)
 		{
 			if (!IsSpace(*ptr))
@@ -833,12 +812,8 @@ readTimeLineHistory(TimeLineID targetTLI)
 
 		timeline = pgut_new(pgTimeLine);
 		timeline->tli = 0;
-#if PG_VERSION_NUM >= 90300
-		timeline->end = 0;
-#else
 		timeline->end.xlogid = 0;
 		timeline->end.xrecoff = 0;
-#endif
 
 		/* expect a numeric timeline ID as first field of line */
 		timeline->tli = (TimeLineID) strtoul(ptr, &endptr, 0);
@@ -865,14 +840,9 @@ readTimeLineHistory(TimeLineID targetTLI)
 			elog(ERROR_CORRUPTED,
 			   _("End logfile must follow Timeline ID."));
 
-#if PG_VERSION_NUM >= 90300
-		sscanf(ptr, "%X/%08X", &xlogid, &xrecoff);
-		timeline->end = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
-#else
 		if (!xlog_logfname2lsn(ptr, &timeline->end))
 			elog(ERROR_CORRUPTED,
 					_("syntax error(endfname) in history file: %s"), fline);
-#endif
 		/* we ignore the remainder of each line */
 	}
 
@@ -886,12 +856,9 @@ readTimeLineHistory(TimeLineID targetTLI)
 	/* append target timeline */
 	timeline = pgut_new(pgTimeLine);
 	timeline->tli = targetTLI;
-#if PG_VERSION_NUM >= 90300
-	timeline->end = (uint64) -1;
-#else
 	timeline->end.xlogid = (uint32) -1; /* lsn in target timelie is valid */
 	timeline->end.xrecoff = (uint32) -1; /* lsn target timelie is valid */
-#endif
+
 	parray_insert(result, 0, timeline);
 
 	/* dump timeline branches for debug */
@@ -902,11 +869,7 @@ readTimeLineHistory(TimeLineID targetTLI)
 		{
 			pgTimeLine *timeline = parray_get(result, i);
 			elog(LOG, "%s() result[%d]: %08X/%08X/%08X", __FUNCTION__, i,
-#if PG_VERSION_NUM >= 90300
-				timeline->tli, (uint32) (timeline->end >> 32), (uint32) timeline->end);
-#else
 				timeline->tli, timeline->end.xlogid, timeline->end.xrecoff);
-#endif
 		}
 	}
 
@@ -943,11 +906,7 @@ satisfy_timeline(const parray *timelines, const pgBackup *backup)
 	{
 		pgTimeLine *timeline = (pgTimeLine *) parray_get(timelines, i);
 		if (backup->tli == timeline->tli &&
-#if PG_VERSION_NUM >= 90300
-				backup->stop_lsn < timeline->end)
-#else
 				XLByteLT(backup->stop_lsn, timeline->end))
-#endif
 			return true;
 	}
 	return false;
@@ -996,11 +955,7 @@ print_backup_id(const pgBackup *backup)
 	char timestamp[100];
 	time2iso(timestamp, lengthof(timestamp), backup->start_time);
 	printf(_("  %s (%X/%08X)\n"), timestamp,
-#if PG_VERSION_NUM >= 90300
-			(uint32) (backup->stop_lsn >> 32), (uint32) backup->stop_lsn);
-#else
 			backup->stop_lsn.xlogid, backup->stop_lsn.xrecoff);
-#endif
 }
 
 static void
@@ -1020,11 +975,7 @@ search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timel
 		for (i = 0; i < parray_num(timelines); i++)
 		{
 			pgTimeLine *timeline = (pgTimeLine *) parray_get(timelines, i);
-#if PG_VERSION_NUM >= 90300
-			XLogFileName(xlogfname, timeline->tli, *needId * XLogSegmentsPerXLogId + *needSeg);
-#else
 			XLogFileName(xlogfname, timeline->tli, *needId, *needSeg);
-#endif
 			join_path_components(xlogpath, path, xlogfname);
 
 			if (stat(xlogpath, &st) == 0)
@@ -1113,38 +1064,9 @@ get_current_timeline(void)
 		result = (TimeLineID) ((ControlFileData *) buffer)->checkPointCopy.ThisTimeLineID;
 	else
 		return 0;
-#if PG_VERSION_NUM >= 90300
-	pg_free(buffer);
-#else
 	free(buffer);
-#endif
 	return result;
 }
-
-#if PG_VERSION_NUM >= 90300
-/*
- * get datapage checksum version of the current database.
- */
-static int
-get_data_checksum_version(void)
-{
-	int			result;
-	char		*buffer;
-
-	buffer = read_control_file();
-
-	if(buffer != NULL)
-		result = (int) ((ControlFileData *) buffer)->data_checksum_version;
-	else
-		return -1;
-#if PG_VERSION_NUM >= 90300
-	pg_free(buffer);
-#else
-	free(buffer);
-#endif
-	return result;
-}
-#endif
 
 /*
  * Parse the string value passed via --recovery-target-timeline.
