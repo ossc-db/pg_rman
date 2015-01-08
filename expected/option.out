@@ -73,7 +73,7 @@ Report bugs to <http://sourceforge.net/p/pg-rman/tickets/>.
 
 ###### COMMAND OPTION TEST-0002 ######
 ###### version option ######
-pg_rman 1.2.10
+pg_rman 1.2.11
 1
 
 ###### COMMAND OPTION TEST-0003 ######
