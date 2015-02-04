@@ -4,35 +4,8 @@
 # This is a test script for options of pg_rman.
 #============================================================================
 
-BASE_PATH=`pwd`
-TEST_BASE=${BASE_PATH}/results/option
-PGDATA_PATH=${TEST_BASE}/data
-BACKUP_PATH=${TEST_BASE}/backup
-ARCLOG_PATH=${TEST_BASE}/arclog
-SRVLOG_PATH=${TEST_BASE}/srvlog
-TBLSPC_PATH=${TEST_BASE}/tblspc
-TEST_PGPORT=54321
-
-# Clear environment variables used by pg_rman except $PGDATA.
-# List of environment variables is defined in catalog.c.
-export PGDATA=${PGDATA_PATH}
-unset PGUSER
-unset PGPORT
-unset PGDATABASE
-unset COMPRESS_DATA
-unset BACKUP_MODE
-unset WITH_SERVLOG
-unset SMOOTH_CHECKPOINT
-unset KEEP_DATA_GENERATIONS
-unset KEEP_DATA_DAYS
-unset KEEP_ARCLOG_FILES
-unset KEEP_ARCLOG_DAYS
-unset KEEP_SRVLOG_FILES
-unset KEEP_SRVLOG_DAYS
-unset RECOVERY_TARGET_TIME
-unset RECOVERY_TARGET_XID
-unset RECOVERY_TARGET_INCLUSIVE
-unset RECOVERY_TARGET_TIMELINE
+# Load common rules
+. sql/common.sh option
 
 # Check presence of pgbench command and initialize environment
 which pgbench > /dev/null 2>&1
@@ -51,7 +24,7 @@ function cleanup()
 	rm -fr ${PGDATA_PATH}
 	rm -fr ${BACKUP_PATH}
 	rm -fr ${ARCLOG_PATH}
-	rm -fr ${SRVLOG_PATH} 
+	rm -fr ${SRVLOG_PATH}
 	rm -fr ${TBLSPC_PATH}
 	mkdir -p ${ARCLOG_PATH}
 	mkdir -p ${SRVLOG_PATH}
@@ -231,5 +204,5 @@ pg_ctl stop -m immediate > /dev/null 2>&1
 rm -fr ${PGDATA_PATH}
 rm -fr ${BACKUP_PATH}
 rm -fr ${ARCLOG_PATH}
-#rm -fr ${SRVLOG_PATH} 
+rm -fr ${SRVLOG_PATH}
 rm -fr ${TBLSPC_PATH}
