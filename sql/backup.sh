@@ -4,42 +4,15 @@
 # This is a test script for backup command of pg_rman.
 #============================================================================
 
-BASE_PATH=`pwd`
-TEST_BASE=${BASE_PATH}/results/backup
-PGDATA_PATH=${TEST_BASE}/data
-BACKUP_PATH=${TEST_BASE}/backup
-ARCLOG_PATH=${TEST_BASE}/arclog
-SRVLOG_PATH=${TEST_BASE}/srvlog
-TBLSPC_PATH=${TEST_BASE}/tblspc
-TEST_PGPORT=54321
+# Load common rules
+. sql/common.sh backup
+
+# Extra parameters exclusive to this test
 SCALE=1
 DURATION=10
 USE_DATA_CHECKSUM=""
 
-# Clear environment variables used by pg_rman except $PGDATA.
-# List of environment variables is defined in catalog.c.
-export PGDATA=${PGDATA_PATH}
-unset PGUSER
-unset PGPORT
-unset PGDATABASE
-unset COMPRESS_DATA
-unset BACKUP_MODE
-unset WITH_SERVLOG
-unset SMOOTH_CHECKPOINT
-unset KEEP_DATA_GENERATIONS
-unset KEEP_DATA_DAYS
-unset KEEP_ARCLOG_FILES
-unset KEEP_ARCLOG_DAYS
-unset KEEP_SRVLOG_FILES
-unset KEEP_SRVLOG_DAYS
-unset RECOVERY_TARGET_TIME
-unset RECOVERY_TARGET_XID
-unset RECOVERY_TARGET_INCLUSIVE
-unset RECOVERY_TARGET_TIMELINE
-unset HARD_COPY
-
-
-## command line option handling for this script 
+# command line option handling for this script
 while [ $# -gt 0 ]; do
 	case $1 in
 		"-d")
@@ -113,7 +86,7 @@ EOF
 
     # start PostgreSQL
     pg_ctl start -D ${PGDATA_PATH} -w -t 300 > /dev/null 2>&1
-	mkdir -p ${TBLSPC_PATH}/pgbench	
+	mkdir -p ${TBLSPC_PATH}/pgbench
 	psql --no-psqlrc -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1 << EOF
 CREATE TABLESPACE pgbench LOCATION '${TBLSPC_PATH}/pgbench';
 CREATE DATABASE pgbench TABLESPACE = pgbench;
@@ -259,8 +232,8 @@ grep OK ${TEST_BASE}/TEST-0009.log | sed -e 's@[^-]@@g' | wc -c
 NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH} | wc -l`
 echo "Number of remaining serverlog files: ${NUM_OF_SRVLOG_FILES_AFTER}"
 
-## cleanup
-# clean up the temporal test data
+# cleanup
+## clean up the temporal test data
 pg_ctl stop -m immediate > /dev/null 2>&1
 rm -fr ${PGDATA_PATH}
 rm -fr ${BACKUP_PATH}
