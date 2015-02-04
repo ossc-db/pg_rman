@@ -4,43 +4,17 @@
 # This is a test script for backup command from standby server of pg_rman.
 #============================================================================
 
-BASE_PATH=`pwd`
-TEST_BASE=${BASE_PATH}/results/backup_from_standby
-PGDATA_PATH=${TEST_BASE}/data
+# Load common rules
+. sql/common.sh backup_from_standby
+
+# Extra parameters exclusive to this test
 SBYDATA_PATH=${TEST_BASE}/standby_data
-BACKUP_PATH=${TEST_BASE}/backup
-ARCLOG_PATH=${TEST_BASE}/arclog
-SRVLOG_PATH=${TEST_BASE}/srvlog
-TBLSPC_PATH=${TEST_BASE}/tblspc
-TEST_PGPORT=54321
 TEST_SBYPGPORT=54322
 SCALE=2
 DURATION=10
 USE_DATA_CHECKSUM=""
 
-# Clear environment variables used by pg_rman .
-# List of environment variables is defined in catalog.c.
-unset PGUSER
-unset PGPORT
-unset PGDATABASE
-unset COMPRESS_DATA
-unset BACKUP_MODE
-unset WITH_SERVLOG
-unset SMOOTH_CHECKPOINT
-unset KEEP_DATA_GENERATIONS
-unset KEEP_DATA_DAYS
-unset KEEP_ARCLOG_FILES
-unset KEEP_ARCLOG_DAYS
-unset KEEP_SRVLOG_FILES
-unset KEEP_SRVLOG_DAYS
-unset RECOVERY_TARGET_TIME
-unset RECOVERY_TARGET_XID
-unset RECOVERY_TARGET_INCLUSIVE
-unset RECOVERY_TARGET_TIMELINE
-unset HARD_COPY
-
-
-## command line option handling for this script 
+# command line option handling for this script
 while [ $# -gt 0 ]; do
 	case $1 in
 		"-d")
