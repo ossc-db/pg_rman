@@ -4,42 +4,15 @@
 # This is a test script for restore command of pg_rman.
 #============================================================================
 
-BASE_PATH=`pwd`
-TEST_BASE=${BASE_PATH}/results/restore
-PGDATA_PATH=${TEST_BASE}/data
-BACKUP_PATH=${TEST_BASE}/backup
-ARCLOG_PATH=${TEST_BASE}/arclog
-SRVLOG_PATH=${TEST_BASE}/srvlog
-TBLSPC_PATH=${TEST_BASE}/tblspc
-TEST_PGPORT=54321
+# Load common rules
+. sql/common.sh restore
+
+# Parameters exclusive to this test
 SCALE=2
 DURATION=10
 USE_DATA_CHECKSUM=""
 
-# Clear environment variables used by pg_rman except $PGDATA.
-# List of environment variables is defined in catalog.c.
-export PGDATA=${PGDATA_PATH}
-unset PGUSER
-unset PGPORT
-unset PGDATABASE
-unset COMPRESS_DATA
-unset BACKUP_MODE
-unset WITH_SERVLOG
-unset SMOOTH_CHECKPOINT
-unset KEEP_DATA_GENERATIONS
-unset KEEP_DATA_DAYS
-unset KEEP_ARCLOG_FILES
-unset KEEP_ARCLOG_DAYS
-unset KEEP_SRVLOG_FILES
-unset KEEP_SRVLOG_DAYS
-unset RECOVERY_TARGET_TIME
-unset RECOVERY_TARGET_XID
-unset RECOVERY_TARGET_INCLUSIVE
-unset RECOVERY_TARGET_TIMELINE
-unset HARD_COPY
-
-
-## command line option handling for this script 
+# command line option handling for this script
 while [ $# -gt 0 ]; do
 	case $1 in
 		"-d")
@@ -118,7 +91,7 @@ EOF
 
     # start PostgreSQL
     pg_ctl start -D ${PGDATA_PATH} -w -t 300 > /dev/null 2>&1
-	mkdir -p ${TBLSPC_PATH}/pgbench	
+	mkdir -p ${TBLSPC_PATH}/pgbench
 	psql --no-psqlrc -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1 << EOF
 CREATE TABLESPACE pgbench LOCATION '${TBLSPC_PATH}/pgbench';
 CREATE DATABASE pgbench TABLESPACE = pgbench;
@@ -299,8 +272,8 @@ FLAGS=0
 for FILENAME in `ls ${ARCLOG_PATH}`
 do
 	if [ -L ${ARCLOG_PATH}/${FILENAME} ]; then
-		echo 'NG: hard-copy option does not work well.' ${FILENAME} 'is a symbolic link.' 
-		FLAGS=`expr ${FLAGS} + 1`	
+		echo 'NG: hard-copy option does not work well.' ${FILENAME} 'is a symbolic link.'
+		FLAGS=`expr ${FLAGS} + 1`
 	fi
 done
 if [ ${FLAGS} -eq 0 ]; then
