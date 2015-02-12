@@ -8,7 +8,10 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get -y install bc libpam-dev libedit-dev
   - sudo apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::="--force-confnew" install postgresql-$PGVERSION postgresql-server-dev-$PGVERSION postgresql-contrib-$PGVERSION
-  - if [ $PGVERSION = 9.2 ] ; then sudo apt-get -y --force-yes install libpq5=9.2.9-1.pgdg12.4+1 libpq-dev=9.2.9-1.pgdg12.4+1 ; fi
+  - sudo apt-cache policy libpq5
+  - sudo apt-cache policy libpq-dev
+  - if [ $PGVERSION = 9.3 ] ; then sudo apt-get -y --force-yes install libpq5=9.3.6-1.pgdg12.4+1 libpq-dev=9.3.6-1.pgdg12.4+1 ; fi
+  - if [ $PGVERSION = 9.2 ] ; then sudo apt-get -y --force-yes install libpq5=9.2.10-1.pgdg12.4+1 libpq-dev=9.2.10-1.pgdg12.4+1 ; fi
   - sudo service postgresql stop
   - echo 'export PATH=$PATH:/usr/lib/postgresql/$PGVERSION/bin' >> ~/.bashrc
   - export PATH=$PATH:/usr/lib/postgresql/$PGVERSION/bin
