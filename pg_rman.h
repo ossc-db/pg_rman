@@ -21,7 +21,13 @@
 #include "pgut/pgut.h"
 #include "access/xlogdefs.h"
 #include "storage/bufpage.h"
+
+#if PG_VERSION_NUM >= 90500
+#include "common/pg_crc.h"
+#else
 #include "utils/pg_crc.h"
+#endif
+
 #include "parray.h"
 
 #define TXID_CURRENT_SQL	"SELECT txid_current();"
