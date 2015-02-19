@@ -205,13 +205,8 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			 * Do backup only pages having larger LSN than previous backup.
 			 */
 			lsn = &prev_backup->start_lsn;
-#if PG_VERSION_NUM >= 90300
 			xlogid = (uint32) (*lsn >> 32);
 			xrecoff = (uint32) *lsn;
-#else
-			xlogid = lsn->xlogid;
-			xrecoff = lsn->xrecoff;
-#endif
 			elog(LOG, _("backup only the page that there was of the update from LSN(%X/%08X).\n"),
 							xlogid, xrecoff);
 		}
@@ -513,14 +508,9 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 		res = execute("SELECT * FROM pg_last_xlog_replay_location()", 0, NULL);
 		sscanf(PQgetvalue(res, 0, 0), "%X/%X", &xlogid, &xrecoff);
 		PQclear(res);
-#if PG_VERSION_NUM >= 90300
+
 		replayed_lsn = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
 		if (!(replayed_lsn < backup->start_lsn))
-#else
-		replayed_lsn.xlogid = xlogid;
-		replayed_lsn.xrecoff = xrecoff;
-		if (!XLByteLT(replayed_lsn, backup->start_lsn))
-#endif
 			break;
 		sleep(sleep_time);
 		/* next sleep_time is increasing by 2 times.	*/
@@ -564,11 +554,7 @@ do_backup_arclog(parray *backup_list)
 	current.read_arclog_bytes = 0;
 
 	/* switch xlog if database is not backed up */
-#if PG_VERSION_NUM >= 90300
 	if (((uint32) current.stop_lsn)  == 0)
-#else
-	if (current.stop_lsn.xrecoff == 0)
-#endif
 		pg_switch_xlog(&current);
 
 	/*
@@ -821,14 +807,7 @@ do_backup(pgBackupOption bkupopt)
 	/* initialize backup result */
 	current.status = BACKUP_STATUS_RUNNING;
 	current.tli = 0;		/* get from result of pg_start_backup() */
-#if PG_VERSION_NUM >= 90300
 	current.start_lsn = current.stop_lsn = (XLogRecPtr) 0;
-#else
-	current.start_lsn.xlogid = 0;
-	current.start_lsn.xrecoff = 0;
-	current.stop_lsn.xlogid = 0;
-	current.stop_lsn.xrecoff = 0;
-#endif
 	current.start_time = time(NULL);
 	current.end_time = (time_t) 0;
 	current.total_data_bytes = BYTES_INVALID;
@@ -1117,11 +1096,7 @@ wait_for_archive(pgBackup *backup, const char *sql)
 	{
 		get_lsn(res, &backup->tli, &backup->stop_lsn);
 		elog(LOG, _("%s(): tli=%X lsn=%X/%08X"), __FUNCTION__, backup->tli,
-#if PG_VERSION_NUM >= 90300
 			(uint32) (backup->stop_lsn >> 32), (uint32) backup->stop_lsn);
-#else
-			backup->stop_lsn.xlogid, backup->stop_lsn.xrecoff);
-#endif
 	}
 
 	/* get filename from the result of pg_xlogfile_name_offset() */
@@ -1201,12 +1176,7 @@ get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
 
 	xrecoff += off_upper << XLogSegOffsetBits;
 
-#if PG_VERSION_NUM >= 90300
 	*lsn = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
-#else
-	lsn->xlogid = xlogid;
-	lsn->xrecoff = xrecoff;
-#endif
 
 	elog(LOG, "%s():%s %s",
 		__FUNCTION__, PQgetvalue(res, 0, 0), PQgetvalue(res, 0, 1));
