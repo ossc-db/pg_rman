@@ -3,24 +3,25 @@ before_install:
   - sudo service postgresql stop
   - sudo apt-get -y --purge remove postgresql libpq-dev libpq5 postgresql-client-common postgresql-common
   - sudo rm -rf /var/lib/postgresql
-  - wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-  - sudo sh -c "echo deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main $PGVERSION >> /etc/apt/sources.list.d/postgresql.list"
   - sudo apt-get update -qq
   - sudo apt-get -y install bc libpam-dev libedit-dev
-  - sudo apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::="--force-confnew" install postgresql-$PGVERSION postgresql-server-dev-$PGVERSION postgresql-contrib-$PGVERSION
-  - sudo apt-cache policy libpq5
-  - sudo apt-cache policy libpq-dev
-  - if [ $PGVERSION = 9.3 ] ; then sudo apt-get -y --force-yes install libpq5=9.3.6-1.pgdg12.4+1 libpq-dev=9.3.6-1.pgdg12.4+1 ; fi
-  - if [ $PGVERSION = 9.2 ] ; then sudo apt-get -y --force-yes install libpq5=9.2.10-1.pgdg12.4+1 libpq-dev=9.2.10-1.pgdg12.4+1 ; fi
-  - sudo service postgresql stop
-  - echo 'export PATH=$PATH:/usr/lib/postgresql/$PGVERSION/bin' >> ~/.bashrc
-  - export PATH=$PATH:/usr/lib/postgresql/$PGVERSION/bin
+  - git clone https://github.com/postgres/postgres.git postgres-dev
+  - cd postgres-dev
+  - export POSTGRES_HOME=/home/travis/build/bwtakacy/pg_rman/pgsql/$PGVERSION
+  - echo 'export POSTGRES_HOME=/home/travis/build/bwtakacy/pg_rman/pgsql/$PGVERSION' >> ~/.bashrc
+  - ./configure --prefix=$POSTGRES_HOME
+  - make -j 2
+  - make install
+  - cd contrib/pgbench
+  - make
+  - make install
+  - echo 'export PATH=$PATH:$POSTGRES_HOME/bin' >> ~/.bashrc
+  - export PATH=$PATH:$POSTGRES_HOME/bin
   - echo 'export PGDATA=/home/travis/build/bwtakacy/pg_rman/pg_data/$PGVERSION' >> ~/.bashrc
   - export PGDATA=/home/travis/build/bwtakacy/pg_rman/pg_data/$PGVERSION
-  - mkdir pg_data
-  - mkdir pg_data/archivelog
-  - initdb --no-locale -D pg_data/$PGVERSION
-  - sudo chmod 777 /var/run/postgresql
+  - mkdir -p $PGDATA
+  - mkdir -p /home/travis/build/bwtakacy/pg_rman/pg_data/archivelog
+  - initdb --no-locale -D $PGDATA
   - sudo echo "local   all         postgres                          trust" > $PGDATA/pg_hba.conf
   - sudo echo "local   all         all                               trust" >> $PGDATA/pg_hba.conf
   - sudo echo "host    all         all         127.0.0.1/32          trust" >> $PGDATA/pg_hba.conf
@@ -33,16 +34,15 @@ before_install:
   - pg_ctl -D $PGDATA start
 
 before_script:
+  - cd
   - git clone https://github.com/bwtakacy/pg_rman.git pg_rman
   - cd pg_rman && git describe --alway
   - make
-  - sudo make install
+  - make install
 
 env:
   matrix:
-    - PGVERSION=9.4
-    - PGVERSION=9.3
-    - PGVERSION=9.2
+    - PGVERSION=9.5
 
 language: cpp
 compiler:
@@ -52,4 +52,4 @@ compiler:
 script: make installcheck
 
 after_script:
-  - cat /home/travis/build/bwtakacy/pg_rman/pg_rman/regression.diffs
+  - cat /home/travis/build/bwtakacy/pg_rman/postgres/regression.diffs
