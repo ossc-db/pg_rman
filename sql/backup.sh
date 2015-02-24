@@ -81,11 +81,11 @@ log_directory = '${SRVLOG_PATH}'
 log_filename = 'postgresql-%F_%H%M%S.log'
 archive_mode = on
 archive_command = 'cp %p ${ARCLOG_PATH}/%f'
-checkpoint_segments = 10
+max_wal_size = 512MB
 EOF
 
     # start PostgreSQL
-    pg_ctl start -D ${PGDATA_PATH} -w -t 300 > /dev/null 2>&1
+    pg_ctl start -D ${PGDATA_PATH} -w -t 300 > ${TEST_BASE}/pg_ctl.log 2>&1
 	mkdir -p ${TBLSPC_PATH}/pgbench
 	psql --no-psqlrc -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1 << EOF
 CREATE TABLESPACE pgbench LOCATION '${TBLSPC_PATH}/pgbench';

@@ -86,7 +86,7 @@ log_directory = '${SRVLOG_PATH}'
 log_filename = 'postgresql-%F_%H%M%S-%p.log'
 archive_mode = on
 archive_command = 'cp %p ${ARCLOG_PATH}/%f'
-checkpoint_segments = 10
+max_wal_size = 512MB
 EOF
 
 	cat << EOF >> ${PGDATA_PATH}/pg_hba.conf
