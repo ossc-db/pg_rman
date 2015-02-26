@@ -56,3 +56,15 @@ OK. Let's try to test --keep-srvlog-files=1.
 1
 7
 Number of remaining serverlog files: 1
+###### BACKUP COMMAND TEST-0010 ######
+###### swith backup mode from incremental to full ######
+incremental backup without validated full backup
+INFO: database backup start
+ERROR: There is no validated full backup with current timeline. Please take a full backup and validate it before doing an incremental backup. Or use with --full-backup-on-error command line option.
+10
+incremental backup in the same situation but with --full-backup-on-error option
+INFO: database backup start
+INFO: There is no validated full backup with current timeline. Switching to full backup mode.
+0
+1
+7

@@ -138,6 +138,7 @@ typedef struct pgBackup
 	BackupMode	backup_mode;
 	bool		with_serverlog;
 	bool		compress_data;
+	bool		full_backup_on_error;
 
 	/* Status - one of BACKUP_STATUS_xxx */
 	BackupStatus	status;
