@@ -190,10 +190,16 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		prev_backup = catalog_get_last_data_backup(backup_list);
 		if (prev_backup == NULL || prev_backup->tli != current.tli)
 		{
-			elog(ERROR_SYSTEM, _("There is no validated full backup with current timeline."
-					"Please take a full backup and validate it before doing an incremental backup."));
-///			elog(INFO, _("no previous full backup, performing a full backup instead"));
-///			current.backup_mode = BACKUP_MODE_FULL;
+            if (current.full_backup_on_error)
+            {
+			    elog(INFO, _("There is no validated full backup with current timeline. "
+                    "Switching to full backup mode."));
+			    current.backup_mode = BACKUP_MODE_FULL;
+            } else {
+			    elog(ERROR_SYSTEM, _("There is no validated full backup with current timeline. "
+					"Please take a full backup and validate it before doing an incremental backup. "
+                    "Or use with --full-backup-on-error command line option."));
+            }
 		}
 		else
 		{

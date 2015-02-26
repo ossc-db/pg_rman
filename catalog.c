@@ -345,6 +345,7 @@ pgBackupWriteConfigSection(FILE *out, pgBackup *backup)
 	fprintf(out, "# configuration\n");
 
 	fprintf(out, "BACKUP_MODE=%s\n", modes[backup->backup_mode]);
+	fprintf(out, "FULL_BACKUP_ON_ERROR=%s\n", BOOL_TO_STR(backup->full_backup_on_error));
 	fprintf(out, "WITH_SERVERLOG=%s\n", BOOL_TO_STR(backup->with_serverlog));
 	fprintf(out, "COMPRESS_DATA=%s\n", BOOL_TO_STR(backup->compress_data));
 }
@@ -450,6 +451,7 @@ catalog_read_ini(const char *path)
 		{ 's', 0, "backup-mode"			, NULL, SOURCE_ENV },
 		{ 'b', 0, "with-serverlog"		, NULL, SOURCE_ENV },
 		{ 'b', 0, "compress-data"		, NULL, SOURCE_ENV },
+		{ 'b', 0, "full-backup-on-error"		, NULL, SOURCE_ENV },
 		{ 'u', 0, "timelineid"			, NULL, SOURCE_ENV },
 		{ 's', 0, "start-lsn"			, NULL, SOURCE_ENV },
 		{ 's', 0, "stop-lsn"			, NULL, SOURCE_ENV },
@@ -479,6 +481,7 @@ catalog_read_ini(const char *path)
 	options[i++].var = &backup_mode;
 	options[i++].var = &backup->with_serverlog;
 	options[i++].var = &backup->compress_data;
+	options[i++].var = &backup->full_backup_on_error;
 	options[i++].var = &backup->tli;
 	options[i++].var = &start_lsn;
 	options[i++].var = &stop_lsn;
@@ -630,6 +633,7 @@ catalog_init_config(pgBackup *backup)
 	backup->backup_mode = BACKUP_MODE_INVALID;
 	backup->with_serverlog = false;
 	backup->compress_data = false;
+	backup->full_backup_on_error = false;
 	backup->status = BACKUP_STATUS_INVALID;
 	backup->tli = 0;
 	backup->start_lsn.xlogid = 0;
