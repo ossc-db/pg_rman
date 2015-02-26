@@ -69,10 +69,11 @@ static pgut_option options[] =
 	{ 'b', 'v', "verbose"		, &verbose },
 	{ 'b', 'c', "check"			, &check },
 	/* backup options */
-	{ 'f', 'b', "backup-mode"		, opt_backup_mode			, SOURCE_ENV },
-	{ 'b', 's', "with-serverlog"	, &current.with_serverlog	, SOURCE_ENV },
-	{ 'b', 'Z', "compress-data"		, &current.compress_data	, SOURCE_ENV },
-	{ 'b', 'C', "smooth-checkpoint"	, &smooth_checkpoint		, SOURCE_ENV },
+	{ 'f', 'b', "backup-mode"		    , opt_backup_mode			, SOURCE_ENV },
+	{ 'b', 's', "with-serverlog"	    , &current.with_serverlog	, SOURCE_ENV },
+	{ 'b', 'Z', "compress-data"		    , &current.compress_data	, SOURCE_ENV },
+	{ 'b', 'C', "smooth-checkpoint"	    , &smooth_checkpoint		, SOURCE_ENV },
+	{ 'b', 'F', "full-backup-on-error"	, &current.full_backup_on_error		, SOURCE_ENV },
 	{ 's', 12, "standby-host"	, &standby_host		, SOURCE_ENV },
 	{ 's', 13, "standby-port"	, &standby_port		, SOURCE_ENV },
 	/* delete options */
@@ -191,15 +192,15 @@ main(int argc, char *argv[])
 	else if (pg_strcasecmp(cmd, "backup") == 0)
 	{
 		pgBackupOption bkupopt;
-		bkupopt.smooth_checkpoint	= smooth_checkpoint;
-		bkupopt.keep_arclog_files	= keep_arclog_files;
-		bkupopt.keep_arclog_days	= keep_arclog_days;
-		bkupopt.keep_srvlog_files	= keep_srvlog_files;
-		bkupopt.keep_srvlog_days	= keep_srvlog_days;
+		bkupopt.smooth_checkpoint	    = smooth_checkpoint;
+		bkupopt.keep_arclog_files	    = keep_arclog_files;
+		bkupopt.keep_arclog_days	    = keep_arclog_days;
+		bkupopt.keep_srvlog_files	    = keep_srvlog_files;
+		bkupopt.keep_srvlog_days	    = keep_srvlog_days;
 		bkupopt.keep_data_generations	= keep_data_generations;
-		bkupopt.keep_data_days		= keep_data_days;
-		bkupopt.standby_host		= standby_host;
-		bkupopt.standby_port		= standby_port;
+		bkupopt.keep_data_days		    = keep_data_days;
+		bkupopt.standby_host		    = standby_host;
+		bkupopt.standby_port		    = standby_port;
 		return do_backup(bkupopt);
 	}
 	else if (pg_strcasecmp(cmd, "restore") == 0){
@@ -245,6 +246,10 @@ pgut_help(bool details)
 	printf(_("  -s, --with-serverlog      also backup server log files\n"));
 	printf(_("  -Z, --compress-data       compress data backup with zlib\n"));
 	printf(_("  -C, --smooth-checkpoint   do smooth checkpoint before backup\n"));
+	printf(_("  -F, --full-backup-on-error   switch to full backup mode\n"));
+	printf(_("                               if pg_rman cannot find validate full backup\n"));
+	printf(_("                               on current timeline\n"));
+	printf(_("      NOTE: this option is only used in --backup-mode=incremental.\n"));
 	printf(_("  --keep-data-generations=N keep GENERATION of full data backup\n"));
 	printf(_("      NOTE: This number does not include the latest full backup in a count.\n"));
 	printf(_("  --keep-data-days=DAY      keep enough data backup to recover to DAY days age\n"));
