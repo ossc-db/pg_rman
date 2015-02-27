@@ -249,7 +249,7 @@ pgut_help(bool details)
 	printf(_("  -F, --full-backup-on-error   switch to full backup mode\n"));
 	printf(_("                               if pg_rman cannot find validate full backup\n"));
 	printf(_("                               on current timeline\n"));
-	printf(_("      NOTE: this option is only used in --backup-mode=incremental.\n"));
+	printf(_("      NOTE: this option is only used in --backup-mode=incremental or archive.\n"));
 	printf(_("  --keep-data-generations=N keep GENERATION of full data backup\n"));
 	printf(_("      NOTE: This number does not include the latest full backup in a count.\n"));
 	printf(_("  --keep-data-days=DAY      keep enough data backup to recover to DAY days age\n"));
