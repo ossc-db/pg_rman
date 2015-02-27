@@ -244,6 +244,18 @@ pg_rman show -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0010.log 2>&1
 grep -c OK ${TEST_BASE}/TEST-0010.log
 grep OK ${TEST_BASE}/TEST-0010.log | sed -e 's@[^-]@@g' | wc -c
 
+echo '###### BACKUP COMMAND TEST-0011 ######'
+echo '###### swith backup mode from archive to full ######'
+init_catalog
+echo 'archive backup without validated full backup'
+pg_rman backup -B ${BACKUP_PATH} -b archive -s -Z -p ${TEST_PGPORT} -d postgres;echo $?
+echo 'archive backup in the same situation but with --full-backup-on-error option'
+pg_rman backup -B ${BACKUP_PATH} -b archive -F -s -Z -p ${TEST_PGPORT} -d postgres;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+pg_rman show -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0011.log 2>&1
+grep -c OK ${TEST_BASE}/TEST-0011.log
+grep OK ${TEST_BASE}/TEST-0011.log | sed -e 's@[^-]@@g' | wc -c
+
 # cleanup
 ## clean up the temporal test data
 pg_ctl stop -m immediate > /dev/null 2>&1
