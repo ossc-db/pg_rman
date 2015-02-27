@@ -27,7 +27,7 @@ Backup options:
   -F, --full-backup-on-error   switch to full backup mode
                                if pg_rman cannot find validate full backup
                                on current timeline
-      NOTE: this option is only used in --backup-mode=incremental.
+      NOTE: this option is only used in --backup-mode=incremental or archive.
   --keep-data-generations=N keep GENERATION of full data backup
       NOTE: This number does not include the latest full backup in a count.
   --keep-data-days=DAY      keep enough data backup to recover to DAY days age
