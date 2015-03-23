@@ -1,0 +1,1301 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD html 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<title>pg_rman</title>
+<link rel="home" title="pg_rman" href="index.html">
+<link rel="stylesheet" TYPE="text/css"href="style.css">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+
+<body>
+<h1 id="pg_rman">pg_rman 1.2</h1>
+    <a href="index.html">documentation in English</a>
+<hr />
+
+<div class="index">
+<ol>
+<li><a href="#name">名前</a></li>
+<li><a href="#synopsis">概要</a></li>
+<li><a href="#description">説明</a></li>
+<li><a href="#examples">使用例</a></li>
+<li><a href="#options">オプション</a></li>
+<li><a href="#waytopassoptions">パラメータの指定方法</a></li>
+<li><a href="#restrictions">使用上の注意と制約</a></li>
+<li><a href="#details">詳細</a></li>
+<li><a href="#externalscript">外部スクリプトとの連携</a></li>
+<li><a href="#install">インストール方法</a></li>
+<li><a href="#requirement">動作環境</a></li>
+<li><a href="#seealso">関連項目</a></li>
+</ol>
+</div>
+
+<h2 id="name">名前</h2>
+<p>pg_rman --  PostgreSQL のバックアップとリカバリを管理します。</p>
+
+<h2 id="synopsis">概要</h2>
+
+<pre><code>pg_rman [ OPTIONS ] { init | backup | restore | show [ DATE | timeline ] | validate [ DATE ] | delete DATE }
+</code></pre>
+
+<p>pg_rman は以下の機能を持ちます。</p>
+
+<ul>
+<li>コマンド1つで、テーブルスペースまで含めてデータベース全体のバックアップを取得します。</li>
+<li>コマンド1つで、バックアップからの完全リカバリを行うことができます。</li>
+<li>増分バックアップや、バックアップの圧縮を行うため、バックアップファイルがコンパクトです。</li>
+<li>バックアップは世代ごとに管理し、一覧できます。</li>
+<li>ストレージ・スナップショットをサポートし、バックアップ取得時間を短縮します。</li>
+</ul>
+
+
+<p><code>DATE</code> には、対象のバックアップのタイムスタンプ (開始日時) を ISO 形式 (YYYY-MM-DD HH:MI:SS) で指定します。<code>DATE</code> の末尾は省略可能で、その場合は指定した <code>DATE</code> の範囲に含まれるバックアップが対象となります。</p>
+
+<pre><code>$ pg_rman show 2009-12 # 2009年12月に取得したバックアップを表示
+$ pg_rman validate     # 未検証のすべてのバックアップを検証
+</code></pre>
+
+<p>以下のコマンドをサポートします。オプション <code>OPTIONS</code> の詳細は <strong>オプション</strong> を参照してください。</p>
+
+<ul>
+<li><code>init</code>
+
+<ul>
+<li>バックアップカタログを初期化します。</li>
+</ul>
+</li>
+<li><code>backup</code>
+
+<ul>
+<li>オンライン・バックアップを行います。</li>
+</ul>
+</li>
+<li><code>restore</code>
+
+<ul>
+<li>リストアを行います。</li>
+</ul>
+</li>
+<li><code>show</code>
+
+<ul>
+<li>過去のバックアップ履歴を表示します。対象として <code>timeline</code> を指定すると、バックアップのタイムラインとその親タイムラインを表示します。</li>
+</ul>
+</li>
+<li><code>validate</code>
+
+<ul>
+<li>バックアップを検証します。取得したバックアップは検証したものでないとリストアや、増分バックアップのベースとして使用することができません。</li>
+</ul>
+</li>
+<li><code>delete</code>
+
+<ul>
+<li>バックアップを削除します。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2 id="description">説明</h2>
+
+<p>pg_rman は、PostgreSQL のオンライン・バックアップとリカバリを管理するためのプログラムです。
+バックアップ方式は、物理オンライン・バックアップです。
+バックアップ対象は、データベースクラスタ自体とアーカイブ WAL、サーバログです。</p>
+
+<p>PostgreSQL 9.0以降のレプリケーションを利用している場合、スタンバイサイトでのバックアップに対応しています。</p>
+
+<p>その他、ストレージ・スナップショットを使用したバックアップに対応しています。</p>
+
+<h3>バックアップカタログの初期化</h3>
+
+<p>pg_rman は、取得したバックアップファイルや管理情報を「バックアップカタログ」という領域に保存します。
+このため、まず最初にバックアップカタログを初期化する必要があります。</p>
+
+<pre><code>$ pg_rman init -B &lt;バックアップカタログパス&gt; -D &lt;PostgreSQLのデータベースクラスタパス&gt; -A &lt;アーカイブログの格納パス&gt;
+</code></pre>
+
+<p>ここで、カタログを初期化する前に postgresql.conf にある <code>log_directory</code>、<code>archive_mode</code>、<code>archive_command</code> を設定しておくことをお奨めします。
+これらのパラメータが設定されていると、pg_rman はその値を反映してサーバログの参照先とアーカイブログの参照先を設定することができます。
+この場合、PostgreSQL のデータベースクラスタパスを指定する必要があります。
+</p>
+
+<h3>バックアップ取得</h3>
+
+<p>バックアップのモードは以下のいずれかで指定します。</p>
+
+<ul>
+<li><strong>全体バックアップ</strong>
+
+<ul>
+<li>データベースクラスタ全体をバックアップします。</li>
+</ul>
+</li>
+<li><strong>増分バックアップ</strong>
+
+<ul>
+<li>最新の検証済みバックアップの開始以降に変更のあったファイル・ページのみをバックアップします。実行には、同一タイムライン上での検証済み全体バックアップが存在する必要があります。</li>
+</ul>
+</li>
+<li><strong>アーカイブ WAL</strong>
+
+<ul>
+<li>アーカイブ WAL のみバックアップします。</li>
+</ul>
+</li>
+</ul>
+
+<h3>バックアップデータの検証</h3>
+<p>
+取得したバックアップが適切かどうか検証します。検証にはファイルサイズのチェックとCRCによるチェックを用いています。
+</p>
+
+<p>バックアップが正常に取得できたら、なるべく早いタイミングでバックアップを検証してください。
+未検証のバックアップは、リストアにも増分バックアップの取得基準としても使用できません。</p>
+
+<h3>バックアップカタログの情報確認</h3>
+<p>
+取得したバックアップは <code>show</code> コマンドにて確認できます。
+</p>
+
+<pre><code>$ pg_rman show
+============================================================================
+Start                Time   Total    Data     WAL     Log  Backup   Status
+============================================================================
+2015-03-10 13:26:37    0m    ----    ----    16MB    ----    26kB   OK
+2015-03-10 13:26:06    0m    ----    16kB    33MB    ----    54kB   OK
+2015-03-10 13:25:05    0m    28MB    ----   838MB    150B  6549kB   OK
+</code></pre>
+
+<p>一覧に表示される列の意味は以下の通りです。</p>
+
+<ul>
+<li>Start : バックアップの開始時刻</li>
+<li>Time : バックアップにかかった時間</li>
+<li>Total : バックアップ対象のデータベースのサイズ</li>
+<li>Data : 読み込んだデータファイルサイズ</li>
+<li>WAL : 読み込んだアーカイブWALサイズ</li>
+<li>Log : 読み込んだサーバログサイズ</li>
+<li>Backup: バックアップ全体のサイズ (≒書き出し量)</li>
+<li>Status: バックアップの状態。以下の状態があります。
+
+<ul>
+<li>OK : バックアップが完了し、検証済みです。</li>
+<li>DONE : バックアップは完了しましたが、まだ検証していません。</li>
+<li>RUNNING : バックアップ中です。</li>
+<li>DELETING : 削除処理中です。</li>
+<li>DELETED : 削除済みです。</li>
+<li>ERROR : バックアップ中にエラーが発生したため利用できません。</li>
+<li>CORRUPT : バックアップが破損しているため利用できません。</li>
+</ul>
+</li>
+</ul>
+
+<p><code>show timeline</code> コマンドにて、各バックアップのタイムラインを表示できます。</p>
+
+<pre><code>$ pg_rman show timeline
+============================================================
+Start                Mode  Current TLI  Parent TLI  Status
+============================================================
+2011-11-27 19:16:37  INCR            1           0  RUNNING
+2011-11-27 19:16:20  INCR            1           0  OK
+2011-11-27 19:15:45  FULL            1           0  OK
+</code></pre>
+
+<p>また、<code>timeline</code> の指定有無に関わらず、「Start」に表示される日付を <code>show</code> コマンドに指定するとバックアップの詳細を表示できます。</p>
+
+<pre><code>$ pg_rman show '2015-03-10 13:25:05'
+# configuration
+BACKUP_MODE=FULL
+FULL_BACKUP_ON_ERROR=false
+WITH_SERVERLOG=true
+COMPRESS_DATA=true
+# result
+TIMELINEID=1
+START_LSN=0/32000028
+STOP_LSN=0/320000f8
+START_TIME='2015-03-10 13:25:05'
+END_TIME='2015-03-10 13:25:13'
+RECOVERY_XID=1836
+RECOVERY_TIME='2015-03-10 13:25:08'
+TOTAL_DATA_BYTES=28920624
+READ_DATA_BYTES=28920624
+READ_ARCLOG_BYTES=838868754
+READ_SRVLOG_BYTES=150
+WRITE_BYTES=6549216
+BLOCK_SIZE=8192
+XLOG_BLOCK_SIZE=8192
+STATUS=OK
+</code></pre>
+
+<h3>リストア</h3>
+<p>取得した検証済みバックアップを用いて、必要なファイルをリストアします。</p>
+<p>リストアを行う前に、PostgreSQL サーバを停止させる必要があります。
+</p>
+<p>
+また、既存のデータベースクラスタは残しておいてください。
+pg_rmanがリストアの際にタイムラインやデータチェックサム有無などの情報を読み取る必要があるためです。
+pg_rmanがリストア中に未アーカイブの WAL をバックアップしつつ、その他のデータを削除します。
+未アーカイブの WAL のバックアップは次に全体バックアップを取得するまで保持されるので、リカバリ結果が望んだものでなかった場合は再度リストアからやり直すことが可能です。
+</p>
+
+<p>リストア時に、<code>$PGDATA</code> に recovery.conf を生成します。
+必要に応じてこのファイルを編集してから PostgreSQL を起動して PITR を実行してください。</p>
+
+<p>リカバリ結果が確認できたら、速やかに全体バックアップを取得してください。</p>
+
+<p><code>--recovery-target-timeline</code> を指定しなかった場合は、制御ファイル(<code>$PGDATA/global/pg_control</code>) の最終チェックポイントタイムラインをターゲットとしてリストアします。
+pg_control が存在しない場合は、リストアのベースとなる全体バックアップのタイムラインをターゲットとしてリストアします。</p>
+
+<h3>バックアップの削除</h3>
+<p><code>delete</code> コマンドで日時を指定すると、そこまでのリカバリに不要なバックアップを削除できます。以下の例では、2009年9月11日の 12:00 時点にリカバリするのに不要なバックアップを削除しています。</p>
+
+<pre><code>$ pg_rman show
+============================================================================
+Start                Time   Total    Data     WAL     Log  Backup   Status
+============================================================================
+2009-09-11 20:00:01    0m    ----    ----      0B    ----      0B   OK
+2009-09-11 15:00:53    0m    ----   8363B    16MB    ----  2346kB   OK
+2009-09-11 10:00:48    0m    ----    ----      0B    ----      0B   OK
+2009-09-11 05:00:06    0m    40MB    ----    16MB    ----  5277kB   OK
+2009-09-11 00:00:02    0m    ----   8363B    16MB    ----   464kB   OK
+2009-09-10 20:30:12    0m    ----    ----      0B    ----      0B   OK
+2009-09-10 15:00:06    0m    ----    ----    16MB    ----    16kB   OK
+2009-09-10 10:00:02    0m    ----   8363B    16MB    ----    16kB   OK
+2009-09-10 05:00:08    0m    40MB    ----   150MB    ----    13MB   OK
+$ pg_rman delete 2009-09-11 12:00:00
+$ pg_rman show
+============================================================================
+Start                Time   Total    Data     WAL     Log  Backup   Status
+============================================================================
+2009-09-11 20:00:01    0m    ----    ----      0B    ----      0B   OK
+2009-09-11 15:00:53    0m    ----   8363B    16MB    ----  2346kB   OK
+2009-09-11 10:00:48    0m    ----    ----      0B    ----      0B   OK
+2009-09-11 05:00:06    0m    40MB    ----    16MB    ----  5277kB   OK
+</code></pre>
+
+
+<h3>スタンバイサイトでのバックアップ</h3>
+
+<p>PostgreSQL 9.0 以降のレプリケーションを利用している場合、スタンバイサイトでバックアップを取得することができます。</p>
+
+<p>スタンバイサイトでのバックアップを行うためには、通常の pg_rman の利用方法と異なるオプションを指定する必要があります。
+</p>
+
+<p>スタンバイサイトで pg_rman を用いたバックアップを行う使用例を示します。 基本的な使用方法は、単体の PostgreSQL で利用する場合と同様なので、注意が必要な点のみ記述します。</p>
+
+<p>まず、バックアップカタログの初期化についてです。 <code>-D</code>/<code>--pgdata</code> で指定するものは、スタンバイのデータベースクラスタへのパスとなります。</p>
+
+<pre><code>$ pg_rman init -B &lt;バックアップカタログパス&gt; -D &lt;(スタンバイの)PostgreSQLのデータベースクラスタパス&gt;
+</code></pre>
+
+<p>スタンバイサイトでバックアップを取得するには、<code>-D</code>/<code>--pgdata</code> オプションでスタンバイサイトのデータベースクラスタを指定し、その他の接続オプション(<code>-d</code>/<code>--dbname</code>、<code>-h</code>/<code>--host</code>、<code>-p</code>/<code>--port</code> など)でマスタサイトの設定情報を指定します。 スタンバイ接続オプション (<code>--standby-host</code>、<code>--standby-port</code>) でスタンバイサイトの設定情報を指定します。<code>--standby-host</code> と <code>--standby-port</code> は両方とも指定する必要があります。</p>
+
+<p>以下の環境において、スタンバイサイトからバックアップを取得する際のコマンド例を示します。</p>
+
+<ul>
+<li>マスタサイトのホスト: master</li>
+<li>スタンバイサイトのホスト: 自ホスト(localhost)</li>
+<li>スタンバイサイトのポート番号: 5432</li>
+<li>スタンバイサイトのデータベースクラスタパス: /home/postgres/pgdata_sby
+<li>バックアップ取得コマンド
+<pre><code>$ pg_rman backup --pgdata=/home/postgres/pgdata_sby --backup-mode=full --host=master --standby-host=localhost --standby-port=5432
+</code></pre>
+</ul>
+
+
+
+<h2 id="examples">使用例</h2>
+<p>
+バックアップ対象のPostgreSQLが以下のような設定になっているとします。
+</p>
+
+<pre><code>postgres=# SHOW log_directory ;
+ log_directory
+---------------
+ pg_log
+(1 row)
+
+postgres=# SHOW archive_command ;
+              archive_command
+--------------------------------------------
+ cp %p /home/postgres/arc_log/%f
+(1 row)
+</code></pre>
+
+<p>
+また、PostgreSQLのデータベースクラスタのパスを環境変数 <code>PGDATA</code> に、pg_rmanが管理するバックアップカタログのパスを環境変数 <code>BACKUP_PATH</code> に設定しておきます。
+これによりpg_rmanの各コマンド実行時に毎回これらの値をオプションで指定する必要がなくなります。
+</p>
+
+<pre><code>$ echo $PGDATA
+/home/postgres/pgdata
+$ echo $BACKUP_PATH
+/home/postgres/backup
+</code></pre>
+
+<p>バックアップカタログの初期化を行います</p>
+
+<pre><code>$ pg_rman init
+INFO: ARCLOG_PATH is set to '/home/postgres/arclog'
+INFO: SRVLOG_PATH is set to '/home/postgres/pgdata/pg_log'
+</code></pre>
+
+<p>バックアップカタログの初期化を行うと、<code>BACKUP_PATH</code> 配下にファイル <code>pg_rman.ini</code> が生成されます。
+このファイルに記載したオプションは、各pg_rmanのコマンド実行時にデフォルトとして使用されるため、コマンドラインオプションにて指定する必要がなくなります。
+一般的な運用では、ほぼ全てのパラメータは設定ファイルで指定し、バックアップモードのみをコマンドラインで与えることになるでしょう。
+<code>pg_rman.ini</code>内で指定する際のオプション名については、<a href="">パラメータの指定方法</a>を参照してください。
+</p>
+
+<p>今回は以下の様なオプション設定をデフォルトとして採用するとします。</p>
+
+<pre><code>$ cat $BACKUP_PATH/pg_rman.ini
+ARCLOG_PATH = /home/postgres/arclog
+SRVLOG_PATH = /home/postgres/pgdata/pg_log
+
+BACKUP_MODE = F
+COMPRESS_DATA = YES
+KEEP_ARCLOG_FILES = 10
+KEEP_ARCLOG_DAYS = 10
+KEEP_DATA_GENERATIONS = 3
+KEEP_DATA_DAYS = 120
+KEEP_SRVLOG_FILES = 10
+KEEP_SRVLOG_DAYS = 10
+</code></pre>
+
+<p>バックアップを行います。
+まずはデータベース全体のバックアップを取得します。
+今回は合わせてサーバログもバックアップするとします。
+</p>
+
+<pre><code>$ pg_rman backup --backup-mode=full --with-serverlog
+INFO: database backup start
+NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+</code></pre>
+
+
+
+<pre><code>$ pg_rman show
+============================================================================
+Start                Time   Total    Data     WAL     Log  Backup   Status
+============================================================================
+2015-03-10 13:25:05    0m    28MB    ----   838MB    150B  6549kB   DONE
+</code></pre>
+
+<p>
+Status列の値がDONEになっているのは、バックアップ取得は完了したが、検証を実施していないためです。
+<code>validate</code> コマンドを実行して、上記で取得したバックアップの検証を行います。
+</p>
+
+<pre><code>$ pg_rman validate
+INFO: validate: 2015-03-10 13:25:05 backup and archive log files by CRC
+$ pg_rman show
+============================================================================
+Start                Time   Total    Data     WAL     Log  Backup   Status
+============================================================================
+2015-03-10 13:25:05    0m    28MB    ----   838MB    150B  6549kB   OK
+</code></pre>
+
+<p>
+検証が成功したため、showコマンドの出力結果にてStatus列の値がOKになっています。
+</p>
+
+<p>現在のデータベースを破棄し、バックアップからリストアします。</p>
+
+<pre><code>$ pg_ctl stop -m immediate
+$ pg_rman restore
+</code></pre>
+
+<p>リストア完了後にpg_rmanが生成したrecovery.confの内容を確認し、必要に応じて修正を行います。
+今回の場合は、最新の状態までリカバリするため特に修正せず、そのままPostgreSQLを起動してPITRを実施させます。
+</p>
+
+<pre><code>$ cat $PGDATA/recovery.conf
+# recovery.conf generated by pg_rman 1.2.11
+restore_command = 'cp /home/postgres/arclog/%f %p'
+recovery_target_timeline = '1'
+$ pg_ctl start
+</code></pre>
+
+
+
+<h1 id="options">オプション</h1>
+
+<p>pg_rman では、下記のコマンドライン引数を指定できます。一部のオプションは環境変数でも指定できます。詳細はパラメータの指定方法を参照してください。</p>
+
+<h2>共通オプション</h2>
+
+<p>データの場所に関するパスは、絶対パスで指定する必要があります。</p>
+
+<ul>
+<li><strong><code>-D PATH</code> / <code>--pgdata=PATH</code></strong>
+
+<ul>
+<li>データベースクラスタの絶対パスを指定します。バックアップ時とリストア時には必須項目です。</li>
+</ul>
+</li>
+<li><strong><code>-A PATH</code> / <code>--arclog-path=PATH</code></strong>
+
+<ul>
+<li>WAL のアーカイブ先ディレクトリの絶対パスを指定します。バックアップ時とリストア時には必須項目です。</li>
+</ul>
+</li>
+<li><strong><code>-S PATH</code> / <code>--srvlog-path=PATH</code></strong>
+
+<ul>
+<li>サーバログが存在するディレクトリの絶対パスを指定します。サーバログのバックアップ時とリストア時には必須項目です。</li>
+</ul>
+</li>
+<li><strong><code>-B PATH</code> / <code>--backup-path=PATH</code></strong>
+
+<ul>
+<li>バックアップカタログの絶対パスを指定します。必須項目です。</li>
+</ul>
+</li>
+<li><strong><code>-c</code> / <code>--check</code></strong>
+
+<ul>
+<li>このオプションを指定すると、バックアップやリストアの実際の処理は行いません。<code>--verbose</code> オプションと組み合わせて処理内容を確認するのに使用します。</li>
+</ul>
+</li>
+<li><strong><code>-v</code> / <code>--verbose</code></strong>
+
+<ul>
+<li>このオプションを指定すると処理内容を表示します。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>バックアップ・オプション</h2>
+
+<ul>
+<li><strong><code>-b { full | incremental | archive }</code> / <code>--backup-mode={ full | incremental | archive }</code></strong>
+
+<ul>
+<li>バックアップ対象を指定します。全体バックアップ (<code>full</code>), 増分バックアップ (<code>incremental</code>), アーカイブ WAL バックアップ (<code>archive</code>) のいずれかを指定できます。指定した文字列の前方一致で判定されるため、<code>-b f</code> は <code>full</code> と同じ動作になります。
+
+<ul>
+<li>full : 全体バックアップとアーカイブWALバックアップを取得</li>
+<li>incremental : 増分バックアップとアーカイブWALバックアップを取得</li>
+<li>archive : データベースはバックアップせず、WALバックアップのみを取得</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong><code>-s</code> / <code>--with-serverlog</code></strong>
+
+<ul>
+<li>サーバログをバックアップします。省略時は取得しません。</li>
+</ul>
+</li>
+<li><strong><code>-Z</code> / <code>--compress-data</code></strong>
+
+<ul>
+<li>zlibを用いてバックアップファイルを圧縮します。省略時は圧縮なしです。</li>
+</ul>
+</li>
+<li><strong><code>-C</code> / <code>--smooth-checkpoint</code></strong>
+
+<ul>
+<li>バックアップ直前に平滑化チェックポイントを行います。<a href="http://www.postgresql.jp/document/current/html/functions-admin.html"><code>pg_start_backup()</code></a> の第2引数に相当します。</li>
+</ul>
+</li>
+<li><strong><code>--keep-data-generations</code> / <code>--keep-data-days</code></strong>
+
+<ul>
+<li>バックアップしたデータの保持期限を指定します。 <code>--keep-data-generations</code> では保存する世代数を、<code>--keep-data-days</code> では最低保存日数を指定します。有効にするためには両方のオプションを指定する必要があります。両方の閾値を超えた全体バックアップだけが削除されます。</li>
+</ul>
+</li>
+<li><strong><code>--keep-arclog-files</code> / <code>--keep-arclog-days</code></strong>
+
+<ul>
+<li>バックアップ済みのアーカイブ WAL の保持期限を指定します。<code>--keep-arclog-files</code> では保存ファイル数を、<code>--keep-arclog-days</code> では保存日数を指定し、どちらの閾値も超えたファイルだけがアーカイブ格納領域から削除されます。 保存期限を有効にするには、<code>--keep-arclog-files</code>、<code>--keep-arclog-days</code> 両方のオプションを指定する必要があります。</li>
+</ul>
+</li>
+<li><strong><code>--keep-srvlog-files</code> / <code>--keep-srvlog-days</code></strong>
+
+<ul>
+<li>バックアップ済みのサーバログの保持期限を指定します。<code>--keep-srvlog-files</code> では保存ファイル数を、<code>--keep-srvlog-days</code> では保存日数を指定し、どちらの閾値も超えたファイルだけがサーバログが保存されるディレクトリ (log_directory) から削除されます。 本オプションは、<code>--with-serverlog</code>、<code>--srvlog-path</code> を指定してバックアップを取得した場合に限ります。 また、保存期限を有効にするには、<code>--keep-srvlog-files</code>、<code>--keep-srvlog-days</code> 両方のオプションを指定する必要があります。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>リストア・オプション</h2>
+
+<p>&ndash;recovery で始まる変数は recovery.conf のパラメータに対応します。詳細は<a href="http://www.postgresql.jp/document/current/html/recovery-config.html">リカバリの設定</a>を参照してください。</p>
+
+<ul>
+<li><strong><code>--recovery-target-timeline TIMELINE</code></strong>
+
+<ul>
+<li>どの時系列でリカバリを行うかを指定します。省略時は現在のタイムライン(<code>$PGDATA/global/pg_control</code> から取得)でリカバリを行います。</li>
+</ul>
+</li>
+<li><strong><code>--recovery-target-time TIMESTAMP</code></strong>
+
+<ul>
+<li>リカバリ処理をどこまで行うかを示す時刻を指定します。省略時は可能な限り最新の状態までリカバリを行います。</li>
+</ul>
+</li>
+<li><strong><code>--recovery-target-xid XID</code></strong>
+
+<ul>
+<li>リカバリ処理をどこまで進めるかを示すトランザクションIDを指定します。省略時は可能な限り最新の状態までリカバリを行います。</li>
+</ul>
+</li>
+<li><strong><code>--recovery-target-inclusive</code></strong>
+
+<ul>
+<li>指定したリカバリ対象の直後で停止する (true) か、リカバリ対象の直前で停止する (false) かを指定します。デフォルトは true です。</li>
+</ul>
+</li>
+</ul>
+
+
+<p>以下は、リストア時の挙動を指定するパラメータです。</p>
+
+<ul>
+<li><strong><code>--hard-copy</code></strong>
+
+<ul>
+<li>アーカイブ WAL をリストアする際、ファイルをアーカイブ格納領域にコピーします。このオプションを指定しない場合、アーカイブ格納領域には、バックアップカタログ内のアーカイブ WAL へのシンボリックリンクが作られます。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>カタログ・オプション</h2>
+
+<ul>
+<li><strong><code>-a</code> / <code>--show-all</code></strong>
+
+<ul>
+<li>削除済みのバックアップも一覧に表示します。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>接続オプション</h2>
+
+<p>PostgreSQLに接続するためのパラメータです。</p>
+
+<ul>
+<li><strong><code>-d DBNAME</code> / <code>--dbname=DBNAME</code></strong>
+
+<ul>
+<li>pg_start_backup() と pg_stop_backup() の呼び出しを行うための接続先データベースです。管理コマンドを発行するだけなので、指定するデータベースはどれでも構いません。</li>
+</ul>
+</li>
+<li><strong><code>-h HOSTNAME</code> / <code>--host=HOSTNAME</code></strong>
+
+<ul>
+<li>サーバが稼働しているマシンのホスト名を指定します。ホスト名がスラッシュから始まる場合、Unix ドメインソケット用のディレクトリとして使用されます。</li>
+</ul>
+</li>
+<li><strong><code>-p PORT</code> / <code>--port=PORT</code></strong>
+
+<ul>
+<li>サーバが接続を監視する TCP ポートもしくは Unix ドメインソケットファイルの拡張子を指定します。</li>
+</ul>
+</li>
+<li><strong><code>-U USERNAME</code> / <code>--username=USERNAME</code></strong>
+
+<ul>
+<li>接続するユーザ名を指定します。</li>
+</ul>
+</li>
+<li><strong><code>-w</code> / <code>--no-password</code></strong>
+
+<ul>
+<li>パスワードの入力を促しません。サーバがパスワード認証を必要とし、かつ、.pgpass ファイルなどの他の方法が利用できない場合、接続試行は失敗します。バッチジョブやパスワードを入力するユーザが存在しない場合にこのオプションは有用かもしれません。</li>
+</ul>
+</li>
+<li><strong><code>-W</code> / <code>--password</code></strong>
+
+<ul>
+<li>データベースに接続する前に、pg_rman は強制的にパスワード入力を促します。サーバがパスワード認証を要求する場合 pg_rman は自動的にパスワード入力を促しますので、これが重要になることはありません。しかし、pg_rman は、サーバにパスワードが必要かどうかを判断するための接続試行を無駄に行います。こうした余計な接続試行を防ぐために -W の入力が有意となる場合もあります。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>スタンバイ接続オプション</h2>
+
+<p>スタンバイサイトの PostgreSQL に接続するためのパラメータです。 スタンバイサイトからバックアップを取得する際のみに使用します。</p>
+
+<ul>
+<li><strong><code>--standby-host</code></strong>
+
+<ul>
+<li>スタンバイサーバが稼働しているマシンのホスト名を指定します。ホスト名がスラッシュから始まる場合、Unix ドメインソケット用のディレクトリとして使用されます。</li>
+</ul>
+</li>
+<li><strong><code>--standby-port</code></strong>
+
+<ul>
+<li>サーバが接続を監視する TCP ポートもしくは Unix ドメインソケットファイルの拡張子を指定します。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>一般オプション</h2>
+
+<ul>
+<li><strong><code>--help</code></strong>
+
+<ul>
+<li>ヘルプを表示し、終了します</li>
+</ul>
+</li>
+<li><strong><code>-V</code> / <code>--version</code></strong>
+
+<ul>
+<li>バージョン情報を出力し、終了します</li>
+</ul>
+</li>
+<li><strong><code>-!</code> / <code>--debug</code></strong>
+
+<ul>
+<li>処理中に詳細なデバッグ情報を表示します。</li>
+</ul>
+</li>
+</ul>
+
+
+<h1 id="waytopassoptions">パラメータの指定方法</h1>
+
+<p>pg_rman では、一部の設定項目は、環境変数や設定ファイルでも指定できます。コマンドラインオプション、環境変数、設定ファイル項目の対応関係は以下の表の通りです。</p>
+
+<table>
+<thead>
+<tr>
+<th>短形式</th>
+<th>長形式</th>
+<th>環境変数</th>
+<th>設定ファイル</th>
+<th>意味</th>
+<th>備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-h</td>
+<td>&ndash;host</td>
+<td>PGHOST</td>
+<td></td>
+<td>データベースホスト名およびソケットディレクトリ名</td>
+<td></td>
+</tr>
+<tr>
+<td>-p</td>
+<td>&ndash;port</td>
+<td>PGPORT</td>
+<td></td>
+<td>データベースポート番号</td>
+<td></td>
+</tr>
+<tr>
+<td>-d</td>
+<td>&ndash;dbname</td>
+<td>PGDATABASE</td>
+<td></td>
+<td>データベース名</td>
+<td></td>
+</tr>
+<tr>
+<td>-U</td>
+<td>&ndash;username</td>
+<td>PGUSER</td>
+<td></td>
+<td>データベースユーザ名</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>PGPASSWORD</td>
+<td></td>
+<td>データベースパスワード</td>
+<td></td>
+</tr>
+<tr>
+<td>-w</td>
+<td>&ndash;password</td>
+<td></td>
+<td></td>
+<td>データベースパスワード入力の強制</td>
+<td></td>
+</tr>
+<tr>
+<td>-W</td>
+<td>&ndash;no-password</td>
+<td></td>
+<td></td>
+<td>データベースパスワード入力プロンプトを出さない</td>
+<td></td>
+</tr>
+<tr>
+<td>-D</td>
+<td>&ndash;pgdata</td>
+<td>PGDATA</td>
+<td>指定可</td>
+<td>データベースクラスタのパス</td>
+<td></td>
+</tr>
+<tr>
+<td>-B</td>
+<td>&ndash;backup-path</td>
+<td>BACKUP_PATH</td>
+<td>指定可</td>
+<td>バックアップカタログのパス</td>
+<td></td>
+</tr>
+<tr>
+<td>-A</td>
+<td>&ndash;arclog-path</td>
+<td>ARCLOG_PATH</td>
+<td>指定可</td>
+<td>WALアーカイブ先のパス</td>
+<td></td>
+</tr>
+<tr>
+<td>-S</td>
+<td>&ndash;srvlog-path</td>
+<td>SRVLOG_PATH</td>
+<td>指定可</td>
+<td>サーバログディレクトリのパス</td>
+<td></td>
+</tr>
+<tr>
+<td>-b</td>
+<td>&ndash;backup-mode</td>
+<td>BACKUP_MODE</td>
+<td>指定可</td>
+<td>バックアップ対象 (full, incremental, or archive)</td>
+<td></td>
+</tr>
+<tr>
+<td>-s</td>
+<td>&ndash;with-serverlog</td>
+<td>WITH_SERVERLOG</td>
+<td>指定可</td>
+<td>サーバログを共にバックアップ</td>
+<td>環境変数、設定ファイルにはboolean型で指定</td>
+</tr>
+<tr>
+<td>-Z</td>
+<td>&ndash;compress-data</td>
+<td>COMPRESS_DATA</td>
+<td>指定可</td>
+<td>データ圧縮あり</td>
+<td>環境変数、設定ファイルにはboolean型で指定</td>
+</tr>
+<tr>
+<td>-C</td>
+<td>&ndash;smooth-checkpoint</td>
+<td>SMOOTH_CHECKPOINT</td>
+<td>指定可</td>
+<td>平滑化チェックポイント</td>
+<td>環境変数、設定ファイルにはboolean型で指定</td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;standby-host</td>
+<td>STANDBY_HOST</td>
+<td>指定可</td>
+<td>スタンバイサイトのホスト名</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;standby-port</td>
+<td>STANDBY_PORT</td>
+<td>指定可</td>
+<td>スタンバイサイトのポート番号</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;keep-data-generations</td>
+<td>KEEP_DATA_GENERATIONS</td>
+<td>指定可</td>
+<td>データベースバックアップの保存世代数</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;keep-data-days</td>
+<td>KEEP_DATA_DAYS</td>
+<td>指定可</td>
+<td>データベースバックアップの保存日数</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;keep-srvlog-files</td>
+<td>KEEP_SRVLOG_FILES</td>
+<td>指定可</td>
+<td>サーバログの保存ファイル数</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;keep-srvlog-days</td>
+<td>KEEP_SRVLOG_DAYS</td>
+<td>指定可</td>
+<td>サーバログの保存日数</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;keep-arclog-files</td>
+<td>KEEP_ARCLOG_FILES</td>
+<td>指定可</td>
+<td>アーカイブ WAL の保存ファイル数</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;keep-arclog-days</td>
+<td>KEEP_ARCLOG_DAYS</td>
+<td>指定可</td>
+<td>アーカイブ WAL の保存日数</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;recovery-target-timeline</td>
+<td>RECOVERY_TARGET_TIMELINE</td>
+<td>指定可</td>
+<td>リカバリ到達点のタイムライン ID</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;recovery-target-xid</td>
+<td>RECOVERY_TARGET_XID</td>
+<td>指定可</td>
+<td>リカバリ到達点のトランザクション ID</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;recovery-target-time</td>
+<td>RECOVERY_TARGET_TIME</td>
+<td>指定可</td>
+<td>リカバリ到達点のタイムスタンプ</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;recovery-target-inclusive</td>
+<td>RECOVERY_TARGET_INCLUSIVE</td>
+<td>指定可</td>
+<td>リカバリ到達点自体をリカバリするか</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;hard-copy</td>
+<td>HARD_COPY</td>
+<td>指定可</td>
+<td>アーカイブWALのリストア方法</td>
+<td>環境変数、設定ファイルにはboolean型で指定</td>
+</tr>
+</tbody>
+</table>
+
+
+<ul>
+<li>設定ファイルの項目名は、長形式または環境変数と同じ名前で指定します。</li>
+<li>パスワードは環境変数でのみ指定可能です。</li>
+</ul>
+
+
+<p>また、このユーティリティは、他のほとんどの PostgreSQL ユーティリティと同様、 libpq でサポートされる環境変数を使用します。詳細については、<a href="http://www.postgresql.jp/document/current/html/libpq-envars.html">環境変数</a>の項目を参照してください。</p>
+
+<h1 id="restrictions">使用上の注意と制約</h1>
+
+<p>pg_rman を使用する際には、以下の使用上の注意と制約があります。</p>
+
+<ul>
+<li>データベースクラスタとバックアップ先の両方のファイルシステムへアクセスできる必要があります。データベース・サーバがバックアップ先のファイルシステムをネットワーク・マウントし、pg_rman はデータベース・サーバ上で動作させることを推奨します。</li>
+<li>pg_rman とサーバの「ブロックサイズ」を一致させる必要があります。同一のバージョンであっても、BLCKSZ、XLOG_BLCKSZ が異なる組合せではバックアップできません。</li>
+<li>データベースクラスタや WAL 格納先、アーカイブ WAL 格納先に読み取り不可のファイル/ディレクトリが存在するとバックアップ/リストアに失敗します。</li>
+<li>WALアーカイブ先が別サーバ上に存在する場合、DBサーバよりもシステム時刻が進んでいるとバックアップ/リカバリに失敗します。</li>
+<li>pg_rman 1.2.10までを使用する場合、データベース作成を行った後には必ず全体バックアップを取得し直してください。もし増分バックアップしか取得しなかった場合、バックアップ自体は成功しますが必要なファイルを取得出来ていない可能性があります。その場合、増分バックアップを用いたリストアを行うと、PostgreSQLを立ち上げてリカバリが完了した後にアクセスしようとすると「PANIC:  could not open critical system index 2662」というエラーが発生してPostgreSQLがクラッシュします。pg_rman 1.2.11からはこの制約は無くなっています。</li>
+<li>pg_rmanがバックアップ取得中に異常終了した場合、PostgreSQLサーバはオンライン・バックアップ取得中のステータスのままになってしまうことがあります。その場合は、手動で"SELECT pg_stop_backup()&ldquo;を行う必要があります。</li>
+<li>pg_rmanは増分バックアップ取得の際に、対象データベースのタイムラインをチェックして増分バックアップのベースとなる全体バックアップのタイムラインと一致しているかをチェックします。しかし、全く異なるデータベースだがタイムラインが同じというデータベースを指定してしまうと、pg_rmanはそれに気づかず、誤った増分バックアップを取得してしまいます。</li>
+</ul>
+
+
+<p>スタンバイサイトでのバックアップ取得の際には、以下の制約事項があります。</p>
+
+<ul>
+<li>正しくレプリケーションが実行されていない場合、バックアップが完了しない場合があります。</li>
+<li>マスタとスタンバイで同時にバックアップを取得することはできません。</li>
+<li>複数のスタンバイで同時にバックアップを取得することはできません。</li>
+<li>基本的に、マスタとしてリストアします。スタンバイとしてのリストアは自動的には行いません。</li>
+<li>pg_rman でリストアしたデータベースクラスタをスタンバイとして利用したい場合は、別途アーカイブログの管理等を行う必要があります。</li>
+</ul>
+
+
+<p>ストレージ・スナップショットを利用する際には、以下の制約事項があります。</p>
+
+<ul>
+<li>ファイルの更新日時を保持しない仕様のスナップショットを使用する場合、増分バックアップがフルバックアップ相当になります。</li>
+<li>増分バックアップは前回バックアップのファイルの更新日時との比較でバックアップの要否を判定します。ファイルの更新日を保持しない仕様のスナップショットでは、前回バックアップと更新日時が一致しないため、増分バックアップでもフルバックアップ相当になります。</li>
+<li>片系の状態でのスプリット・ミラー方式のスナップショットを使用したバックアップはできません。</li>
+<li>pg_rman 実行前に RESYNC 操作を行い、両系の状態で本ツールを実行する前提とします。</li>
+<li>スプリット・ミラー方式のスナップショットを使用してバックアップした場合、pg_rman の実行後は切り離された状態(片系)となります。
+
+<ul>
+<li>スナップショット取得時に SPLIT 操作を実行し、切り離しを行うが RESYNC 操作は行わないため、本ツールの終了時には片系の状態となります。</li>
+</ul>
+</li>
+<li>異なるメーカのスナップショットを同時には取得することはできません。</li>
+<li>異なるコマンド体系を使用するストレージを複数機種混在して使用することはできません。</li>
+<li>スナップショット取得に必要なコマンド群に実行権限が付与されていることとします。</li>
+<li>スナップショット取得に必要なコマンドやボリュームのマウントは OS のルートユーザなどの権限が必要であることが予想されます。pg_rman を実行するユーザに対して、外部スクリプト内で実行するコマンドを実行できる権限などが設定されている必要があります。</li>
+<li>LVM (Logical Volume Manager) スナップショットの場合は、mount, umount, lvcreate, lvremove, lvscan などをルート権限で実行する必要があります。事前に sudo でこれらのコマンドをパスワードなしに実行できる設定にします。</li>
+</ul>
+
+
+<h1 id="details">詳細</h1>
+
+<h2 id="Recovery.to.Point-in-Time">Recovery to Point-in-Time</h2>
+
+<p>pg_rman では、タイムラインやトランザクション ID、タイムスタンプでリカバリ到達点を指定することにより、任意の時点の状態にデータベースをリカバリすることができます。正確なリカバリ到達点を決定するには、pg_xlogdump(<a href="http://www.postgresql.jp/document/current/html/pgxlogdump.html">9.3～</a>) / xlogdump (<a href="http://github.com/snaga/xlogdump/">～9.2</a>) などのツールで WAL に書かれているトランザクション内容を確認してください。タイムラインやリカバリ到達点の詳細については<a href="http://www.postgresql.jp/document/current/html/continuous-archiving.html">継続的アーカイブとポイントインタイムリカバリ（PITR）</a>を参照してください。</p>
+
+<p>設定ファイルには「<code>設定項目=設定値</code>」の書式でパラメータを指定します。指定可能な項目は <strong>パラメータの指定方法</strong> を参照してください。設定値に空白を含む場合はシングルクォートで囲んでください。設定ファイル内の &ldquo;<code>#</code>&rdquo; 以降はコメントとして無視されます。また、設定値以外の空白及びタブは無視されます。</p>
+
+<h2>プログラム終了コード</h2>
+
+<p>pg_rman ではエラーの種別ごとに異なるプログラム終了コードを返します。</p>
+
+<table>
+<thead>
+<tr>
+<th>コード</th>
+<th>名前</th>
+<th>意味</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>SUCCESS</td>
+<td>正常に終了しました。</td>
+</tr>
+<tr>
+<td>1</td>
+<td>HELP</td>
+<td>ヘルプを表示し、終了しました。</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ERROR</td>
+<td>未分類のエラーです。</td>
+</tr>
+<tr>
+<td>3</td>
+<td>FATAL</td>
+<td>エラーが再帰的に発生し強制終了しました。</td>
+</tr>
+<tr>
+<td>4</td>
+<td>PANIC</td>
+<td>未知の致命的エラーです。</td>
+</tr>
+<tr>
+<td>10</td>
+<td>ERROR_SYSTEM</td>
+<td>I/O またはシステムエラーです。</td>
+</tr>
+<tr>
+<td>11</td>
+<td>ERROR_NOMEM</td>
+<td>メモリ不足です。</td>
+</tr>
+<tr>
+<td>12</td>
+<td>ERROR_ARGS</td>
+<td>入力パラメータが不正です。</td>
+</tr>
+<tr>
+<td>13</td>
+<td>ERROR_INTERRUPTED</td>
+<td>シグナルにより中断されました。(Ctrl+C 等)</td>
+</tr>
+<tr>
+<td>14</td>
+<td>ERROR_PG_COMMAND</td>
+<td>PostgreSQL サーバへ発行したSQLが失敗しました。</td>
+</tr>
+<tr>
+<td>15</td>
+<td>ERROR_PG_CONNECT</td>
+<td>PostgreSQL サーバに接続できません。</td>
+</tr>
+<tr>
+<td>20</td>
+<td>ERROR_ARCHIVE_FAILED</td>
+<td>WAL アーカイブに失敗しました。</td>
+</tr>
+<tr>
+<td>21</td>
+<td>ERROR_NO_BACKUP</td>
+<td>バックアップが見つかりません。</td>
+</tr>
+<tr>
+<td>22</td>
+<td>ERROR_CORRUPTED</td>
+<td>バックアップが破損しています。</td>
+</tr>
+<tr>
+<td>23</td>
+<td>ERROR_ALREADY_RUNNING</td>
+<td>他の pg_rman が実行中です。</td>
+</tr>
+<tr>
+<td>24</td>
+<td>ERROR_PG_INCOMPATIBLE</td>
+<td>PostgreSQL サーバとの互換性がありません。</td>
+</tr>
+<tr>
+<td>25</td>
+<td>ERROR_PG_RUNNING</td>
+<td>PostgreSQL サーバが起動中のためリストアできません。</td>
+</tr>
+<tr>
+<td>26</td>
+<td>ERROR_PID_BROKEN</td>
+<td>postmaster.pid ファイルが破損しています。</td>
+</tr>
+</tbody>
+</table>
+
+
+<h1 id="externalscript">外部スクリプトとの連携</h1>
+
+<p>ストレージ・スナップショット利用時にスナップショットの取得とファイルシステムへのマウントを行うスクリプトです。外部スクリプトを追加する場合は、外部スクリプトの各インタフェースをストレージのマニュアル等を参考に実装します。実装すべき内容は <strong>インタフェース仕様</strong> を参照してください。</p>
+
+<ul>
+<li><p>外部スクリプトは1回の実行で、1個以上のスナップショットを対象とした各種操作を行います。</p></li>
+<li><p>外部スクリプトはバックアップカタログ直下に &ldquo;<code>snapshot_script</code>&rdquo; のファイル名で格納します。</p></li>
+<li><p>pg_rman では、LVM (Logical Volume Manager) 向けの外部スクリプトのサンプル (snapshot_script_lvm.sh) を提供します。</p></li>
+</ul>
+
+
+<h2>コマンド仕様</h2>
+
+<pre><code>$ &lt;/samp&gt;&lt;kbd&gt;${BACKUP_PATH}/snapshot_script { split | resync | mount | umount | freeze | unfreeze } [cleanup]
+</code></pre>
+
+<ul>
+<li>入力
+
+<ul>
+<li>第1引数 <code>{ split | resync | mount | umount | freeze | unfreeze }</code>
+
+<ul>
+<li>実行する操作を指示する識別子です。</li>
+</ul>
+</li>
+<li>第2引数 <code>[cleanup]</code>
+
+<ul>
+<li><code>cleanup</code> が指定された時は、エラーが発生した場合に警告メッセージを出力して処理を継続します。</li>
+<li><code>resync</code>、<code>umount</code>、<code>unfreeze</code> にのみ適用します。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>出力
+
+<ul>
+<li><code>split</code> 操作の実行により、スナップショットボリュームを作成します。</li>
+<li><code>freeze</code> 操作の実行により、ファイルシステムのI/Oを凍結します。</li>
+<li><code>mount</code> 操作の実行により、スナップショットボリュームのマウントを作成します。</li>
+<li>標準出力
+
+<ul>
+<li><code>split</code> 操作の実行により、スナップショットに含まれるテーブルスペース名を出力します。</li>
+<li><code>mount</code> 操作の実行により、スナップショットに含まれるテーブルスペース名および当該テーブルスペースの格納ディレクトリを &lt;テーブルスペース名&gt;=&lt;テーブルスペース格納ディレクトリ&gt; の形式で出力します。</li>
+<li>コマンド成功時には &ldquo;<code>SUCCESS</code>&rdquo; を出力し、エラー時には何も出力しません。なお、<code>split</code>、<code>mount</code> の場合には末行に出力します。</li>
+</ul>
+</li>
+<li>標準エラー出力
+
+<ul>
+<li>ログメッセージを出力します。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>戻り値
+
+<ul>
+<li>規定しません。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>インタフェース仕様</h2>
+
+<ul>
+<li><code>split</code>
+
+<ul>
+<li>1個以上のスナップショットを作成する処理を実装します。</li>
+<li>作成したスナップショットに含まれるテーブルスペース名を標準出力に出力します。
+
+<ul>
+<li>データベースクラスタがスナップショットに含まれる場合は &ldquo;<code>PG-DATA</code>&rdquo; とします。</li>
+<li>スナップショットに含まれるテーブルスペースが複数の場合は、複数行で出力します。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><code>resync [cleanup]</code>
+
+<ul>
+<li><code>split</code> で作成したスナップショットを削除する処理を実装します。</li>
+<li>スプリット・ミラー方式などのスナップショットの削除が不要な場合は空実装とします。</li>
+<li><code>cleanup</code> が指定されている場合は、スナップショットの削除に失敗したとき、その旨の警告メッセージを出力し、残りのスナップショットの削除を継続します。</li>
+</ul>
+</li>
+<li><code>mount</code>
+
+<ul>
+<li><code>split</code> で作成したスナップショットをファイルシステムにマウントする処理を実装します。</li>
+<li>スナップショットに含まれるテーブルスペース名と当該テーブルスペースを格納するディレクトリの絶対パスを「&lt;テーブルスペース名&gt;=&lt;テーブルスペース格納ディレクトリ&gt;」の形式で標準出力に出力します。
+
+<ul>
+<li>データベースクラスタがスナップショットに含まれる場合は、テーブルスペース名を &ldquo;<code>PG-DATA</code>&rdquo; とします。</li>
+<li>スナップショットに含まれるテーブルスペースが複数の場合は、複数行で出力します。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><code>umount [cleanup]</code>
+
+<ul>
+<li><code>mount</code> で作成したファイルシステムへのマウントを削除する処理を実装します。</li>
+<li><code>cleanup</code> が指定されている場合は、マウントの削除に失敗したときに、その旨の警告メッセージを出力し、残りのマウントの削除を継続します。</li>
+</ul>
+</li>
+<li><code>freeze</code>
+
+<ul>
+<li>1個以上のファイルシステムのI/Oを凍結する処理を実装します。</li>
+<li>ファイルシステムのI/Oの凍結が不要な場合は空実装とします。</li>
+</ul>
+</li>
+<li><code>unfreeze [cleanup]</code>
+
+<ul>
+<li><code>freeze</code> で凍結したファイルシステムのI/Oを解除する処理を実装します。</li>
+<li>ファイルシステムのI/Oの凍結を解除する処理が不要な場合は空実装とします。</li>
+<li><code>cleanup</code> が指定されている場合は、ファイルシステムのI/Oの凍結解除に失敗したとき、その旨の警告メッセージを出力し、残りのファイルシステムのI/Oの凍結解除を継続します。</li>
+</ul>
+</li>
+</ul>
+
+
+<h2>LVM(Logical Volume Manager)向けの外部スクリプト(サンプル)の処理内容</h2>
+
+<ul>
+<li><p><code>split</code></p>
+
+<ul>
+<li><p>スナップショット対象とするボリュームに対して、ルートユーザ権限で lvcreate コマンドを実行します。</p>
+
+<pre><code>  $ sudo /usr/sbin/lvcreate --snapshot --size=2G --name snap00 /dev/VolGroup00/LogVolume00
+</code></pre></li>
+<li><p>上記は論理ボリューム &ldquo;LogVolume00&rdquo; のスナップショットを作成する場合の例です。</p></li>
+<li>スナップショット名、スナップショット領域のサイズ、スナップショットを作成する論理ボリュームは条件に合わせて任意に設定します。</li>
+<li>スナップショットからバックアップするテーブルスペース名を標準出力に出力します。</li>
+</ul>
+</li>
+<li><p><code>resync</code></p>
+
+<ul>
+<li><p>スナップショット対象とするボリュームに対して、ルートユーザ権限で lvremove コマンドを実行します。</p>
+
+<pre><code>  $ sudo /usr/sbin/lvremove -f /dev/VolGroup00/snap00
+</code></pre></li>
+</ul>
+</li>
+<li><p><code>mount</code></p>
+
+<ul>
+<li><p>スナップショット対象とするボリュームに対して、ルートユーザ権限で mount コマンドを実行します。</p>
+
+<pre><code>  $ sudo /bin/mount /dev/VolGroup00/snap00 /mnt/snapshot_lvm/pgdata
+</code></pre></li>
+<li><p>上記は、<code>split</code> で作成したスナップショットボリュームを &ldquo;/mnt/snapshot_lvm/pgdata&rdquo; にマウントする場合の例です。</p></li>
+<li>マウントディレクトリは条件に合わせて任意に設定します。</li>
+<li>スナップショットからバックアップするテーブルスペース名とそのマウントディレクトリを標準出力に出力します。</li>
+</ul>
+</li>
+<li><p><code>umount</code></p>
+
+<ul>
+<li><p>スナップショット対象とするボリュームに対して、ルートユーザ権限で umount コマンドを実行します。</p>
+
+<pre><code>  $ sudo /bin/umount /mnt/snapshot_lvm/pgdata
+</code></pre></li>
+</ul>
+</li>
+<li><p><code>freeze</code></p>
+
+<ul>
+<li>何もしません(ファイルシステムのI/Oの凍結が不要です)。</li>
+</ul>
+</li>
+<li><p><code>unfreeze</code></p>
+
+<ul>
+<li>何もしません(ファイルシステムのI/Oの凍結が不要です)。</li>
+</ul>
+</li>
+</ul>
+
+
+<h1 id="install">インストール方法</h1>
+
+<p>pg_rman のインストールは、標準の contrib モジュールと同様です。</p>
+
+<h2>ビルド</h2>
+
+<p>pgxs を使ってビルドできます。</p>
+
+<pre><code>$ cd pg_rman
+$ make
+$ make install
+</code></pre>
+
+<p>データベースへの登録は不要です。</p>
+
+<h1 id="requirement">動作環境</h2>
+<dl>
+<dt>PostgreSQLバージョン</dt>
+<dd>PostgreSQL 8.4, 9.0, 9.1, 9.2, 9.3, 9.4</dd>
+<dt>OS</dt>
+<dd>RHEL 5/6/7, Ubuntu 12.04LTS</dd>
+</dl>
+
+
+<h1 id="seealso">関連項目</h2>
+<a href="http://www.postgresql.jp/document/9.3/html/backup.html">バックアップとリストア</a>
+
+<hr />
+
+<p class="footer">Copyright (c) 2009-2015, NIPPON TELEGRAPH AND TELEPHONE CORPORATION</p>
+
+</body>
+</html>
