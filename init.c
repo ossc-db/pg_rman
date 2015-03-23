@@ -73,7 +73,7 @@ do_init(void)
 	if (fp == NULL)
 		elog(ERROR_SYSTEM, _("can't create pg_rman.ini: %s"), strerror(errno));
 
-	/* set ARCLOG_PATH refered with log_directory */
+	/* set ARCLOG_PATH refered with archive_command */
 	if (arclog_path == NULL && archive_command && archive_command[0])
 	{
 		char *command = pgut_strdup(archive_command);
