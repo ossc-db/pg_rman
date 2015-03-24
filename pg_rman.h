@@ -254,6 +254,7 @@ extern int do_show(pgBackupRange *range, bool show_timeline, bool show_all);
 /* in delete.c */
 extern int do_delete(pgBackupRange *range, bool force);
 extern void pgBackupDelete(int keep_generations, int keep_days);
+extern int do_purge(void);
 
 /* in validate.c */
 extern int do_validate(pgBackupRange *range);
