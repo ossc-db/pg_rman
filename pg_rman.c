@@ -213,6 +213,8 @@ main(int argc, char *argv[])
 		return do_validate(&range);
 	else if (pg_strcasecmp(cmd, "delete") == 0)
 		return do_delete(&range, force);
+	else if (pg_strcasecmp(cmd, "purge") == 0)
+		do_purge();
 	else
 		elog(ERROR_ARGS, "invalid command \"%s\"", cmd);
 
@@ -231,6 +233,7 @@ pgut_help(bool details)
 	printf(_("  %s OPTION show timeline [DATE]\n"), PROGRAM_NAME);
 	printf(_("  %s OPTION validate [DATE]\n"), PROGRAM_NAME);
 	printf(_("  %s OPTION delete DATE\n"), PROGRAM_NAME);
+	printf(_("  %s OPTION purge\n"), PROGRAM_NAME);
 
 	if (!details)
 		return;
