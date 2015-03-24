@@ -33,8 +33,17 @@
 
 <h2 id="synopsis">概要</h2>
 
-<pre><code>pg_rman [ OPTIONS ] { init | backup | restore | show [ DATE | timeline ] | validate [ DATE ] | delete DATE }
-</code></pre>
+<pre>
+<code>
+pg_rman [ OPTIONS ] { init | 
+                      backup |
+                      restore | 
+                      show [ DATE | timeline ] | 
+                      validate [ DATE ] | 
+                      delete DATE | 
+                      purge }
+</code>
+</pre>
 
 <p>pg_rman は以下の機能を持ちます。</p>
 
@@ -90,6 +99,12 @@ $ pg_rman validate     # 未検証のすべてのバックアップを検証
 
 <ul>
 <li>バックアップを削除します。</li>
+</ul>
+</li>
+<li><code>purge</code>
+
+<ul>
+<li>削除済みのバックアップをバックアップカタログから削除します。</li>
 </ul>
 </li>
 </ul>
@@ -272,6 +287,27 @@ Start                Time   Total    Data     WAL     Log  Backup   Status
 2009-09-11 05:00:06    0m    40MB    ----    16MB    ----  5277kB   OK
 </code></pre>
 
+<h3>削除済みバックアップの消去</h3>
+<p><code>delete</code> コマンドで削除したバックアップは、データ自体はファイルシステムから削除されますが、管理情報が残ります。これらの管理情報をファイルシステムから除外するには <code>purge</code> コマンドを実行してください。
+
+<pre><code>$ pg_rman show -a
+============================================================================
+Start                Time   Total    Data     WAL     Log  Backup   Status
+============================================================================
+2015-03-24 11:56:36    0m    ----    16kB    33MB    ----    54kB   OK
+2015-03-24 11:56:19    0m    28MB    ----    67MB    ----  3484kB   OK
+2015-03-24 11:10:59    0m    28MB    ----    33MB    ----  3405kB   DELETED
+
+$ pg_rman purge
+INFO: The DELETED backup 2015-03-24 11:10:59 is purged.
+
+$ pg_rman show -a
+============================================================================
+Start                Time   Total    Data     WAL     Log  Backup   Status
+============================================================================
+2015-03-24 11:56:36    0m    ----    16kB    33MB    ----    54kB   OK
+2015-03-24 11:56:19    0m    28MB    ----    67MB    ----  3484kB   OK
+</code></pre>
 
 <h3>スタンバイサイトでのバックアップ</h3>
 

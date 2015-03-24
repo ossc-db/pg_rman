@@ -1,0 +1,11 @@
+\! bash sql/purge.sh
+###### PURGE COMMAND TEST-0001 ######
+###### purge DELETED backups sucessfully ######
+delete the oldest backup
+Now, test purge command
+Number of purged backups: 1
+###### PURGE COMMAND TEST-0002 ######
+###### purge DELETED backups with check option ######
+delete the oldest backup
+Now, test purge command with check option
+Number of purged backups: 0
