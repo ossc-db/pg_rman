@@ -11,6 +11,7 @@ Usage:
   pg_rman OPTION show timeline [DATE]
   pg_rman OPTION validate [DATE]
   pg_rman OPTION delete DATE
+  pg_rman OPTION purge
 
 Common Options:
   -D, --pgdata=PATH         location of the database storage area
