@@ -260,3 +260,95 @@ checkIfDeletable(pgBackup *backup)
 
 	return false;
 }
+
+/*
+ * Remove DELETED backups from BACKUP_PATH direcotory. 
+ */
+int do_purge(void)
+{
+	int		i, j;
+	int		ret;
+	int		any_errors;
+	parray *backup_list;
+	parray *files;
+	pgBackup *backup;
+	char 	timestamp[20];
+	char	path[MAXPGPATH];
+
+	/* get exclusive lock of backup catalog */
+	ret = catalog_lock();
+	if (ret == -1)
+		elog(ERROR_SYSTEM, _("can't lock backup catalog."));
+	else if (ret == 1)
+		elog(ERROR_ALREADY_RUNNING,
+			("another pg_rman is running, stop delete."));
+
+	/* get list of backups. */
+	backup_list = catalog_get_backup_list(NULL);
+	if(!backup_list){
+		elog(ERROR_SYSTEM, _("can't process any more."));
+	}
+
+	for (i=0; i < parray_num(backup_list); i++) 
+	{
+		backup = parray_get(backup_list, i);
+
+		/* skip living backups */
+		if(backup->status != BACKUP_STATUS_DELETED) 
+			continue;
+
+		time2iso(timestamp, lengthof(timestamp), backup->start_time); 
+		pgBackupGetPath(backup, path, lengthof(path), NULL);
+		
+		if (check)
+		{
+			elog(INFO, "The DELETED backup %-19s will be purged.", timestamp);
+			elog(INFO, "The path is %s", path);
+		}
+
+		files = parray_new();
+		dir_list_file(files, path, NULL, false, true);
+		parray_qsort(files, pgFileComparePathDesc);
+		any_errors = 0;
+		for (j = 0; j < parray_num(files); j++)
+		{
+			pgFile *file = (pgFile *) parray_get(files, j);
+
+			/* print progress */
+			if (check)
+			{
+				if (verbose)
+				{
+					/* skip actual deletion in check mode */
+					elog(INFO, _("will delete file(%d/%lu) \"%s\"\n"), j + 1,
+						(unsigned long) parray_num(files), file->path);
+					continue;
+				}
+			} else {
+				if(verbose)
+				{
+					elog(INFO, _("delete file(%d/%lu) \"%s\"\n"), j + 1,
+						(unsigned long) parray_num(files), file->path);
+				}
+
+				if (remove(file->path))
+				{
+					elog(WARNING, _("can't remove \"%s\": %s"), file->path,
+						strerror(errno));
+					any_errors++;
+				}
+			}
+		}
+
+		if (!check) 
+		{
+			if(any_errors)
+			{
+				elog(WARNING, "There are errors in purging backup %-19s", timestamp);
+			} else {
+				elog(INFO, "The DELETED backup %-19s is purged.", timestamp);
+			}
+		}
+	}
+	return 0;
+}
