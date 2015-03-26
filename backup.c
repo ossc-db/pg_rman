@@ -1262,7 +1262,7 @@ backup_cleanup(bool fatal, void *userdata)
 	/* If backup_label exist in $PGDATA, notify stop of backup to PostgreSQL */
 	snprintf(path, lengthof(path), "%s/backup_label", pgdata);
 	make_native_path(path);
-	if (fileExists(path))
+	if (fileExists(path) || current.is_from_standby)
 	{
 		if (verbose)
 			printf(_("backup_label exists, stop backup\n"));
