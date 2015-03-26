@@ -20,6 +20,8 @@ do_delete(pgBackupRange *range, bool force)
 	parray *backup_list;
 	bool	do_delete;
 	bool	force_delete;
+	char 	backup_timestamp[20];
+	char 	given_timestamp[20];
 
 	/* DATE are always required */
 	if (!pgBackupRangeIsValid(range))
@@ -41,10 +43,12 @@ do_delete(pgBackupRange *range, bool force)
 
 	do_delete = false;
 	force_delete = false;
+	time2iso(given_timestamp, lengthof(given_timestamp), range->begin); 
 	/* find delete target backup. */
 	for (i = 0; i < parray_num(backup_list); i++)
 	{
 		pgBackup *backup = (pgBackup *)parray_get(backup_list, i);
+		time2iso(backup_timestamp, lengthof(backup_timestamp), backup->start_time); 
 
 		if(force)
 			force_delete = checkIfDeletable(backup);
@@ -60,11 +64,27 @@ do_delete(pgBackupRange *range, bool force)
 			continue;
 		}
 
-		/* find latest full backup. */
+		elog(INFO, _("The backup with start time %-19s cannot be deleted."), backup_timestamp); 
+		/* We keep latest full backup until the given DATE. */
 		if (backup->backup_mode >= BACKUP_MODE_FULL &&
 			backup->status == BACKUP_STATUS_OK &&
 			backup->start_time <= range->begin)
+		{
+			/* Found the latest and validated full backup. So we can delete backups older than this. */
 			do_delete = true;
+			elog(INFO, _("Because this is the latest and validated full backup until %-19s."), 
+					given_timestamp); 
+		} else {
+			if (backup->backup_mode < BACKUP_MODE_FULL)
+			{
+				elog(INFO, _("Because this backup is not a latest full backup until %-19s."), given_timestamp); 
+			} else if (backup->start_time > range->begin) {
+				elog(INFO, _("Because this backup started later than %-19s."), given_timestamp); 
+			} else {	
+				elog(INFO, _("This backup is full backup and not later than %-19s, but the status is not OK."), 
+						given_timestamp); 
+			}
+		}
 	}
 
 	/* release catalog lock */
@@ -188,7 +208,12 @@ pgBackupDeleteFiles(pgBackup *backup)
 
 	time2iso(timestamp, lengthof(timestamp), backup->start_time);
 
-	elog(INFO, _("delete: %s"), timestamp);
+	if (check)
+	{
+		elog(INFO, _("will delete the backup with start time: %s"), timestamp);
+	} else {
+		elog(INFO, _("delete the backup with start time: %s"), timestamp);
+	}
 
 	/*
 	 * update STATUS to BACKUP_STATUS_DELETING in preparation for the case which
