@@ -23,6 +23,7 @@
 <li><a href="#restrictions">Restrictions</a></li>
 <li><a href="#details">Details</a></li>
 <li><a href="#externalscript">External Scripts</a></li>
+<li><a href="#download">Download</a></li>
 <li><a href="#install">Installation</a></li>
 <li><a href="#requirement">Requirements</a></li>
 <li><a href="#seealso">See Also</a></li>
@@ -47,10 +48,10 @@
 <p>pg_rman has the features below:</p>
 
 <ul>
-<li>Takes a backup while database including tablespaces with just one command.</li>
+<li>Takes a backup of entire database including tablespaces with just one command.</li>
 <li>Can recovery from backup with just one command.</li>
 <li>Supports incremental backup and compression of backup files so that it takes less disk spaces.</li>
-<li>Manages backup generations and shows a catalog of the backups.</li>
+<li>Manages backup versions and shows a catalog of the backups.</li>
 <li>Supports storage snapshot.</li>
 </ul>
 
@@ -61,7 +62,7 @@
 $ pg_rman validate     # validate all unvalidated backups
 </code></pre>
 
-<p>pg_rman supports the following commands. See also <strong>Options</strong> for details of <code>OPTIONS</code>.</p>
+<p>pg_rman supports the following commands. See also <a href="#options">Options</a> for details of <code>OPTIONS</code>.</p>
 
 <ul>
 <li><code>init</code>
@@ -113,9 +114,7 @@ $ pg_rman validate     # validate all unvalidated backups
 
 <p>pg_rman is a utility program to backup and restore PostgreSQL database. It takes a physical online backup of whole database cluster, archive WALs, and server logs.</p>
 
-<p>pg_rman supports getting backup from standby-site with PostgreSQL 9.0 later.</p>
-
-<p>And pg_rman supports storage snapshot backup.</p>
+<p>pg_rman supports getting backup from standby-site with PostgreSQL 9.0 later, also supports storage snapshot backup.</p>
 
 <h2>Initialize a backup catalog</h2>
 
@@ -124,11 +123,11 @@ $ pg_rman validate     # validate all unvalidated backups
 <pre><code>$ pg_rman init -B &lt;a backup catalog path&gt;
 </code></pre>
 
-<p>It is recommended to setup <code>log_directory</code>, <code>archive_mode</code> and <code>archive_command</code> in postgresql.conf before initialize the backup catalog. If the variables are initialized, pg_rman can adjust the config file to the setting. In this case, you have to specify the database cluster path for PostgreSQL. Please specify it in <code>PGDATA</code> environmental variable or <code>-D</code>/<code>--pgdata</code> option.</p>
+<p>It is recommended to setup <code>log_directory</code>, <code>archive_mode</code> and <code>archive_command</code> in postgresql.conf before initialize the backup catalog. If the variables are initialized, pg_rman can adjust the configuration file to the setting. In this case, you have to specify the database cluster path for PostgreSQL. Please specify it in <code>PGDATA</code> environmental variable or <code>-D</code>/<code>--pgdata</code> option.</p>
 
 <h2>Backup</h2>
 
-<p>The mode of backup can be one of the following types. Also serverlogs can be added.</p>
+<p>The mode of backup can be one of the following types.</p>
 
 <ul>
 <li><strong>Full backup</strong>
@@ -150,6 +149,7 @@ $ pg_rman validate     # validate all unvalidated backups
 </ul>
 </li>
 </ul>
+<p>Pg_rman also can backup PostgreSQL server log files.</p>
 
 <h2>Validate backup data</h2>
 
@@ -238,11 +238,12 @@ STATUS=OK
 
 <p>It is recommended to take a full backup as soon as possible after recovery is succeeded.</p>
 
-<p>If <code>--recovery-target-timeline</code> is not specifed, the last checkpoint&rsquo;s TimeLineID in control file (<code>$PGDATA/global/pg_control</code>) will be a restore target. If pg_control is not present, TimeLineID in the full backup used by the restore will be a restore target.</p>
+<p>If <code>--recovery-target-timeline</code> is not specified, the last checkpoint&rsquo;s TimeLineID in control file (<code>$PGDATA/global/pg_control</code>) will be a restore target. If pg_control is not present, TimeLineID in the full backup used by the restore will be a restore target.</p>
 
 <h2>Delete backups</h2>
 
-<p>The delete command deletes backup files not required by recovery after the specified date. The following example deletes unneeded backup files to recovery at 12:00 11, September 2009.</p>
+<p>The delete command deletes all backup files before the specified date not required by other incremental backups. Incremental backups depend on earlier validated full backup.</p>
+<p> The following example deletes unneeded backup files to recovery at 12:00 11, September 2009.</p>
 
 <pre><code>$ pg_rman show
 ============================================================================
@@ -335,7 +336,7 @@ postgres=# SHOW archive_command ;
 </code></pre>
 
 <p>
-And the <code>PGDATA</code> and <code>BACKUP_PATH</code> are set as environmet variables.
+And the <code>PGDATA</code> and <code>BACKUP_PATH</code> are set as environment variables.
 </p>
 
 <pre><code>$ echo $PGDATA
@@ -374,7 +375,7 @@ KEEP_SRVLOG_DAYS = 10
 
 <p>Then, do a backup.
 It should be start from a full backup.
-Hrere, we will also take server log files.
+Here, we will also take server log files.
 </p>
 
 <pre><code>$ pg_rman backup --backup-mode=full --with-serverlog
@@ -417,7 +418,7 @@ $ pg_rman restore
 </code></pre>
 
 <p>
-The pg_rman has created recovery.conf.
+The pg_rman has created recovery.conf in $PGDATA by restore command.
 If necessary, modify it as you wanted.
 In this example, we use this without modifications and will try to do PITR to latest database status.
 </p>
@@ -431,7 +432,7 @@ $ pg_ctl start
 
 <h1 id="options">Options</h1>
 
-<p>pg_rman accepts the following command line parameters. Some of them can be also sepcified as environment variables. See also Parameters for the details.</p>
+<p>pg_rman accepts the following command line parameters. Some of them can be also specified as environment variables.</p>
 
 <h2>Common options</h2>
 
@@ -502,7 +503,7 @@ $ pg_ctl start
 <li><strong><code>-Z</code> / <code>--compress-data</code></strong>
 
 <ul>
-<li>Comress backup files with zlib if specified.</li>
+<li>Compress backup files with zlib if specified.</li>
 </ul>
 </li>
 <li><strong><code>-C</code> / <code>--smooth-checkpoint</code></strong>
@@ -540,7 +541,7 @@ $ pg_ctl start
 <li><strong><code>--recovery-target-timeline TIMELINE</code></strong>
 
 <ul>
-<li>Specifies recovering into a particular timeline. If not specified, the current timeline Use (<code>$PGDATA/global/pg_control</code>) is used.</li>
+<li>Specifies recovering into a particular timeline. If not specified, the current timeline from (<code>$PGDATA/global/pg_control</code>) is used.</li>
 </ul>
 </li>
 <li><strong><code>--recovery-target-time TIMESTAMP</code></strong>
@@ -558,13 +559,18 @@ $ pg_ctl start
 <li><strong><code>--recovery-target-inclusive</code></strong>
 
 <ul>
-<li>Specifies whether we stop just after the specified recovery target (true), or just before the recovery target (false). Default is true. The following parameter determines the behavior of restore.</li>
+<li>Specifies whether we stop just after the specified recovery target (true), or just before the recovery target (false). Default is true. 
 </ul>
 </li>
+</li>
+</ul>
+
+<p>The following parameter determines the behavior of restore.</p>
+<ul>
 <li><strong><code>--hard-copy</code></strong>
 
 <ul>
-<li>The archive WAL are copied to archive WAL storage area. If not specified, pg_rman makes symlink to archive WAL where are in the backup catalog directory.</li>
+<li>The archive WAL are copied to archive WAL storage area. If not specified, pg_rman makes symbolic link to archive WAL where are in the backup catalog directory.</li>
 </ul>
 </li>
 </ul>
@@ -672,7 +678,7 @@ $ pg_ctl start
 
 <h1 id="waytopassoptions">Way to pass options</h1>
 
-<p>Some of parameters can be specified in commandline arguments, environment variables or configuration file as follows:</p>
+<p>Some of parameters can be specified in command line arguments, environment variables or configuration file as follows:</p>
 
 <table>
 <thead>
@@ -728,18 +734,18 @@ $ pg_ctl start
 </tr>
 <tr>
 <td>-w</td>
-<td>&ndash;password</td>
+<td>&ndash;no-password</td>
 <td> </td>
 <td></td>
-<td>force password prompt</td>
+<td>never prompt for password</td>
 <td></td>
 </tr>
 <tr>
 <td>-W</td>
-<td>&ndash;no-password</td>
+<td>&ndash;password</td>
 <td></td>
 <td></td>
-<td>never prompt for password</td>
+<td>force password prompt</td>
 <td></td>
 </tr>
 <tr>
@@ -931,7 +937,7 @@ $ pg_ctl start
 <li>Block sizes of pg_rman and server should be matched. BLCKSZ and XLOG_BLCKSZ also should be matched.</li>
 <li>If there are some unreadable files/directories in database cluster directory, WAL directory or archived WAL directory, the backup or restore would be failed.</li>
 <li>In using pg_rman 1.2.10 or before, after creating a database, it should be taken a FULL backup. If one took an incremental backup after creating a database, pg_rman cannot take a consistent backup data. If one use this inconsistent backup to restore, PostgreSQL may show &ldquo;PANIC:  could not open critical system index 2662&rdquo; after recovery. After pg_rman 1.2.11, this restriction has been removed.</li>
-<li>When taking an incremental backup, pg_rman check the timeline ID of the target database whether it is the same with the one of the full backup in backup list. But, pg_rman does not check wheter the data itself is same with the full backup in backup list. So, you can take an incremental backup over the full backup against the database which has the same timeline ID but has different data.</li>
+<li>When taking an incremental backup, pg_rman check the timeline ID of the target database whether it is the same with the one of the full backup in backup list. But, pg_rman does not check whether the data itself is same with the full backup in backup list. So, you can take an incremental backup over the full backup against the database which has the same timeline ID but has different data.</li>
 </ul>
 
 
@@ -1112,7 +1118,7 @@ $ pg_ctl start
 <li>second argument <code>[cleanup]</code>
 
 <ul>
-<li>If you specified <code>cleanup</code>, error occuring doesn&rsquo;t stop the process. just output warning messages.</li>
+<li>If you specified <code>cleanup</code>, error occurring doesn&rsquo;t stop the process. just output warning messages.</li>
 <li>this argument is for <code>resync</code>, <code>umount</code>, <code>unfreeze</code> only.</li>
 </ul>
 </li>
@@ -1170,14 +1176,14 @@ $ pg_ctl start
 <ul>
 <li>Making procedure for removing snapshot made by <code>split</code> operation.</li>
 <li>If you don&rsquo;t need to remove snapshot, like split mirror snapshot, you don&rsquo;t make any procedure.</li>
-<li>If <code>cleanup</code> is specified and occuring errors, output warning messages and continue to get rest snapshots.</li>
+<li>If <code>cleanup</code> is specified and occurring errors, output warning messages and continue to get rest snapshots.</li>
 </ul>
 </li>
 <li><code>mount</code>
 
 <ul>
 <li>Making procedure for mounting the snapshot made by <code>split</code> operation to the filesystem.</li>
-<li>output tablespace name and its direcotry(absolute path) to standard output. The template is [&lt;tablespace name&gt;=&lt;directory path&gt;].
+<li>output tablespace name and its directory(absolute path) to standard output. The template is [&lt;tablespace name&gt;=&lt;directory path&gt;].
 
 <ul>
 <li>If database cluster is included in a snapshot, the tablespace name should be &ldquo;<code>PG-DATA</code>&rdquo;.</li>
@@ -1190,7 +1196,7 @@ $ pg_ctl start
 
 <ul>
 <li>Making procedure for unmounting the snapshot made by <code>mount</code> operation.</li>
-<li>If <code>cleanup</code> is specified and occuring errors, output warning messages and continue to unmount rest snapshots.</li>
+<li>If <code>cleanup</code> is specified and occurring errors, output warning messages and continue to unmount rest snapshots.</li>
 </ul>
 </li>
 <li><code>freeze</code>
@@ -1205,7 +1211,7 @@ $ pg_ctl start
 <ul>
 <li>Making procedure for unfreezing filesystem IO by performing <code>freeze</code> operation.</li>
 <li>If your storage doesn&rsquo;t need to freeze filesystem IO, you don&rsquo;t make any procedure.</li>
-<li>If cleanup is specified and occuring errors, output warning messages and continue to unfreeze rest filesystems.</li>
+<li>If cleanup is specified and occurring errors, output warning messages and continue to unfreeze rest filesystems.</li>
 </ul>
 </li>
 </ul>
@@ -1243,7 +1249,7 @@ $ pg_ctl start
 <pre><code>  $ sudo /bin/mount /dev/VolGroup00/snap00 /mnt/snapshot_lvm/pgdata
 </code></pre></li>
 <li><p>Above example is mounting snapshot volume made by split operation to &ldquo;/mnt/snapshot_lvm/pgdata&rdquo;.</p></li>
-<li>Mounting directory name is parametarable.</li>
+<li>Mounting directory name can be parameterized.</li>
 <li>Output tablespace names and corresponding mounting direcotry name to standard output.</li>
 </ul>
 </li>
@@ -1270,10 +1276,14 @@ $ pg_ctl start
 </li>
 </ul>
 
+<h1 id="download">Download</h1>
+<p>You can download pg_rman rpm packages and source from: <a href="http://sourceforge.net/projects/pg-rman/files/?source=navbar">Click here to download pg_rman</a>  </p>
+<br>
 
 <h1 id="Installations">Installations</h1>
 
 <p>pg_rman can be installed as same as standard contrib modules.</p>
+<p>No need to register to databases.</p>
 
 <h2 id="Build.from.source">Build from source</h2>
 
@@ -1284,7 +1294,11 @@ $ make
 $ make install
 </code></pre>
 
-<p>No need to register to databases.</p>
+<h2 id="Install.from.rpm">Install from rpm package</h2>
+<p>Download rpm which name contains the PostgreSQL version and OS version of your environment.</p>
+<pre><code># rpm -ivh pg_rman-x.x.xx-x.pgxx.rhelx.x86_64.rpm
+</code></pre>
+
 
 <h1 id="requirement">Requirements</h1>
 <dl>
