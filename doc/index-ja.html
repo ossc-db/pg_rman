@@ -22,6 +22,7 @@
 <li><a href="#restrictions">使用上の注意と制約</a></li>
 <li><a href="#details">詳細</a></li>
 <li><a href="#externalscript">外部スクリプトとの連携</a></li>
+<li><a href="#download">ダウンロード</a></li>
 <li><a href="#install">インストール方法</a></li>
 <li><a href="#requirement">動作環境</a></li>
 <li><a href="#seealso">関連項目</a></li>
@@ -62,7 +63,7 @@ pg_rman [ OPTIONS ] { init |
 $ pg_rman validate     # 未検証のすべてのバックアップを検証
 </code></pre>
 
-<p>以下のコマンドをサポートします。オプション <code>OPTIONS</code> の詳細は <strong>オプション</strong> を参照してください。</p>
+<p>以下のコマンドをサポートします。オプション <code>OPTIONS</code> の詳細は <a href="#options">オプション</a> を参照してください。</p>
 
 <ul>
 <li><code>init</code>
@@ -378,7 +379,7 @@ INFO: SRVLOG_PATH is set to '/home/postgres/pgdata/pg_log'
 <p>バックアップカタログの初期化を行うと、<code>BACKUP_PATH</code> 配下にファイル <code>pg_rman.ini</code> が生成されます。
 このファイルに記載したオプションは、各pg_rmanのコマンド実行時にデフォルトとして使用されるため、コマンドラインオプションにて指定する必要がなくなります。
 一般的な運用では、ほぼ全てのパラメータは設定ファイルで指定し、バックアップモードのみをコマンドラインで与えることになるでしょう。
-<code>pg_rman.ini</code>内で指定する際のオプション名については、<a href="">パラメータの指定方法</a>を参照してください。
+<code>pg_rman.ini</code>内で指定する際のオプション名については、<a href="#waytopassoptions">パラメータの指定方法</a>を参照してください。
 </p>
 
 <p>今回は以下の様なオプション設定をデフォルトとして採用するとします。</p>
@@ -758,18 +759,18 @@ $ pg_ctl start
 </tr>
 <tr>
 <td>-w</td>
-<td>&ndash;password</td>
-<td></td>
-<td></td>
-<td>データベースパスワード入力の強制</td>
-<td></td>
-</tr>
-<tr>
-<td>-W</td>
 <td>&ndash;no-password</td>
 <td></td>
 <td></td>
 <td>データベースパスワード入力プロンプトを出さない</td>
+<td></td>
+</tr>
+<tr>
+<td>-W</td>
+<td>&ndash;password</td>
+<td></td>
+<td></td>
+<td>データベースパスワード入力の強制</td>
 <td></td>
 </tr>
 <tr>
@@ -1302,11 +1303,16 @@ $ pg_ctl start
 </ul>
 
 
+<h1 id="download">ダウンロード</h1>
+<p>pg_rmanのソースコード、もしくはRPMは<a href="http://sourceforge.net/projects/pg-rman/files/?source=navbar">ここから</a>ダウンロードできます。</p>
+<br>
+
 <h1 id="install">インストール方法</h1>
 
 <p>pg_rman のインストールは、標準の contrib モジュールと同様です。</p>
+<p>データベースへの登録は不要です。</p>
 
-<h2>ビルド</h2>
+<h2>ソースコードからのインストール</h2>
 
 <p>pgxs を使ってビルドできます。</p>
 
@@ -1315,7 +1321,10 @@ $ make
 $ make install
 </code></pre>
 
-<p>データベースへの登録は不要です。</p>
+<h2>RPMを用いたインストール</h2>
+<p>利用環境でのOSのバージョンとPostgreSQLのバージョンに合わせたRPMをダウンロードし、インストールしてください。</p>
+<pre><code># rpm -ivh pg_rman-x.x.xx-x.pgxx.rhelx.x86_64.rpm
+</code></pre>
 
 <h1 id="requirement">動作環境</h2>
 <dl>
