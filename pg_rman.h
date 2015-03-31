@@ -249,7 +249,7 @@ extern int do_restore(const char *target_time,
 extern int do_init(void);
 
 /* in show.c */
-extern int do_show(pgBackupRange *range, bool show_timeline, bool show_all);
+extern int do_show(pgBackupRange *range, bool show_detail, bool show_all);
 
 /* in delete.c */
 extern int do_delete(pgBackupRange *range, bool force);
