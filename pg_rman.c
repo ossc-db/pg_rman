@@ -105,7 +105,7 @@ main(int argc, char *argv[])
 	const char	   *cmd = NULL;
 	const char	   *range1 = NULL;
 	const char	   *range2 = NULL;
-	bool			show_timeline = false;
+	bool			show_detail = false;
 	pgBackupRange	range;
 	int				i;
 
@@ -122,9 +122,9 @@ main(int argc, char *argv[])
 	{
 		if (cmd == NULL)
 			cmd = argv[i];
-		else if (pg_strcasecmp(argv[i], "timeline") == 0 &&
+		else if (pg_strcasecmp(argv[i], "detail") == 0 &&
 				 pg_strcasecmp(cmd, "show") == 0)
-			show_timeline = true;
+			show_detail = true;
 		else if (range1 == NULL)
 			range1 = argv[i];
 		else if (range2 == NULL)
@@ -208,7 +208,7 @@ main(int argc, char *argv[])
 					target_inclusive, target_tli_string, is_hard_copy);
 	}
 	else if (pg_strcasecmp(cmd, "show") == 0)
-		return do_show(&range, show_timeline, show_all);
+		return do_show(&range, show_detail, show_all);
 	else if (pg_strcasecmp(cmd, "validate") == 0)
 		return do_validate(&range);
 	else if (pg_strcasecmp(cmd, "delete") == 0)
@@ -230,7 +230,7 @@ pgut_help(bool details)
 	printf(_("  %s OPTION backup\n"), PROGRAM_NAME);
 	printf(_("  %s OPTION restore\n"), PROGRAM_NAME);
 	printf(_("  %s OPTION show [DATE]\n"), PROGRAM_NAME);
-	printf(_("  %s OPTION show timeline [DATE]\n"), PROGRAM_NAME);
+	printf(_("  %s OPTION show detail [DATE]\n"), PROGRAM_NAME);
 	printf(_("  %s OPTION validate [DATE]\n"), PROGRAM_NAME);
 	printf(_("  %s OPTION delete DATE\n"), PROGRAM_NAME);
 	printf(_("  %s OPTION purge\n"), PROGRAM_NAME);
