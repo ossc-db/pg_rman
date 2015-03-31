@@ -39,7 +39,7 @@
 <code>pg_rman [ OPTIONS ] { init |
                       backup |
                       restore |
-                      show [ DATE | timeline ] |
+                      show [ DATE | detail ] |
                       validate [ DATE ] |
                       delete DATE |
                       purge }
@@ -86,7 +86,7 @@ $ pg_rman validate     # validate all unvalidated backups
 <li><code>show</code>
 
 <ul>
-<li>Show backup history. The timeline option shows timeline of the backup and the parent&rsquo;s timeline for each backup.</li>
+<li>Show backup history. The detail option shows with additional information of each backups.</li>
 </ul>
 </li>
 <li><code>validate</code>
@@ -162,49 +162,59 @@ $ pg_rman validate     # validate all unvalidated backups
 <p>The <code>show</code> command outputs backup lists.</p>
 
 <pre><code>$ pg_rman show
-============================================================================
-Start                Time   Total    Data     WAL     Log  Backup   Status
-============================================================================
-2015-03-10 13:26:37    0m    ----    ----    16MB    ----    26kB   OK
-2015-03-10 13:26:06    0m    ----    16kB    33MB    ----    54kB   OK
-2015-03-10 13:25:05    0m    28MB    ----   838MB    150B  6549kB   OK
+ ==========================================================
+ StartTime           Mode  Duration    Size   TLI  Status
+ ==========================================================
+ 2015-03-27 11:43:31  INCR        0m    54kB     1  OK
+ 2015-03-27 11:43:19  INCR        0m    69kB     1  OK
+ 2015-03-27 11:43:04  INCR        0m   151kB     1  OK
+ 2015-03-27 11:42:56  INCR        0m    96kB     1  OK
+ 2015-03-27 11:34:55  FULL        0m  5312kB     1  OK
+</code></pre>
+
+<p><code>show detail</code> command shows more detail information.</p>
+
+<pre><code>$ pg_rman show detail
+ ============================================================================================================
+ StartTime           Mode  Duration    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status
+ ============================================================================================================
+ 2015-03-27 11:43:31  INCR        0m    16kB    33MB    ----    54kB        true       1          0  OK
+ 2015-03-27 11:43:19  INCR        0m   148kB    33MB    ----    69kB        true       1          0  OK
+ 2015-03-27 11:43:04  INCR        0m   173kB    83MB    ----   151kB        true       1          0  OK
+ 2015-03-27 11:42:56  INCR        0m   173kB    50MB    ----    96kB        true       1          0  OK
+ 2015-03-27 11:34:55  FULL        0m    28MB    83MB    ----  5312kB        true       1          0  OK
 </code></pre>
 
 <p>The fields are:</p>
-
 <ul>
-<li>Start : start time of backup</li>
-<li>Time : total time of backup</li>
-<li>Total : size of whole database cluster</li>
+<li>StartTime : start time of backup</li>
+<li>Mode : mode of backup.
+<ul>
+<li>FULL : full backup</li>
+<li>INCR : incremental backup</li>
+<li>ARCH : archive WAL backup</li>
+</ul>
+</li>
+<li>Duration : total time of backup</li>
 <li>Data : size of read data files</li>
-<li>WAL : size of read WAL archive files</li>
-<li>Log : size of read serverlog files</li>
-<li>Backup: size of backup (= written size)</li>
-<li>Status: status of backup. Possible values are:
-
+<li>ArcLog : size of read archive WAL files</li>
+<li>SrvLog : size of read server log files</li>
+<li>Size/Total : size of backup ( = written size)</li>
+<li>Compressed : whether backup is compressed or not</li>
+<li>TLI/CurTLI : timeline ID of PostgreSQL</li>
+<li>ParentTLI : former timeline ID of PostgreSQL</li>
+<li>Status: status of backup. Possible values are: 
 <ul>
-<li>OK : backup is done and validated.</li>
-<li>DONE : backup is done, but not validated yet.</li>
-<li>RUNNING : backup is running now.</li>
-<li>DELETING : backup is being deleted now.</li>
+<li>OK : backup is done successfully and validated.</li>
+<li>DONE : backup is done successfully.</li>
+<li>RUNNING : backup is still running.</li>
+<li>DELETING : backup is being deleted.</li>
 <li>DELETED : backup has been deleted.</li>
-<li>ERROR : backup is unavailable because some errors occur during backup.</li>
-<li>CORRUPT : backup is unavailable because it is broken.</li>
+<li>ERROR : some errors occur during backup.</li>
+<li>CORRUPT : backup is unavailable because it does not pass validation.</li>
 </ul>
 </li>
 </ul>
-
-
-<p>with <code>timeline</code>, you can see the timeline with the backup catalog.</p>
-
-<pre><code>$ pg_rman show timeline
-============================================================
-Start                Mode  Current TLI  Parent TLI  Status
-============================================================
-2011-11-27 19:16:37  INCR            1           0  RUNNING
-2011-11-27 19:16:20  INCR            1           0  OK
-2011-11-27 19:15:45  FULL            1           0  OK
-</code></pre>
 
 <p>And more, when you specify the date in &ldquo;Start&rdquo; field, you can see the detail information of the backup.</p>
 
@@ -246,27 +256,42 @@ STATUS=OK
 <p> The following example deletes unneeded backup files to recovery at 12:00 11, September 2009.</p>
 
 <pre><code>$ pg_rman show
-============================================================================
-Start                Time   Total    Data     WAL     Log  Backup   Status
-============================================================================
-2009-09-11 20:00:01    0m    ----    ----      0B    ----      0B   OK
-2009-09-11 15:00:53    0m    ----   8363B    16MB    ----  2346kB   OK
-2009-09-11 10:00:48    0m    ----    ----      0B    ----      0B   OK
-2009-09-11 05:00:06    0m    40MB    ----    16MB    ----  5277kB   OK
-2009-09-11 00:00:02    0m    ----   8363B    16MB    ----   464kB   OK
-2009-09-10 20:30:12    0m    ----    ----      0B    ----      0B   OK
-2009-09-10 15:00:06    0m    ----    ----    16MB    ----    16kB   OK
-2009-09-10 10:00:02    0m    ----   8363B    16MB    ----    16kB   OK
-2009-09-10 05:00:08    0m    40MB    ----   150MB    ----    13MB   OK
-$ pg_rman delete 2009-09-11 12:00:00
-$ pg_rman show
-============================================================================
-Start                Time   Total    Data     WAL     Log  Backup   Status
-============================================================================
-2009-09-11 20:00:01    0m    ----    ----      0B    ----      0B   OK
-2009-09-11 15:00:53    0m    ----   8363B    16MB    ----  2346kB   OK
-2009-09-11 10:00:48    0m    ----    ----      0B    ----      0B   OK
-2009-09-11 05:00:06    0m    40MB    ----    16MB    ----  5277kB   OK
+ ==========================================================
+ StartTime           Mode  Duration    Size   TLI  Status
+ ==========================================================
+ 2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
+ 2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
+ 2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
+ 2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
+ 2015-03-27 11:43:31  INCR        0m    54kB     1  OK
+ 2015-03-27 11:43:19  INCR        0m    69kB     1  OK
+ 2015-03-27 11:43:04  INCR        0m   151kB     1  OK
+ 2015-03-27 11:42:56  INCR        0m    96kB     1  OK
+ 2015-03-27 11:34:55  FULL        0m  5312kB     1  OK
+
+ $ pg_rman delete 2015-03-27 14:59:00
+ INFO: The backup with start time 2015-03-27 14:59:47 cannot be deleted.
+ INFO: Because this backup started later than 2015-03-27 14:59:00.
+ INFO: The backup with start time 2015-03-27 14:59:19 cannot be deleted.
+ INFO: Because this backup is not a latest full backup until 2015-03-27 14:59:00.
+ INFO: The backup with start time 2015-03-27 14:59:00 cannot be deleted.
+ INFO: Because this backup is not a latest full backup until 2015-03-27 14:59:00.
+ INFO: The backup with start time 2015-03-27 14:58:46 cannot be deleted.
+ INFO: Because this is the latest and validated full backup until 2015-03-27 14:59:00.
+ INFO: delete the backup with start time: 2015-03-27 11:43:31
+ INFO: delete the backup with start time: 2015-03-27 11:43:19
+ INFO: delete the backup with start time: 2015-03-27 11:43:04
+ INFO: delete the backup with start time: 2015-03-27 11:42:56
+ INFO: delete the backup with start time: 2015-03-27 11:34:55
+
+ $ pg_rman show
+ ==========================================================
+  StartTime           Mode  Duration    Size   TLI  Status
+  ==========================================================
+  2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
+  2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
+  2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
+  2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
 </code></pre>
 
 
@@ -274,22 +299,34 @@ Start                Time   Total    Data     WAL     Log  Backup   Status
 <p>Though <code>delete</code> command removes actual data from file system, there remains some catalog information of deleted backups. In order to remove this, execute <code>purge</code> command.</p>
 
 <pre><code>$ pg_rman show -a
-============================================================================
-Start                Time   Total    Data     WAL     Log  Backup   Status
-============================================================================
-2015-03-24 11:56:36    0m    ----    16kB    33MB    ----    54kB   OK
-2015-03-24 11:56:19    0m    28MB    ----    67MB    ----  3484kB   OK
-2015-03-24 11:10:59    0m    28MB    ----    33MB    ----  3405kB   DELETED
+ ==========================================================
+ StartTime           Mode  Duration    Size   TLI  Status
+ ==========================================================
+ 2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
+ 2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
+ 2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
+ 2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
+ 2015-03-27 11:43:31  INCR        0m    54kB     1  DELETED
+ 2015-03-27 11:43:19  INCR        0m    69kB     1  DELETED
+ 2015-03-27 11:43:04  INCR        0m   151kB     1  DELETED
+ 2015-03-27 11:42:56  INCR        0m    96kB     1  DELETED
+ 2015-03-27 11:34:55  FULL        0m  5312kB     1  DELETED
 
-$ pg_rman purge
-INFO: The DELETED backup 2015-03-24 11:10:59 is purged.
+ $ pg_rman purge
+ INFO: The DELETED backup 2015-03-27 11:43:31 is purged.
+ INFO: The DELETED backup 2015-03-27 11:43:19 is purged.
+ INFO: The DELETED backup 2015-03-27 11:43:04 is purged.
+ INFO: The DELETED backup 2015-03-27 11:42:56 is purged.
+ INFO: The DELETED backup 2015-03-27 11:34:55 is purged.
 
-$ pg_rman show -a
-============================================================================
-Start                Time   Total    Data     WAL     Log  Backup   Status
-============================================================================
-2015-03-24 11:56:36    0m    ----    16kB    33MB    ----    54kB   OK
-2015-03-24 11:56:19    0m    28MB    ----    67MB    ----  3484kB   OK
+ $ pg_rman show -a
+ ==========================================================
+  StartTime           Mode  Duration    Size   TLI  Status
+  ==========================================================
+  2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
+  2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
+  2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
+  2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
 </code></pre>
 
 <h2 id="Standby-site.Backup">Standby-site Backup</h2>
@@ -386,10 +423,10 @@ NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 <p>Check the result by <code>show</code> command.</p>
 
 <pre><code>$ pg_rman show
-============================================================================
-Start                Time   Total    Data     WAL     Log  Backup   Status
-============================================================================
-2015-03-10 13:25:05    0m    28MB    ----   838MB    150B  6549kB   DONE
+ ==========================================================
+ StartTime           Mode  Duration    Size   TLI  Status
+ ==========================================================
+ 2015-03-27 15:16:15  FULL        0m   463MB     3  DONE
 </code></pre>
 
 <p>
@@ -399,12 +436,13 @@ So, do <code>validate</code> command next.
 </p>
 
 <pre><code>$ pg_rman validate
-INFO: validate: 2015-03-10 13:25:05 backup and archive log files by CRC
-$ pg_rman show
-============================================================================
-Start                Time   Total    Data     WAL     Log  Backup   Status
-============================================================================
-2015-03-10 13:25:05    0m    28MB    ----   838MB    150B  6549kB   OK
+ INFO: validate: 2015-03-27 15:16:15 backup and archive log files by CRC
+
+ $ pg_rman show
+ ==========================================================
+ StartTime           Mode  Duration    Size   TLI  Status
+ ==========================================================
+ 2015-03-27 15:16:15  FULL        0m   463MB     3  OK
 </code></pre>
 
 <p>
