@@ -10,7 +10,7 @@
 #include "pg_rman.h"
 
 static void show_backup_list(FILE *out, parray *backup_list, bool show_all);
-static void show_timeline_backup_list(FILE *out, parray *backup_list, bool show_all);
+static void show_detail_backup_list(FILE *out, parray *backup_list, bool show_all);
 static void show_backup_detail(FILE *out, pgBackup *backup);
 
 /*
@@ -19,7 +19,7 @@ static void show_backup_detail(FILE *out, pgBackup *backup);
  * backup indicated by id.
  */
 int
-do_show(pgBackupRange *range, bool show_timeline, bool show_all)
+do_show(pgBackupRange *range, bool show_detail, bool show_all)
 {
 	if (pgBackupRangeIsSingle(range))
 	{
@@ -49,10 +49,10 @@ do_show(pgBackupRange *range, bool show_timeline, bool show_all)
 			elog(ERROR_SYSTEM, _("can't process any more."));
 		}
 
-		if (!show_timeline)
+		if (!show_detail)
 			show_backup_list(stdout, backup_list, show_all);
 		else
-			show_timeline_backup_list(stdout, backup_list, show_all);
+			show_detail_backup_list(stdout, backup_list, show_all);
 
 		/* cleanup */
 		parray_walk(backup_list, pgBackupFree);
@@ -165,20 +165,17 @@ show_backup_list(FILE *out, parray *backup_list, bool show_all)
 	int i;
 
 	/* show header */
-	fputs("============================================================================\n", out);
-	fputs("Start                Time   Total    Data     WAL     Log  Backup   Status  \n", out);
-	fputs("============================================================================\n", out);
+	fputs("==========================================================\n", out);
+	fputs(" StartTime           Mode  Duration    Size   TLI  Status \n", out);
+	fputs("==========================================================\n", out);
 
 	for (i = 0; i < parray_num(backup_list); i++)
 	{
 		pgBackup *backup;
 		char timestamp[20];
 		char duration[20] = "----";
-		char total_data_bytes_str[10] = "----";
-		char read_data_bytes_str[10] = "----";
-		char read_arclog_bytes_str[10] = "----";
-		char read_srvlog_bytes_str[10] = "----";
 		char write_bytes_str[10];
+		static const char *modes[] = { "", "ARCH", "INCR", "FULL"};
 
 		backup = parray_get(backup_list, i);
 
@@ -190,38 +187,25 @@ show_backup_list(FILE *out, parray *backup_list, bool show_all)
 		if (backup->end_time != (time_t) 0)
 			snprintf(duration, lengthof(duration), "%lum",
 				(backup->end_time - backup->start_time) / 60);
-		/* "Full" is only for full backup */
-		if (backup->backup_mode >= BACKUP_MODE_FULL)
-			pretty_size(backup->total_data_bytes, total_data_bytes_str,
-					lengthof(total_data_bytes_str));
-		else if (backup->backup_mode >= BACKUP_MODE_INCREMENTAL)
-			pretty_size(backup->read_data_bytes, read_data_bytes_str,
-					lengthof(read_data_bytes_str));
-		if (HAVE_ARCLOG(backup))
-			pretty_size(backup->read_arclog_bytes, read_arclog_bytes_str,
-					lengthof(read_arclog_bytes_str));
-		if (backup->with_serverlog)
-			pretty_size(backup->read_srvlog_bytes, read_srvlog_bytes_str,
-					lengthof(read_srvlog_bytes_str));
+
 		pretty_size(backup->write_bytes, write_bytes_str,
 				lengthof(write_bytes_str));
 
-		fprintf(out, "%-19s %5s  %6s  %6s  %6s  %6s  %6s   %s\n",
-			timestamp, duration,
-			total_data_bytes_str, read_data_bytes_str, read_arclog_bytes_str,
-			read_srvlog_bytes_str, write_bytes_str, status2str(backup->status));
+		fprintf(out, "%-19s  %-4s    %6s  %6s %5d  %s\n",
+			timestamp, modes[backup->backup_mode], duration,
+			write_bytes_str, backup->tli, status2str(backup->status));
 	}
 }
 
 static void
-show_timeline_backup_list(FILE *out, parray *backup_list, bool show_all)
+show_detail_backup_list(FILE *out, parray *backup_list, bool show_all)
 {
 	int		i;
 
 	/* show header */
-	fputs("============================================================\n", out);
-	fputs("Start                Mode  Current TLI  Parent TLI  Status  \n", out);
-	fputs("============================================================\n", out);
+	fputs("============================================================================================================\n", out);
+	fputs(" StartTime           Mode  Duration    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status  \n", out);
+	fputs("============================================================================================================\n", out);
 
 	for (i = 0; i < parray_num(backup_list); i++)
 	{
@@ -229,6 +213,12 @@ show_timeline_backup_list(FILE *out, parray *backup_list, bool show_all)
 
 		pgBackup *backup;
 		char timestamp[20];
+		char duration[20] = "----";
+		char read_data_bytes_str[10] = "----";
+		char read_arclog_bytes_str[10] = "----";
+		char read_srvlog_bytes_str[10] = "----";
+		char write_bytes_str[10];
+        char *is_compressed;
 		TimeLineID	parent_tli;
 
 		backup = parray_get(backup_list, i);
@@ -239,11 +229,36 @@ show_timeline_backup_list(FILE *out, parray *backup_list, bool show_all)
 			continue;
 
 		time2iso(timestamp, lengthof(timestamp), backup->start_time);
+		if (backup->end_time != (time_t) 0)
+			snprintf(duration, lengthof(duration), "%lum",
+				(backup->end_time - backup->start_time) / 60);
+	    pretty_size(backup->read_data_bytes, read_data_bytes_str,
+				lengthof(read_data_bytes_str));
+		if (HAVE_ARCLOG(backup))
+			pretty_size(backup->read_arclog_bytes, read_arclog_bytes_str,
+					lengthof(read_arclog_bytes_str));
+		if (backup->with_serverlog)
+			pretty_size(backup->read_srvlog_bytes, read_srvlog_bytes_str,
+					lengthof(read_srvlog_bytes_str));
+		pretty_size(backup->write_bytes, write_bytes_str,
+				lengthof(write_bytes_str));
+        if (backup->compress_data) {
+            is_compressed = "true";
+        } else {
+            is_compressed = "false";
+        }
 
 		parent_tli = get_parent_tli(backup->tli);
 
-		fprintf(out, "%-19s  %-4s   %10d  %10d  %s\n",
-			timestamp, modes[backup->backup_mode], backup->tli, parent_tli,
+		fprintf(out, "%-19s  %-4s    %6s  %6s  %6s  %6s  %6s       %5s  %6d  %9d  %s\n",
+			timestamp, modes[backup->backup_mode],
+            duration,
+            read_data_bytes_str,
+            read_arclog_bytes_str,
+            read_srvlog_bytes_str,
+            write_bytes_str,
+            is_compressed,
+            backup->tli, parent_tli,
 			status2str(backup->status));
 	}
 }
