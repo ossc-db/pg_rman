@@ -77,13 +77,38 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 
 	time2iso(timestamp, lengthof(timestamp), backup->start_time);
 	if(!for_get_timeline){
-		if (with_database)
-			elog(INFO, "validate: %s backup and archive log files by %s", timestamp, (size_only ? "SIZE" : "CRC"));
-		else{
-			if (backup->backup_mode == BACKUP_MODE_ARCHIVE)
-				elog(INFO, "validate: %s archive log files by %s", timestamp, (size_only ? "SIZE" : "CRC"));
-			else if (backup->with_serverlog)
-				elog(INFO, "validate: %s server log files by %s", timestamp, (size_only ? "SIZE" : "CRC"));
+		if (with_database && backup->with_serverlog){
+			if (check){
+				elog(INFO, "will validate: %s backup, archive log files and server log files by %s", 
+						timestamp, (size_only ? "SIZE" : "CRC"));
+			} else{
+				elog(INFO, "validate: %s backup, archive log files and server log files by %s", 
+						timestamp, (size_only ? "SIZE" : "CRC"));
+			}
+		} else if (with_database){
+			if (check){
+				elog(INFO, "will validate: %s backup and archive log files by %s", 
+						timestamp, (size_only ? "SIZE" : "CRC"));
+			} else{
+				elog(INFO, "validate: %s backup and archive log files by %s", 
+						timestamp, (size_only ? "SIZE" : "CRC"));
+			}
+		} else if ((backup->backup_mode == BACKUP_MODE_ARCHIVE) && backup->with_serverlog) {
+			if (check){
+				elog(INFO, "will validate: %s archive log files and server log files by %s",
+						timestamp, (size_only ? "SIZE" : "CRC"));
+			} else{
+				elog(INFO, "validate: %s archive log files and server log files by %s",
+						timestamp, (size_only ? "SIZE" : "CRC"));
+			}
+		} else if (backup->backup_mode == BACKUP_MODE_ARCHIVE) {
+			if (check){
+				elog(INFO, "will validate: %s archive log files by %s",
+						timestamp, (size_only ? "SIZE" : "CRC"));
+			} else{
+				elog(INFO, "validate: %s archive log files by %s",
+						timestamp, (size_only ? "SIZE" : "CRC"));
+			}
 		}
 	}
 
