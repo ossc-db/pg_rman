@@ -8,7 +8,7 @@ Usage:
   pg_rman OPTION backup
   pg_rman OPTION restore
   pg_rman OPTION show [DATE]
-  pg_rman OPTION show timeline [DATE]
+  pg_rman OPTION show detail [DATE]
   pg_rman OPTION validate [DATE]
   pg_rman OPTION delete DATE
   pg_rman OPTION purge
