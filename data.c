@@ -28,14 +28,14 @@
 #define zlibInSize  4096
 
 static int doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
-	void *outbuf, FILE *in, FILE *out, pg_crc32 *crc, size_t *write_size,
+	void *outbuf, FILE *in, FILE *out, pg_crc32c *crc, size_t *write_size,
 	int flash);
 static int doInflate(z_stream *zp, size_t in_size, size_t out_size,void *inbuf,
-	void *outbuf, FILE *in, FILE *out, pg_crc32 *crc, size_t *read_size);
+	void *outbuf, FILE *in, FILE *out, pg_crc32c *crc, size_t *read_size);
 
 static int
 doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
-	void *outbuf, FILE *in, FILE *out, pg_crc32 *crc, size_t *write_size,
+	void *outbuf, FILE *in, FILE *out, pg_crc32c *crc, size_t *write_size,
 	int flash)
 {
 	int	status;
@@ -84,7 +84,7 @@ doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
 
 static int
 doInflate(z_stream *zp, size_t in_size, size_t out_size,void *inbuf,
-	void *outbuf, FILE *in, FILE *out, pg_crc32 *crc, size_t *read_size)
+	void *outbuf, FILE *in, FILE *out, pg_crc32c *crc, size_t *read_size)
 {
 	int	status = Z_OK;
 
@@ -222,7 +222,7 @@ backup_data_file(const char *from_root,
 	BlockNumber			blknum;
 	size_t				read_len;
 	int					errno_tmp;
-	pg_crc32			crc;
+	pg_crc32c			crc;
 #ifdef HAVE_LIBZ
 	z_stream			z;
 	char				outbuf[zlibOutSize];
@@ -513,7 +513,7 @@ restore_data_file(const char *from_root,
 	z_stream			z;
 	int					status;
 	char				inbuf[zlibInSize];
-	pg_crc32			crc;
+	pg_crc32c			crc;
 	size_t				read_size;
 #endif
 
@@ -707,7 +707,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 	int			errno_tmp;
 	char		buf[8192];
 	struct stat	st;
-	pg_crc32	crc;
+	pg_crc32c	crc;
 #ifdef HAVE_LIBZ
 	z_stream	z;
 	int			status;

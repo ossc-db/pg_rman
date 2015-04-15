@@ -30,7 +30,7 @@ read_control_file()
 	char 		*buffer;
 	int			fd;
 	char		ControlFilePath[MAXPGPATH];
-	pg_crc32	crc;
+	pg_crc32c	crc;
 
 	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
 

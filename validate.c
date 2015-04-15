@@ -219,7 +219,7 @@ pgBackupValidateFiles(parray *files, const char *root, bool size_only)
 		/* validate CRC too */
 		if (!size_only)
 		{
-			pg_crc32	crc;
+			pg_crc32c	crc;
 
 			crc = pgFileGetCRC(file);
 			if (crc != file->crc)

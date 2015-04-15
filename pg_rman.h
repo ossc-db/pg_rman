@@ -18,7 +18,7 @@
 #include "pgut/pgut.h"
 #include "access/xlogdefs.h"
 #include "storage/bufpage.h"
-#include "common/pg_crc.h"
+#include "port/pg_crc32c.h"
 #include "parray.h"
 
 #define TXID_CURRENT_SQL	"SELECT txid_current();"
@@ -73,7 +73,7 @@ typedef struct pgFile
 	size_t	write_size;		/* size of the backed-up file. BYTES_INVALID means
 							   that the file existed but was not backed up
 							   because not modified since last backup. */
-	pg_crc32 crc;			/* CRC value of the file, regular file only */
+	pg_crc32c crc;			/* CRC value of the file, regular file only */
 	char   *linked;			/* path of the linked file */
 	bool	is_datafile;	/* true if the file is PostgreSQL data file */
 	char	path[1]; 		/* path of the file */
@@ -295,7 +295,7 @@ extern void dir_copy_files(const char *from_root, const char *to_root);
 
 extern void pgFileDelete(pgFile *file);
 extern void pgFileFree(void *file);
-extern pg_crc32 pgFileGetCRC(pgFile *file);
+extern pg_crc32c pgFileGetCRC(pgFile *file);
 extern int pgFileComparePath(const void *f1, const void *f2);
 extern int pgFileComparePathDesc(const void *f1, const void *f2);
 extern int pgFileCompareMtime(const void *f1, const void *f2);

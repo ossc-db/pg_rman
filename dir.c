@@ -122,11 +122,11 @@ delete_file:
 	}
 }
 
-pg_crc32
+pg_crc32c
 pgFileGetCRC(pgFile *file)
 {
 	FILE	   *fp;
-	pg_crc32	crc = 0;
+	pg_crc32c	crc = 0;
 	char		buf[1024];
 	size_t		len;
 	int			errno_tmp;
@@ -516,7 +516,7 @@ dir_read_file_list(const char *root, const char *file_txt)
 		char			path[MAXPGPATH];
 		char			type;
 		unsigned long	write_size;
-		pg_crc32		crc;
+		pg_crc32c		crc;
 		unsigned int	mode;	/* bit length of mode_t depends on platforms */
 		struct tm		tm;
 		pgFile		   *file;
