@@ -12,9 +12,6 @@ before_install:
   - ./configure --prefix=$POSTGRES_HOME
   - make -j 2
   - make install
-  - cd contrib/pgbench
-  - make
-  - make install
   - echo 'export PATH=$PATH:$POSTGRES_HOME/bin' >> ~/.bashrc
   - export PATH=$PATH:$POSTGRES_HOME/bin
   - echo 'export PGDATA=/home/travis/build/bwtakacy/pg_rman/pg_data/$PGVERSION' >> ~/.bashrc
