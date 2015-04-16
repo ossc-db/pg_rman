@@ -1180,6 +1180,9 @@ elog(int elevel, const char *fmt, ...)
 	case LOG:
 		fputs("LOG: ", stderr);
 		break;
+	case DETAIL:
+		fputs("DETAIL: ", stderr);
+		break;
 	case INFO:
 		fputs("INFO: ", stderr);
 		break;

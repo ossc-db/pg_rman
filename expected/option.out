@@ -58,6 +58,9 @@ Restore options:
 Catalog options:
   -a, --show-all            show deleted backup too
 
+Delete options:
+  -f, --force               forcely delete backup older than given DATE
+
 Connection options:
   -d, --dbname=DBNAME       database to connect
   -h, --host=HOSTNAME       database server host or socket directory

@@ -10,22 +10,30 @@
 #include "pg_rman.h"
 
 static int pgBackupDeleteFiles(pgBackup *backup);
-static bool checkIfDeletable(pgBackup *backup);
 
+/*
+ *  Check backup lists and decide which to delete.
+ *  The backups which are not necessary for PITR until given date range.
+ *  If force option is set true, delete backups taken older than given
+ *  date without checking the necessity for PITR.
+ */
 int
 do_delete(pgBackupRange *range, bool force)
 {
 	int		i;
 	int		ret;
 	parray *backup_list;
-	bool	do_delete;
-	bool	force_delete;
+	bool	found_boundary_to_keep;
 	char 	backup_timestamp[20];
 	char 	given_timestamp[20];
+	char	*backup_mode;
 
 	/* DATE are always required */
 	if (!pgBackupRangeIsValid(range))
 		elog(ERROR_ARGS, _("required delete range option not specified: delete DATE"));
+
+	found_boundary_to_keep = false;
+	time2iso(given_timestamp, lengthof(given_timestamp), range->begin);
 
 	/* get exclusive lock of backup catalog */
 	ret = catalog_lock();
@@ -41,49 +49,50 @@ do_delete(pgBackupRange *range, bool force)
 		elog(ERROR_SYSTEM, _("can't process any more."));
 	}
 
-	do_delete = false;
-	force_delete = false;
-	time2iso(given_timestamp, lengthof(given_timestamp), range->begin); 
-	/* find delete target backup. */
+	/* check each backups and delete if possible */
 	for (i = 0; i < parray_num(backup_list); i++)
 	{
 		pgBackup *backup = (pgBackup *)parray_get(backup_list, i);
-		time2iso(backup_timestamp, lengthof(backup_timestamp), backup->start_time); 
+		time2iso(backup_timestamp, lengthof(backup_timestamp), backup->start_time);
 
-		if(force)
-			force_delete = checkIfDeletable(backup);
-
-		/* delete backup and update status to DELETED */
-		if (do_delete || force_delete)
+		/* We keep backups until finding the validated full backup
+		 * which is necessary for recovery until specified DATE.
+		 */
+		if (backup->start_time > range->begin)
+			continue;
+		else
 		{
+			if (!force && !found_boundary_to_keep)
+			{
+				/* Check whether this is the first validate full backup before the specified DATE */
+				if (backup->backup_mode >= BACKUP_MODE_FULL &&
+					backup->status == BACKUP_STATUS_OK)
+				{
+					elog(WARNING, _("cannot delete backup with start time \"%s\""),
+									backup_timestamp);
+					elog(DETAIL, _("it is the latest full backup necessary"
+								   " for successful recovery"));
+					found_boundary_to_keep = true;
+				} else {
+					elog(WARNING, _("cannot delete backup with start time \"%s\""),
+									backup_timestamp);
+					backup_mode = (backup->backup_mode == BACKUP_MODE_INCREMENTAL) ? "incremental" : "archive";
+					elog(DETAIL, _("it is an %s backup necessary"
+								   " for successful recovery"), backup_mode);
+				}
+
+				/* keep this backup */
+				continue;
+			}
+
 			/* check for interrupt */
 			if (interrupted)
-				elog(ERROR_INTERRUPTED, _("interrupted during delete backup"));
-
-			pgBackupDeleteFiles(backup);
-			continue;
-		}
-
-		elog(INFO, _("The backup with start time %-19s cannot be deleted."), backup_timestamp); 
-		/* We keep latest full backup until the given DATE. */
-		if (backup->backup_mode >= BACKUP_MODE_FULL &&
-			backup->status == BACKUP_STATUS_OK &&
-			backup->start_time <= range->begin)
-		{
-			/* Found the latest and validated full backup. So we can delete backups older than this. */
-			do_delete = true;
-			elog(INFO, _("Because this is the latest and validated full backup until %-19s."), 
-					given_timestamp); 
-		} else {
-			if (backup->backup_mode < BACKUP_MODE_FULL)
 			{
-				elog(INFO, _("Because this backup is not a latest full backup until %-19s."), given_timestamp); 
-			} else if (backup->start_time > range->begin) {
-				elog(INFO, _("Because this backup started later than %-19s."), given_timestamp); 
-			} else {	
-				elog(INFO, _("This backup is full backup and not later than %-19s, but the status is not OK."), 
-						given_timestamp); 
+				elog(ERROR_INTERRUPTED, _("interrupted during delete backup"));
 			}
+
+			/* Do actual deletion */
+			pgBackupDeleteFiles(backup);
 		}
 	}
 
@@ -210,9 +219,9 @@ pgBackupDeleteFiles(pgBackup *backup)
 
 	if (check)
 	{
-		elog(INFO, _("will delete the backup with start time: %s"), timestamp);
+		elog(INFO, _("will delete the backup with start time: \"%s\""), timestamp);
 	} else {
-		elog(INFO, _("delete the backup with start time: %s"), timestamp);
+		elog(NOTICE, _("delete the backup with start time: \"%s\""), timestamp);
 	}
 
 	/*
@@ -274,20 +283,8 @@ pgBackupDeleteFiles(pgBackup *backup)
 	return 0;
 }
 
-bool
-checkIfDeletable(pgBackup *backup)
-{
-	/* find latest full backup. */
-	if (backup->status != BACKUP_STATUS_OK &&
-		backup->status != BACKUP_STATUS_DELETED &&
-		backup->status != BACKUP_STATUS_DONE)
-		return true;
-
-	return false;
-}
-
 /*
- * Remove DELETED backups from BACKUP_PATH direcotory. 
+ * Remove DELETED backups from BACKUP_PATH direcotory.
  */
 int do_purge(void)
 {
@@ -314,21 +311,21 @@ int do_purge(void)
 		elog(ERROR_SYSTEM, _("can't process any more."));
 	}
 
-	for (i=0; i < parray_num(backup_list); i++) 
+	for (i=0; i < parray_num(backup_list); i++)
 	{
 		backup = parray_get(backup_list, i);
 
 		/* skip living backups */
-		if(backup->status != BACKUP_STATUS_DELETED) 
+		if(backup->status != BACKUP_STATUS_DELETED)
 			continue;
 
-		time2iso(timestamp, lengthof(timestamp), backup->start_time); 
+		time2iso(timestamp, lengthof(timestamp), backup->start_time);
 		pgBackupGetPath(backup, path, lengthof(path), NULL);
 		
 		if (check)
 		{
-			elog(INFO, "The DELETED backup %-19s will be purged.", timestamp);
-			elog(INFO, "The path is %s", path);
+			elog(INFO, _("The DELETED backup \"%s\" will be purged."), timestamp);
+			elog(INFO, _("The path is %s"), path);
 		}
 
 		files = parray_new();
@@ -369,9 +366,9 @@ int do_purge(void)
 		{
 			if(any_errors)
 			{
-				elog(WARNING, "There are errors in purging backup %-19s", timestamp);
+				elog(WARNING, _("There are errors in purging backup \"%s\""), timestamp);
 			} else {
-				elog(INFO, "The DELETED backup %-19s is purged.", timestamp);
+				elog(INFO, _("The DELETED backup \"%s\" is purged."), timestamp);
 			}
 		}
 	}

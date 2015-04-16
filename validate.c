@@ -79,18 +79,18 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 	if(!for_get_timeline){
 		if (with_database && backup->with_serverlog){
 			if (check){
-				elog(INFO, "will validate: %s backup, archive log files and server log files by %s", 
+				elog(INFO, "will validate: %s backup, archive log files and server log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
 			} else{
-				elog(INFO, "validate: %s backup, archive log files and server log files by %s", 
+				elog(INFO, "validate: %s backup, archive log files and server log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
 			}
 		} else if (with_database){
 			if (check){
-				elog(INFO, "will validate: %s backup and archive log files by %s", 
+				elog(INFO, "will validate: %s backup and archive log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
 			} else{
-				elog(INFO, "validate: %s backup and archive log files by %s", 
+				elog(INFO, "validate: %s backup and archive log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
 			}
 		} else if ((backup->backup_mode == BACKUP_MODE_ARCHIVE) && backup->with_serverlog) {
