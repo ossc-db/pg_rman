@@ -279,6 +279,8 @@ pgut_help(bool details)
 	printf(_("  --hard-copy                 copying archivelog not symbolic link\n"));
 	printf(_("\nCatalog options:\n"));
 	printf(_("  -a, --show-all            show deleted backup too\n"));
+	printf(_("\nDelete options:\n"));
+	printf(_("  -f, --force               forcely delete backup older than given DATE\n"));
 }
 
 /*

@@ -120,7 +120,7 @@ pg_rman validate -B ${BACKUP_PATH} --quiet > /dev/null 2>&1;echo $?
 DELETE_DATE=`date +"%Y-%m-%d %H:%M:%S"`
 pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet > /dev/null 2>&1;echo $?
-pg_rman delete ${DELETE_DATE} -B ${BACKUP_PATH} --quiet;echo $?
+pg_rman delete ${DELETE_DATE} -B ${BACKUP_PATH} > /dev/null 2>&1;echo $?
 pg_rman show -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0004-show.out 2>&1
 pg_rman show -a -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0004-show-all.out 2>&1
 if ! grep "DELETED" ${TEST_BASE}/TEST-0004-show.out > /dev/null && grep "DELETED" ${TEST_BASE}/TEST-0004-show-all.out > /dev/null ; then
