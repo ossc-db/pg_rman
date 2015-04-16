@@ -151,7 +151,8 @@ extern FILE *pgut_fopen(const char *path, const char *mode, bool missing_ok);
 /*
  * elog
  */
-#define LOG			(-4)
+#define LOG			(-5)
+#define DETAIL		(-4)
 #define INFO		(-3)
 #define NOTICE		(-2)
 #define WARNING		(-1)

@@ -78,7 +78,7 @@ pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quie
 pg_rman validate -B ${BACKUP_PATH} --quiet
 
 echo "delete the oldest backup"
-pg_rman -B ${BACKUP_PATH} delete ${SECOND_BACKUP_DATE} --quiet
+pg_rman -B ${BACKUP_PATH} delete ${SECOND_BACKUP_DATE} > /dev/null 2>&1
 pg_rman show -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0001.out.1 2>&1
 pg_rman show -a -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0001.out.2 2>&1
 
@@ -104,7 +104,7 @@ pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quie
 pg_rman validate -B ${BACKUP_PATH} --quiet
 
 echo "delete the oldest backup"
-pg_rman -B ${BACKUP_PATH} delete ${SECOND_BACKUP_DATE} --quiet
+pg_rman -B ${BACKUP_PATH} delete ${SECOND_BACKUP_DATE} > /dev/null 2>&1
 pg_rman show -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0002.out.1 2>&1
 pg_rman show -a -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0002.out.2 2>&1
 
