@@ -32,7 +32,7 @@ run the below commands.
 ````
  $ make
  # make install
-`````
+````
 
 How to run regression tests
 ---------------------------
