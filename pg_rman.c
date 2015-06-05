@@ -247,7 +247,7 @@ pgut_help(bool details)
 	printf(_("  -B, --backup-path=PATH    location of the backup storage area\n"));
 	printf(_("  -c, --check               show what would have been done\n"));
 	printf(_("  -v, --verbose             show what detail messages\n"));
-	printf(_("  -P, --progres             show progress of processed files\n"));
+	printf(_("  -P, --progress            show progress of processed files\n"));
 	printf(_("\nBackup options:\n"));
 	printf(_("  -b, --backup-mode=MODE    full, incremental, or archive\n"));
 	printf(_("  -s, --with-serverlog      also backup server log files\n"));
