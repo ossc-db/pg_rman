@@ -20,7 +20,7 @@ Common Options:
   -B, --backup-path=PATH    location of the backup storage area
   -c, --check               show what would have been done
   -v, --verbose             show what detail messages
-  -P, --progres             show progress of processed files
+  -P, --progress            show progress of processed files
 
 Backup options:
   -b, --backup-mode=MODE    full, incremental, or archive
