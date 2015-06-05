@@ -1298,8 +1298,10 @@ backup_files(const char *from_root,
 			 const char *prefix)
 {
 	int				i;
+	int				num_skipped = 0;
 	struct timeval	tv;
 	bool			prev_file_not_found = false;
+
 	/* sort pathname ascending */
 	parray_qsort(files, pgFileComparePath);
 
@@ -1344,9 +1346,10 @@ backup_files(const char *from_root,
 			{
 				/* record as skipped file in file_xxx.txt */
 				file->write_size = BYTES_INVALID;
+				num_skipped++;
 				if (verbose)
 					printf(_("skip\n"));
-				continue;
+				goto show_progress;
 			}
 			else
 			{
@@ -1412,10 +1415,11 @@ backup_files(const char *from_root,
 					if(prev_file->mtime == file->mtime)
 					{
 						/* record as skipped file in file_xxx.txt */
-							file->write_size = BYTES_INVALID;
+						file->write_size = BYTES_INVALID;
+						num_skipped++;
 						if (verbose)
 							printf(_("skip\n"));
-						continue;
+						goto show_progress;
 					}
 				}
 				else
@@ -1447,9 +1451,10 @@ backup_files(const char *from_root,
 			{
 				/* record as skipped file in file_xxx.txt */
 				file->write_size = BYTES_INVALID;
+				num_skipped++;
 				if (verbose)
 					printf(_("skip\n"));
-				continue;
+				goto show_progress;
 			}
 
 			if (verbose)
@@ -1462,6 +1467,21 @@ backup_files(const char *from_root,
 						(unsigned long) file->size);
 				else
 					printf(_("copied %lu\n"), (unsigned long) file->write_size);
+
+				continue;
+			}
+
+show_progress:
+			/* print progress in non-verbose format */
+			if (progress)
+			{
+				fprintf(stderr, _("Processed %d of %lu files, skipped %d"),
+						i + 1, (unsigned long) parray_num(files), num_skipped);
+
+				if (i + 1 < (unsigned long) parray_num(files))
+					fprintf(stderr, "\r");
+				else
+					fprintf(stderr, "\n");
 			}
 
 		}

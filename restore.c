@@ -337,6 +337,7 @@ restore_database(pgBackup *backup)
 	int		ret;
 	parray *files;
 	int		i;
+	int		num_skipped = 0;
 
 	/* confirm block size compatibility */
 	if (backup->block_size != BLCKSZ)
@@ -419,7 +420,7 @@ restore_database(pgBackup *backup)
 		if (interrupted)
 			elog(ERROR_INTERRUPTED, _("interrupted during restore database"));
 
-		/* print progress */
+		/* print progress in verbose mode */
 		if (verbose && !check)
 			printf(_("(%d/%lu) %s "), i + 1, (unsigned long) parray_num(files),
 				file->path + strlen(from_root) + 1);
@@ -427,17 +428,19 @@ restore_database(pgBackup *backup)
 		/* directories are created with mkdirs.sh */
 		if (S_ISDIR(file->mode))
 		{
+			num_skipped++;
 			if (verbose && !check)
 				printf(_("directory, skip\n"));
-			continue;
+			goto show_progress;
 		}
 
 		/* not backed up */
 		if (file->write_size == BYTES_INVALID)
 		{
+			num_skipped++;
 			if (verbose && !check)
 				printf(_("not backed up, skip\n"));
-			continue;
+			goto show_progress;
 		}
 
 		/* restore file */
@@ -446,7 +449,22 @@ restore_database(pgBackup *backup)
 
 		/* print size of restored file */
 		if (verbose && !check)
+		{
 			printf(_("restored %lu\n"), (unsigned long) file->write_size);
+			continue;
+		}
+
+show_progress:
+		/* print progress in non-verbose format */
+		if (progress)
+		{
+			fprintf(stderr, _("Processed %d of %lu files, skipped %d"),
+					i + 1, (unsigned long) parray_num(files), num_skipped);
+			if(i + 1 < (unsigned long) parray_num(files))
+				fprintf(stderr, "\r");
+			else
+				fprintf(stderr, "\n");
+		}
 	}
 
 	/* Delete files which are not in file list. */
