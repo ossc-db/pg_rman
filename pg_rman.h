@@ -225,6 +225,7 @@ extern char *srvlog_path;
 
 /* common configuration */
 extern bool verbose;
+extern bool progress;
 extern bool check;
 
 /* current settings */
