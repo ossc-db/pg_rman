@@ -30,7 +30,7 @@ do_show(pgBackupRange *range, bool show_detail, bool show_all)
 		{
 			char timestamp[100];
 			time2iso(timestamp, lengthof(timestamp), range->begin);
-			elog(INFO, _("backup taken at \"%s\" doesn not exist."),
+			elog(INFO, _("backup taken at \"%s\" does not exist."),
 				timestamp);
 			/* This is not error case */
 			return 0;

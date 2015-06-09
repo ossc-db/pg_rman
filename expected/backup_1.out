@@ -59,7 +59,7 @@ OK. Let's try to test --keep-srvlog-files=1.
 3
 Number of remaining serverlog files: 1
 ###### BACKUP COMMAND TEST-0010 ######
-###### swith backup mode from incremental to full ######
+###### switch backup mode from incremental to full ######
 incremental backup without validated full backup
 INFO: copying database files
 ERROR: There is no validated full backup with current timeline. Please take a full backup and validate it before doing an incremental backup. Or use with --full-backup-on-error command line option.
@@ -73,7 +73,7 @@ INFO: copying server log files
 1
 1
 ###### BACKUP COMMAND TEST-0011 ######
-###### swith backup mode from archive to full ######
+###### switch backup mode from archive to full ######
 archive backup without validated full backup
 ERROR: There is no validated full backup with current timeline. Please take a full backup and validate it before doing an archive backup. Or use with --full-backup-on-error command line option.
 10

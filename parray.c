@@ -12,7 +12,7 @@
 /* members of struct parray are hidden from client. */
 struct parray
 {
-	void **data;		/* poiter array, expanded if necessary */
+	void **data;		/* pointer array, expanded if necessary */
 	size_t alloced;		/* number of elements allocated */
 	size_t used;		/* number of elements in use */
 };

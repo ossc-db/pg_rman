@@ -233,7 +233,7 @@ NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH} | wc -l`
 echo "Number of remaining serverlog files: ${NUM_OF_SRVLOG_FILES_AFTER}"
 
 echo '###### BACKUP COMMAND TEST-0010 ######'
-echo '###### swith backup mode from incremental to full ######'
+echo '###### switch backup mode from incremental to full ######'
 init_catalog
 echo 'incremental backup without validated full backup'
 pg_rman backup -B ${BACKUP_PATH} -b incremental -s -Z -p ${TEST_PGPORT} -d postgres;echo $?
@@ -245,7 +245,7 @@ grep OK ${TEST_BASE}/TEST-0010.log | grep FULL | wc -l
 grep ERROR ${TEST_BASE}/TEST-0010.log | grep INCR | wc -l
 
 echo '###### BACKUP COMMAND TEST-0011 ######'
-echo '###### swith backup mode from archive to full ######'
+echo '###### switch backup mode from archive to full ######'
 init_catalog
 echo 'archive backup without validated full backup'
 pg_rman backup -B ${BACKUP_PATH} -b archive -s -Z -p ${TEST_PGPORT} -d postgres;echo $?

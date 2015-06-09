@@ -58,7 +58,7 @@ pg_rman -B ${BACKUP_PATH} init;echo $?
 echo ''
 
 echo '###### INIT COMMAND TEST-0005 ######'
-echo '###### failure with backup catalog shoud be given as absolute path ######'
+echo '###### failure with backup catalog should be given as absolute path ######'
 rm -rf ${BACKUP_PATH}
 pg_rman --backup-path=resuts/init/backup init;echo $?
 echo ''

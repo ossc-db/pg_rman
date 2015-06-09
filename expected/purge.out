@@ -1,6 +1,6 @@
 \! bash sql/purge.sh
 ###### PURGE COMMAND TEST-0001 ######
-###### purge DELETED backups sucessfully ######
+###### purge DELETED backups successfully ######
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
