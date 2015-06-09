@@ -72,14 +72,16 @@ Number of remaining serverlog files: 1
 ###### BACKUP COMMAND TEST-0010 ######
 ###### swith backup mode from incremental to full ######
 incremental backup without validated full backup
-INFO: database backup start
+INFO: copying database files
 ERROR: There is no validated full backup with current timeline. Please take a full backup and validate it before doing an incremental backup. Or use with --full-backup-on-error command line option.
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 10
 incremental backup in the same situation but with --full-backup-on-error option
-INFO: database backup start
+INFO: copying database files
 INFO: There is no validated full backup with current timeline. Switching to full backup mode.
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+INFO: copying archived WAL files
+INFO: copying server log files
 0
 1
 1
@@ -90,8 +92,10 @@ ERROR: There is no validated full backup with current timeline. Please take a fu
 10
 archive backup in the same situation but with --full-backup-on-error option
 INFO: There is no validated full backup with current timeline. Switching to full backup mode.
-INFO: database backup start
+INFO: copying database files
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+INFO: copying archived WAL files
+INFO: copying server log files
 0
 1
 1
