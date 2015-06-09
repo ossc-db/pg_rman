@@ -776,7 +776,7 @@ do_backup(pgBackupOption bkupopt)
 	if (current.backup_mode == BACKUP_MODE_INVALID)
 		elog(ERROR_ARGS, _("required parameter not specified: BACKUP_MODE (-b, --backup-mode)"));
 
-	/* ARCLOG_PATH is requried only when backup archive WAL */
+	/* ARCLOG_PATH is required only when backup archive WAL */
 	if (HAVE_ARCLOG(&current) && arclog_path == NULL)
 		elog(ERROR_ARGS, _("required parameter not specified: ARCLOG_PATH (-A, --arclog-path)"));
 
@@ -905,7 +905,7 @@ do_backup(pgBackupOption bkupopt)
 
 	/*
 	 * If this backup is full backup, delete backup of online WAL.
-	 * Note that sereverlog files which were backed up during first restoration
+	 * Note that serverlog files which were backed up during first restoration
 	 * don't be delete.
 	 * Also delete symbolic link in the archive directory.
 	 */

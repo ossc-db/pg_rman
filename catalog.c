@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * catalog.c: backup catalog opration
+ * catalog.c: backup catalog operation
  *
  * Copyright (c) 2009-2015, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
  *

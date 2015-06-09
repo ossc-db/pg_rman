@@ -15,7 +15,7 @@ static bool pgBackupValidateFiles(parray *files, const char *root, bool size_onl
 
 /*
  * Validate files in the backup and update its status to OK.
- * If any of files are corrupted, update its stutus to CORRUPT.
+ * If any of files are corrupted, update its status to CORRUPT.
  */
 int
 do_validate(pgBackupRange *range)
