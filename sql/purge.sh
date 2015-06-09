@@ -65,7 +65,7 @@ function init_catalog()
 
 init_backup
 echo '###### PURGE COMMAND TEST-0001 ######'
-echo '###### purge DELETED backups sucessfully ######'
+echo '###### purge DELETED backups successfully ######'
 
 FIRST_BACKUP_DATE=`date +"%Y-%m-%d %H:%M:%S"`
 pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet

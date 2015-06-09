@@ -33,7 +33,7 @@ ERROR: backup catalog already exist. and it's not empty.
 2
 
 ###### INIT COMMAND TEST-0005 ######
-###### failure with backup catalog shoud be given as absolute path ######
+###### failure with backup catalog should be given as absolute path ######
 ERROR: -B, --backup-path must be an absolute path
 12
 
