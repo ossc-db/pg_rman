@@ -284,7 +284,7 @@ pgBackupDeleteFiles(pgBackup *backup)
 }
 
 /*
- * Remove DELETED backups from BACKUP_PATH direcotory.
+ * Remove DELETED backups from BACKUP_PATH directory.
  */
 int do_purge(void)
 {

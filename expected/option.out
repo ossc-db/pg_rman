@@ -61,7 +61,7 @@ Catalog options:
   -a, --show-all            show deleted backup too
 
 Delete options:
-  -f, --force               forcely delete backup older than given DATE
+  -f, --force               forcibly delete backup older than given DATE
 
 Connection options:
   -d, --dbname=DBNAME       database to connect
