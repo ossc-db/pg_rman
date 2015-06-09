@@ -356,8 +356,9 @@ restore_database(pgBackup *backup)
 	if (verbose && !check)
 	{
 		printf(_("----------------------------------------\n"));
-		printf(_("restoring database from backup %s.\n"), timestamp);
 	}
+
+	elog(INFO, _("restoring database files from backup \"%s\"."), timestamp);
 
 	/*
 	 * Validate backup files with its size, because load of CRC calculation is
@@ -527,6 +528,7 @@ void
 restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 {
 	int i;
+	int num_skipped = 0;
 	char timestamp[100];
 	parray *files;
 	char path[MAXPGPATH];
@@ -537,8 +539,9 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 	if (verbose && !check)
 	{
 		printf(_("----------------------------------------\n"));
-		printf(_("restoring WAL from backup %s.\n"), timestamp);
 	}
+
+	elog(INFO,_("restoring WAL files from backup \"%s\"."), timestamp);
 
 	/*
 	 * Validate backup files with its size, because load of CRC calculation is
@@ -568,7 +571,7 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 		{
 			if (verbose && !check)
 				printf(_("skip(not backed up)\n"));
-			continue;
+			goto show_progress;
 		}
 
 		/*
@@ -580,7 +583,7 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 		{
 			if (verbose && !check)
 				printf(_("skip(timeline history)\n"));
-			continue;
+			goto show_progress;
 		}
 
 		if (!check)
@@ -591,7 +594,7 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 				if (verbose)
 					printf(_("decompressed\n"));
 
-				continue;
+				goto show_progress;
 			}
 
 			/* even same file exist, use backup file */
@@ -620,6 +623,18 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 					printf(_("copied\n"));
 			}
 
+show_progress:
+		/* print progress in non-verbose format */
+		if (progress)
+		{
+			fprintf(stderr, _("Processed %d of %lu files, skipped %d"),
+					i + 1, (unsigned long) parray_num(files), num_skipped);
+			if(i + 1 < (unsigned long) parray_num(files))
+				fprintf(stderr, "\r");
+			else
+				fprintf(stderr, "\n");
+		}
+
 		}
 	}
 
@@ -640,8 +655,9 @@ create_recovery_conf(const char *target_time,
 	if (verbose && !check)
 	{
 		printf(_("----------------------------------------\n"));
-		printf(_("creating recovery.conf\n"));
 	}
+
+	elog(INFO, _("generating recovery.conf"));
 
 	if (!check)
 	{
@@ -682,6 +698,8 @@ backup_online_files(bool re_recovery)
 		printf(_("----------------------------------------\n"));
 		printf(_("backup online WAL and serverlog start\n"));
 	}
+	
+	elog(INFO, _("copying online WAL files and server log files"));
 
 	/* get list of files in $BACKUP_PATH/backup/pg_xlog */
 	files = parray_new();
@@ -721,6 +739,7 @@ static void
 restore_online_files(void)
 {
 	int		i;
+	int		num_skipped = 0;
 	char	root_backup[MAXPGPATH];
 	parray *files_backup;
 
@@ -733,8 +752,9 @@ restore_online_files(void)
 	if (verbose && !check)
 	{
 		printf(_("----------------------------------------\n"));
-		printf(_("restoring online WAL\n"));
 	}
+
+	elog(INFO, _("restoring online WAL files and server log files"));
 
 	/* restore online WAL */
 	for (i = 0; i < parray_num(files_backup); i++)
@@ -751,7 +771,7 @@ restore_online_files(void)
 					file->path + strlen(root_backup) + 1);
 			if (!check)
 				dir_create_dir(to_path, DIR_PERMISSION);
-			continue;
+			goto show_progress;
 		}
 		else if(S_ISREG(file->mode))
 		{
@@ -762,6 +782,18 @@ restore_online_files(void)
 					file->path + strlen(root_backup) + 1);
 			if (!check)
 				copy_file(root_backup, to_root, file, NO_COMPRESSION);
+		}
+
+show_progress:
+		/* print progress in non-verbose format */
+		if (progress)
+		{
+			fprintf(stderr, _("Processed %d of %lu files, skipped %d"),
+					i + 1, (unsigned long) parray_num(files_backup), num_skipped);
+			if(i + 1 < (unsigned long) parray_num(files_backup))
+				fprintf(stderr, "\r");
+			else
+				fprintf(stderr, "\n");
 		}
 	}
 

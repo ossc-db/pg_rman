@@ -110,7 +110,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		}
 	}
 
-	elog(INFO, _("database backup start"));
+	elog(INFO, _("copying database files"));
 
 	/* initialize size summary */
 	current.total_data_bytes = 0;
@@ -559,8 +559,8 @@ do_backup_arclog(parray *backup_list)
 	if (verbose)
 	{
 		printf(_("========================================\n"));
-		printf(_("archived WAL backup start\n"));
 	}
+	elog(INFO, _("copying archived WAL files"));
 
 	/* initialize size summary */
 	current.read_arclog_bytes = 0;
@@ -687,8 +687,8 @@ do_backup_srvlog(parray *backup_list)
 	if (verbose)
 	{
 		printf(_("========================================\n"));
-		printf(_("serverlog backup start\n"));
 	}
+	elog(INFO, _("copying server log files"));
 
 	/* initialize size summary */
 	current.read_srvlog_bytes = 0;
