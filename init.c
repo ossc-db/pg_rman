@@ -73,7 +73,7 @@ do_init(void)
 	if (fp == NULL)
 		elog(ERROR_SYSTEM, _("can't create pg_rman.ini: %s"), strerror(errno));
 
-	/* set ARCLOG_PATH refered with archive_command */
+	/* set ARCLOG_PATH referred with archive_command */
 	if (arclog_path == NULL && archive_command && archive_command[0])
 	{
 		char *command = pgut_strdup(archive_command);
@@ -119,7 +119,7 @@ do_init(void)
 		elog(WARNING, "ARCLOG_PATH is not set because archive_command is empty."
 				"Please set ARCLOG_PATH in pg_rman.ini or environmental variable");
 
-	/* set SRVLOG_PATH refered with log_directory */
+	/* set SRVLOG_PATH referred with log_directory */
 	if (srvlog_path == NULL)
 	{
 		if (log_directory)

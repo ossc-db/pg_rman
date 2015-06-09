@@ -247,7 +247,7 @@ base_backup_found:
 
 	/*
 	 * Restore archived WAL which backed up with or after last restored backup.
-	 * We don't check the backup->tli because a backup of arhived WAL
+	 * We don't check the backup->tli because a backup of archived WAL
 	 * can contain WALs which were archived in multiple timeline.
 	 */
 	if (verbose)
@@ -367,13 +367,13 @@ restore_database(pgBackup *backup)
 	 */
 	pgBackupValidate(backup, true, false, true);
 
-	/* make direcotries and symbolic links */
+	/* make directories and symbolic links */
 	pgBackupGetPath(backup, path, lengthof(path), MKDIRS_SH_FILE);
 	if (!check)
 	{
 		char pwd[MAXPGPATH];
 
-		/* keep orginal directory */
+		/* keep original directory */
 		if (getcwd(pwd, sizeof(pwd)) == NULL)
 			elog(ERROR_SYSTEM, _("can't get current working directory: %s"),
 				strerror(errno));

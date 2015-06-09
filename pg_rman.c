@@ -284,12 +284,12 @@ pgut_help(bool details)
 	printf(_("\nCatalog options:\n"));
 	printf(_("  -a, --show-all            show deleted backup too\n"));
 	printf(_("\nDelete options:\n"));
-	printf(_("  -f, --force               forcely delete backup older than given DATE\n"));
+	printf(_("  -f, --force               forcibly delete backup older than given DATE\n"));
 }
 
 /*
  * Create range object from one or two arguments.
- * All not-digit characters in the argument(s) are igonred.
+ * All not-digit characters in the argument(s) are ignored.
  * Both arg1 and arg2 must be valid pointer.
  */
 static void
@@ -322,7 +322,7 @@ parse_range(pgBackupRange *range, const char *arg1, const char *arg2)
 		if (strcmp(tmp,"") != 0)
 			elog(ERROR_ARGS, _("supplied id(%s) is invalid."), tmp);
 		else
-			elog(ERROR_ARGS, _("argments are invalid. near \"%s\""), arg1);
+			elog(ERROR_ARGS, _("arguments are invalid. near \"%s\""), arg1);
 	}
 
 	free(tmp);

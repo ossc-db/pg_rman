@@ -48,7 +48,7 @@
 #define SNAPSHOT_MOUNT			"mount"
 #define SNAPSHOT_UMOUNT			"umount"
 
-/* Direcotry/File permission */
+/* Directory/File permission */
 #define DIR_PERMISSION		(0700)
 #define FILE_PERMISSION		(0600)
 
@@ -120,7 +120,7 @@ typedef enum BackupMode
 } BackupMode;
 
 /*
- * pg_rman takes backup into the directroy $BACKUP_PATH/<date>/<time>.
+ * pg_rman takes backup into the directory $BACKUP_PATH/<date>/<time>.
  *
  * status == -1 indicates the pgBackup is invalid.
  */
