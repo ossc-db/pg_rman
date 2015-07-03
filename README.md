@@ -14,11 +14,11 @@ different PostgreSQL server versions without introducing
 server version check code blocks.
 Please choose branch with PostgreSQL version you use.
 
-* master : branch for latest PostgreSQL develop version
-* REL9_4_STABLE : branch for PostgreSQL 9.4
-* REL9_3_STABLE : branch for PostgreSQL 9.3
-* REL9_2_STABLE : branch for PostgreSQL 9.2
-* pre-9.2 : branch for PostgreSQL 9.1 and before
+* master : branch for latest PostgreSQL develop version [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=master)](https://travis-ci.org/ossc-db/pg_rman)
+* REL9_4_STABLE : branch for PostgreSQL 9.4 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL9_4_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
+* REL9_3_STABLE : branch for PostgreSQL 9.3 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL9_3_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
+* REL9_2_STABLE : branch for PostgreSQL 9.2 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL9_2_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
+* pre-9.2 : branch for PostgreSQL 9.1 and before [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=pre-9.2)](https://travis-ci.org/ossc-db/pg_rman)
 
 How to use
 ----------
