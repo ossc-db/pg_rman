@@ -35,6 +35,7 @@ before_script:
   - cd
   - git clone https://github.com/ossc-db/pg_rman.git pg_rman
   - cd pg_rman && git describe --alway
+  - git checkout -b REL9_5_STABLE origin/REL9_5_STABLE
   - make
   - make install
 
