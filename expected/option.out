@@ -77,8 +77,8 @@ Generic options:
   --help                    show this help, then exit
   --version                 output version information, then exit
 
-Read the website for details. <http://sourceforge.net/projects/pg-rman/>
-Report bugs to <http://sourceforge.net/p/pg-rman/tickets/>.
+Read the website for details. <http://github.com/ossc-db/pg_rman>
+Report bugs to <http://github.com/ossc-db/pg_rman/issues>.
 1
 
 ###### COMMAND OPTION TEST-0002 ######
