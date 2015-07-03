@@ -79,7 +79,7 @@ typedef void (*pgut_atexit_callback)(bool fatal, void *userdata);
 extern const char  *PROGRAM_NAME;
 extern const char  *PROGRAM_VERSION;
 extern const char  *PROGRAM_URL;
-extern const char  *PROGRAM_EMAIL;
+extern const char  *PROGRAM_ISSUES;
 
 extern void	pgut_help(bool details);
 
