@@ -7,17 +7,18 @@ before_install:
   - sudo apt-get -y install bc libpam-dev libedit-dev
   - git clone https://github.com/postgres/postgres.git postgres-dev
   - cd postgres-dev
-  - export POSTGRES_HOME=/home/travis/build/bwtakacy/pg_rman/pgsql/$PGVERSION
-  - echo 'export POSTGRES_HOME=/home/travis/build/bwtakacy/pg_rman/pgsql/$PGVERSION' >> ~/.bashrc
+  - if [ $PGVERSION = 9.5 ] ; then git checkout -b REL9_5_STABLE origin/REL9_5_STABLE; fi
+  - export POSTGRES_HOME=/home/travis/build/ossc-db/pg_rman/pgsql/$PGVERSION
+  - echo 'export POSTGRES_HOME=/home/travis/build/ossc-db/pg_rman/pgsql/$PGVERSION' >> ~/.bashrc
   - ./configure --prefix=$POSTGRES_HOME
   - make -j 2
   - make install
   - echo 'export PATH=$PATH:$POSTGRES_HOME/bin' >> ~/.bashrc
   - export PATH=$PATH:$POSTGRES_HOME/bin
-  - echo 'export PGDATA=/home/travis/build/bwtakacy/pg_rman/pg_data/$PGVERSION' >> ~/.bashrc
-  - export PGDATA=/home/travis/build/bwtakacy/pg_rman/pg_data/$PGVERSION
+  - echo 'export PGDATA=/home/travis/build/ossc-db/pg_rman/pg_data/$PGVERSION' >> ~/.bashrc
+  - export PGDATA=/home/travis/build/ossc-db/pg_rman/pg_data/$PGVERSION
   - mkdir -p $PGDATA
-  - mkdir -p /home/travis/build/bwtakacy/pg_rman/pg_data/archivelog
+  - mkdir -p /home/travis/build/ossc-db/pg_rman/pg_data/archivelog
   - initdb --no-locale -D $PGDATA
   - sudo echo "local   all         postgres                          trust" > $PGDATA/pg_hba.conf
   - sudo echo "local   all         all                               trust" >> $PGDATA/pg_hba.conf
@@ -26,13 +27,13 @@ before_install:
   - sudo echo "logging_collector = on" >> $PGDATA/postgresql.conf
   - sudo echo "wal_level = hot_standby" >> $PGDATA/postgresql.conf
   - sudo echo "archive_mode = on" >> $PGDATA/postgresql.conf
-  - sudo echo "archive_command = 'cp %p /home/travis/build/bwtakacy/pg_rman/pg_data/archivelog/%f'" >> $PGDATA/postgresql.conf
+  - sudo echo "archive_command = 'cp %p /home/travis/build/ossc-db/pg_rman/pg_data/archivelog/%f'" >> $PGDATA/postgresql.conf
   - pg_ctl -V
   - pg_ctl -D $PGDATA start
 
 before_script:
   - cd
-  - git clone https://github.com/bwtakacy/pg_rman.git pg_rman
+  - git clone https://github.com/ossc-db/pg_rman.git pg_rman
   - cd pg_rman && git describe --alway
   - make
   - make install
@@ -49,4 +50,4 @@ compiler:
 script: make installcheck
 
 after_script:
-  - cat /home/travis/build/bwtakacy/pg_rman/postgres/regression.diffs
+  - cat /home/travis/build/ossc-db/pg_rman/postgres/regression.diffs
