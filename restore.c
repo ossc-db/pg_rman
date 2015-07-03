@@ -133,9 +133,6 @@ do_restore(const char *target_time,
 		printf(_("target timeline ID = %u\n"), target_tli);
 	}
 
-	/* backup online WAL and serverlog */
-	backup_online_files(cur_tli != 0 && cur_tli != backup_tli);
-
 	/*
 	 * restore timeline history files and get timeline branches can reach
 	 * recovery target point.
@@ -173,6 +170,9 @@ do_restore(const char *target_time,
 	elog(ERROR_NO_BACKUP, _("no full backup found, can't restore."));
 
 base_backup_found:
+
+	/* first off, backup online WAL and serverlog */
+	backup_online_files(cur_tli != 0 && cur_tli != backup_tli);
 
 	/*
 	 * Clear restore destination, but don't remove $PGDATA.
