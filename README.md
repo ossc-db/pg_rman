@@ -73,10 +73,18 @@ How to build and install from source code
 Change directory into top directory of pg_rman sorce codes and
 run the below commands.
 
+
 ````
  $ make
  # make install
 ````
+
+There are some libraries to be installed before.
+
+* pam-devel(libpam-dev)
+* readline-devel(libedit-dev)
+* zlib-devel
+
 
 How to run regression tests
 ---------------------------
