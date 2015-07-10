@@ -30,7 +30,9 @@ do_delete(pgBackupRange *range, bool force)
 
 	/* DATE are always required */
 	if (!pgBackupRangeIsValid(range))
-		elog(ERROR_ARGS, _("required delete range option not specified: delete DATE"));
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("required delete range option not specified: delete DATE")));
 
 	found_boundary_to_keep = false;
 	time2iso(given_timestamp, lengthof(given_timestamp), range->begin);
@@ -38,15 +40,20 @@ do_delete(pgBackupRange *range, bool force)
 	/* get exclusive lock of backup catalog */
 	ret = catalog_lock();
 	if (ret == -1)
-		elog(ERROR_SYSTEM, _("can't lock backup catalog."));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not  lock backup catalog.")));
 	else if (ret == 1)
-		elog(ERROR_ALREADY_RUNNING,
-			_("another pg_rman is running, stop delete."));
+		ereport(ERROR,
+			(errcode(ERROR_ALREADY_RUNNING),
+			 errmsg("another pg_rman is running, stop delete.")));
 
 	/* get list of backups. */
 	backup_list = catalog_get_backup_list(NULL);
 	if(!backup_list){
-		elog(ERROR_SYSTEM, _("can't process any more."));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not get list of backup already taken.")));
 	}
 
 	/* check each backups and delete if possible */
@@ -68,17 +75,16 @@ do_delete(pgBackupRange *range, bool force)
 				if (backup->backup_mode >= BACKUP_MODE_FULL &&
 					backup->status == BACKUP_STATUS_OK)
 				{
-					elog(WARNING, _("cannot delete backup with start time \"%s\""),
-									backup_timestamp);
-					elog(DETAIL, _("it is the latest full backup necessary"
-								   " for successful recovery"));
+					ereport(WARNING,
+						(errmsg("cannot delete backup with start time \"%s\"", backup_timestamp),
+						 errdetail("it is the latest full backup necessary for successful recovery")));
 					found_boundary_to_keep = true;
 				} else {
-					elog(WARNING, _("cannot delete backup with start time \"%s\""),
-									backup_timestamp);
 					backup_mode = (backup->backup_mode == BACKUP_MODE_INCREMENTAL) ? "incremental" : "archive";
-					elog(DETAIL, _("it is an %s backup necessary"
-								   " for successful recovery"), backup_mode);
+					ereport(WARNING,
+						(errmsg("cannot delete backup with start time \"%s\"", backup_timestamp),
+						errdetail("it is an %s backup necessary"
+								" for successful recovery", backup_mode)));
 				}
 
 				/* keep this backup */
@@ -88,7 +94,9 @@ do_delete(pgBackupRange *range, bool force)
 			/* check for interrupt */
 			if (interrupted)
 			{
-				elog(ERROR_INTERRUPTED, _("interrupted during delete backup"));
+				ereport(FATAL,
+					(errcode(ERROR_INTERRUPTED),
+					 errmsg("interrupted during delete backup")));
 			}
 
 			/* Do actual deletion */
@@ -143,7 +151,7 @@ pgBackupDelete(int keep_generations, int keep_days)
 	/* delete files which satisfy both condition */
 	if (keep_generations == KEEP_INFINITE || keep_days == KEEP_INFINITE)
 	{
-		elog(LOG, "%s() infinite", __FUNCTION__);
+		elog(DEBUG, "do not delete old backup files");
 		return;
 	}
 
@@ -156,7 +164,7 @@ pgBackupDelete(int keep_generations, int keep_days)
 	{
 		pgBackup *backup = (pgBackup *)parray_get(backup_list, i);
 
-		elog(LOG, "%s() %lu", __FUNCTION__, backup->start_time);
+		elog(DEBUG, "%s() %lu", __FUNCTION__, backup->start_time);
 		/*
 		 * when validate full backup was found, we can delete the backup
 		 * that is older than it
@@ -169,7 +177,7 @@ pgBackupDelete(int keep_generations, int keep_days)
 //		if (backup_num - 1 <= keep_generations)
 		if (backup_num <= keep_generations)
 		{
-			elog(LOG, "%s() backup are only %d", __FUNCTION__, backup_num);
+			elog(DEBUG, "%s() backup are only %d", __FUNCTION__, backup_num);
 			continue;
 		}
 
@@ -179,12 +187,12 @@ pgBackupDelete(int keep_generations, int keep_days)
 		 */
 		if (backup->start_time >= days_threshold)
 		{
-			elog(LOG, "%s() %lu is not older than %lu", __FUNCTION__,
+			elog(DEBUG, "%s() %lu is not older than %lu", __FUNCTION__,
 				backup->start_time, days_threshold);
 			continue;
 		}
 
-		elog(LOG, "%s() %lu is older than %lu", __FUNCTION__,
+		elog(DEBUG, "%s() %lu is older than %lu", __FUNCTION__,
 			backup->start_time, days_threshold);
 
 		/* delete backup and update status to DELETED */
@@ -221,7 +229,7 @@ pgBackupDeleteFiles(pgBackup *backup)
 	{
 		elog(INFO, _("will delete the backup with start time: \"%s\""), timestamp);
 	} else {
-		elog(NOTICE, _("delete the backup with start time: \"%s\""), timestamp);
+		elog(INFO, _("delete the backup with start time: \"%s\""), timestamp);
 	}
 
 	/*
@@ -250,7 +258,7 @@ pgBackupDeleteFiles(pgBackup *backup)
 		pgFile *file = (pgFile *) parray_get(files, i);
 
 		/* print progress */
-		elog(LOG, _("delete file(%d/%lu) \"%s\"\n"), i + 1,
+		elog(DEBUG, _("delete file(%d/%lu) \"%s\"\n"), i + 1,
 				(unsigned long) parray_num(files), file->path);
 
 		/* skip actual deletion in check mode */
@@ -300,15 +308,20 @@ int do_purge(void)
 	/* get exclusive lock of backup catalog */
 	ret = catalog_lock();
 	if (ret == -1)
-		elog(ERROR_SYSTEM, _("can't lock backup catalog."));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not lock backup catalog.")));
 	else if (ret == 1)
-		elog(ERROR_ALREADY_RUNNING,
-			("another pg_rman is running, stop delete."));
+		ereport(ERROR,
+			(errcode(ERROR_ALREADY_RUNNING),
+			errmsg("another pg_rman is running, stop delete.")));
 
 	/* get list of backups. */
 	backup_list = catalog_get_backup_list(NULL);
 	if(!backup_list){
-		elog(ERROR_SYSTEM, _("can't process any more."));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not get list of backup already taken.")));
 	}
 
 	for (i=0; i < parray_num(backup_list); i++)
@@ -342,20 +355,20 @@ int do_purge(void)
 				if (verbose)
 				{
 					/* skip actual deletion in check mode */
-					elog(INFO, _("will delete file(%d/%lu) \"%s\"\n"), j + 1,
+					elog(DEBUG, _("will delete file(%d/%lu) \"%s\"\n"), j + 1,
 						(unsigned long) parray_num(files), file->path);
 					continue;
 				}
 			} else {
 				if(verbose)
 				{
-					elog(INFO, _("delete file(%d/%lu) \"%s\"\n"), j + 1,
+					elog(DEBUG, _("delete file(%d/%lu) \"%s\"\n"), j + 1,
 						(unsigned long) parray_num(files), file->path);
 				}
 
 				if (remove(file->path))
 				{
-					elog(WARNING, _("can't remove \"%s\": %s"), file->path,
+					elog(WARNING, _("could not remove \"%s\": %s"), file->path,
 						strerror(errno));
 					any_errors++;
 				}

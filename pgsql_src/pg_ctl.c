@@ -41,11 +41,15 @@ get_pgpid(void)
 		if (errno == ENOENT)
 			return 0;
 		else
-			elog(ERROR_SYSTEM, _("could not open PID file \"%s\": %s\n"),
-						 pid_file, strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open PID file \"%s\": %s\n",
+						 pid_file, strerror(errno))));
 	}
 	if (fscanf(pidf, "%ld", &pid) != 1)
-		elog(ERROR_PID_BROKEN, _("invalid data in PID file \"%s\"\n"), pid_file);
+		ereport(ERROR,
+			(errcode(ERROR_PID_BROKEN),
+			 errmsg("invalid data in PID file \"%s\"\n", pid_file)));
 	fclose(pidf);
 	return (pgpid_t) pid;
 }

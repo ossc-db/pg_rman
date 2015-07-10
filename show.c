@@ -30,7 +30,7 @@ do_show(pgBackupRange *range, bool show_detail, bool show_all)
 		{
 			char timestamp[100];
 			time2iso(timestamp, lengthof(timestamp), range->begin);
-			elog(INFO, _("backup taken at \"%s\" does not exist."),
+			elog(NOTICE, _("backup taken at \"%s\" does not exist."),
 				timestamp);
 			/* This is not error case */
 			return 0;
@@ -46,7 +46,9 @@ do_show(pgBackupRange *range, bool show_detail, bool show_all)
 
 		backup_list = catalog_get_backup_list(range);
 		if (backup_list == NULL){
-			elog(ERROR_SYSTEM, _("can't process any more."));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not get list of backup already taken.")));
 		}
 
 		if (!show_detail)
@@ -122,8 +124,10 @@ get_parent_tli(TimeLineID child_tli)
 	if (fd == NULL)
 	{
 		if (errno != ENOENT)
-			elog(ERROR_SYSTEM, _("could not open file \"%s\": %s"), path,
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open file \"%s\": %s", path,
+					strerror(errno))));
 
 		return 0;
 	}
@@ -148,9 +152,9 @@ get_parent_tli(TimeLineID child_tli)
 		/* expect a numeric timeline ID as first field of line */
 		result = (TimeLineID) strtoul(ptr, &endptr, 0);
 		if (endptr == ptr)
-			elog(ERROR_CORRUPTED,
-					_("syntax error(timeline ID) in history file: %s"),
-					fline);
+			ereport(ERROR,
+				(errcode(ERROR_CORRUPTED),
+				 errmsg("syntax error(timeline ID) in history file: %s", fline)));
 	}
 
 	fclose(fd);
