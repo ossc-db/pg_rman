@@ -52,8 +52,9 @@ dir_create_dir(const char *dir, mode_t mode)
 	{
 		if (errno == EEXIST)	/* already exist */
 			return 0;
-		elog(ERROR_SYSTEM, _("can't create directory \"%s\": %s"), dir,
-			strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not create directory \"%s\": %s", dir, strerror(errno))));
 	}
 
 	return 0;
@@ -71,8 +72,9 @@ pgFileNew(const char *path, bool omit_symlink)
 		/* file not found is not an error case */
 		if (errno == ENOENT)
 			return NULL;
-		elog(ERROR_SYSTEM, _("can't stat file \"%s\": %s"), path,
-			strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not stat file \"%s\": %s", path, strerror(errno))));
 	}
 
 	file = (pgFile *) pgut_malloc(offsetof(pgFile, path) + strlen(path) + 1);
@@ -106,8 +108,10 @@ pgFileDelete(pgFile *file)
 			else if (errno == ENOTDIR)	/* could be symbolic link */
 				goto delete_file;
 
-			elog(ERROR_SYSTEM, _("can't remove directory \"%s\": %s"),
-				file->path, strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not remove directory \"%s\": %s",
+					file->path, strerror(errno))));
 		}
 		return;
 	}
@@ -117,8 +121,9 @@ delete_file:
 	{
 		if (errno == ENOENT)
 			return;
-		elog(ERROR_SYSTEM, _("can't remove file \"%s\": %s"), file->path,
-			strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not remove file \"%s\": %s", file->path, strerror(errno))));
 	}
 }
 
@@ -134,20 +139,23 @@ pgFileGetCRC(pgFile *file)
 	/* open file in binary read mode */
 	fp = fopen(file->path, "r");
 	if (fp == NULL)
-		elog(ERROR_SYSTEM, _("can't open file \"%s\": %s"),
-			file->path, strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open file \"%s\": %s", file->path, strerror(errno))));
 
 	/* calc CRC of backup file */
 	PGRMAN_INIT_CRC32(crc);
 	while ((len = fread(buf, 1, sizeof(buf), fp)) == sizeof(buf))
 	{
 		if (interrupted)
-			elog(ERROR_INTERRUPTED, _("interrupted during CRC calculation"));
+			ereport(FATAL,
+				(errcode(ERROR_INTERRUPTED),
+				 errmsg("interrupted during CRC calculation")));
 		PGRMAN_COMP_CRC32(crc, buf, len);
 	}
 	errno_tmp = errno;
 	if (!feof(fp))
-		elog(WARNING, _("can't read \"%s\": %s"), file->path,
+		elog(WARNING, _("could not read \"%s\": %s"), file->path,
 			strerror(errno_tmp));
 	if (len > 0)
 		PGRMAN_COMP_CRC32(crc, buf, len);
@@ -238,8 +246,9 @@ dir_list_file(parray *files, const char *root, const char *exclude[], bool omit_
 		black_list = parray_new();
 		black_list_file = fopen(path, "r");
 		if (black_list_file == NULL)
-			elog(ERROR_SYSTEM, _("can't open black_list: %s"),
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open black_list: %s", strerror(errno))));
 		while (fgets(buf, lengthof(buf), black_list_file) != NULL)
 		{
 			join_path_components(black_item, pgdata, buf);
@@ -286,8 +295,9 @@ dir_list_file_internal(parray *files, const char *root, const char *exclude[],
 		len = readlink(file->path, linked, sizeof(linked));
 		if (len == -1)
 		{
-			elog(ERROR_SYSTEM, _("can't read link \"%s\": %s"), file->path,
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not read link \"%s\": %s", file->path, strerror(errno))));
 		}
 		linked[len] = '\0';
 		file->linked = pgut_strdup(linked);
@@ -368,8 +378,10 @@ dir_list_file_internal(parray *files, const char *root, const char *exclude[],
 				/* maybe the direcotry was removed */
 				return;
 			}
-			elog(ERROR_SYSTEM, _("can't open directory \"%s\": %s"),
-				file->path, strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open directory \"%s\": %s",
+					file->path, strerror(errno))));
 		}
 
 		errno = 0;
@@ -389,8 +401,10 @@ dir_list_file_internal(parray *files, const char *root, const char *exclude[],
 		{
 			int errno_tmp = errno;
 			closedir(dir);
-			elog(ERROR_SYSTEM, _("can't read directory \"%s\": %s"),
-				file->path, strerror(errno_tmp));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not read directory \"%s\": %s",
+					file->path, strerror(errno_tmp))));
 		}
 		closedir(dir);
 
@@ -506,8 +520,9 @@ dir_read_file_list(const char *root, const char *file_txt)
 
 	fp = fopen(file_txt, "rt");
 	if (fp == NULL)
-		elog(errno == ENOENT ? ERROR_CORRUPTED : ERROR_SYSTEM,
-			_("can't open \"%s\": %s"), file_txt, strerror(errno));
+		ereport(ERROR,
+			((errno == ENOENT ? errcode(ERROR_CORRUPTED) : errcode(ERROR_SYSTEM)),
+			 errmsg("could not open \"%s\": %s", file_txt, strerror(errno))));
 
 	files = parray_new();
 
@@ -527,13 +542,15 @@ dir_read_file_list(const char *root, const char *file_txt)
 			&tm.tm_year, &tm.tm_mon, &tm.tm_mday,
 			&tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 11)
 		{
-			elog(ERROR_CORRUPTED, _("invalid format found in \"%s\""),
-				file_txt);
+			ereport(ERROR,
+				(errcode(ERROR_CORRUPTED),
+				 errmsg("invalid format found in \"%s\"", file_txt)));
 		}
 		if (type != 'f' && type != 'F' && type != 'd' && type != 'l')
 		{
-			elog(ERROR_CORRUPTED, _("invalid type '%c' found in \"%s\""),
-				type, file_txt);
+			ereport(ERROR,
+				(errcode(ERROR_CORRUPTED),
+				 errmsg("invalid type '%c' found in \"%s\"", type, file_txt)));
 		}
 		tm.tm_isdst = -1;
 

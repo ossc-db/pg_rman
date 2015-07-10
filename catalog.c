@@ -40,8 +40,9 @@ catalog_lock(void)
 	join_path_components(id_path, backup_path, PG_RMAN_INI_FILE);
 	lock_fd = open(id_path, O_RDWR);
 	if (lock_fd == -1)
-		elog(errno == ENOENT ? ERROR_CORRUPTED : ERROR_SYSTEM,
-			_("can't open file \"%s\": %s"), id_path, strerror(errno));
+		ereport(ERROR,
+			((errno == ENOENT ? errcode(ERROR_CORRUPTED) : errcode(ERROR_SYSTEM)),
+			 errmsg("could not open file \"%s\": %s", id_path, strerror(errno))));
 
 	ret = flock(lock_fd, LOCK_EX | LOCK_NB);	/* non-blocking */
 	if (ret == -1)
@@ -55,8 +56,10 @@ catalog_lock(void)
 		{
 			int errno_tmp = errno;
 			close(lock_fd);
-			elog(ERROR_SYSTEM, _("can't lock file \"%s\": %s"), id_path,
-				strerror(errno_tmp));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not lock file \"%s\": %s", id_path,
+					strerror(errno_tmp))));
 		}
 	}
 
@@ -154,7 +157,7 @@ catalog_get_backup_list(const pgBackupRange *range)
 	date_dir = opendir(backup_path);
 	if (date_dir == NULL)
 	{
-		elog(WARNING, _("can't open directory \"%s\": %s"), backup_path,
+		elog(WARNING, _("could not open directory \"%s\": %s"), backup_path,
 			strerror(errno));
 		goto err_proc;
 	}
@@ -182,7 +185,7 @@ catalog_get_backup_list(const pgBackupRange *range)
 		time_dir = opendir(date_path);
 		if (time_dir == NULL)
 		{
-			elog(WARNING, _("can't open directory \"%s\": %s"),
+			elog(WARNING, _("could not open directory \"%s\": %s"),
 				date_ent->d_name, strerror(errno));
 			goto err_proc;
 		}
@@ -213,7 +216,7 @@ catalog_get_backup_list(const pgBackupRange *range)
 		}
 		if (errno && errno != ENOENT)
 		{
-			elog(WARNING, _("can't read date directory \"%s\": %s"),
+			elog(WARNING, _("could not read date directory \"%s\": %s"),
 				date_ent->d_name, strerror(errno));
 			goto err_proc;
 		}
@@ -222,7 +225,7 @@ catalog_get_backup_list(const pgBackupRange *range)
 	}
 	if (errno)
 	{
-		elog(WARNING, _("can't read backup root directory \"%s\": %s"),
+		elog(WARNING, _("could not read backup root directory \"%s\": %s"),
 			backup_path, strerror(errno));
 		goto err_proc;
 	}
@@ -419,8 +422,10 @@ pgBackupWriteIni(pgBackup *backup)
 	pgBackupGetPath(backup, ini_path, lengthof(ini_path), BACKUP_INI_FILE);
 	fp = fopen(ini_path, "wt");
 	if (fp == NULL)
-		elog(ERROR_SYSTEM, _("can't open INI file \"%s\": %s"), ini_path,
-			strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open INI file \"%s\": %s", ini_path,
+				strerror(errno))));
 
 	/* configuration section */
 	pgBackupWriteConfigSection(fp, backup);
@@ -575,7 +580,14 @@ parse_backup_mode(const char *value, int elevel)
 	else if (len > 0 && pg_strncasecmp("archive", v, len) == 0)
 		return BACKUP_MODE_ARCHIVE;
 
-	elog(elevel, _("invalid backup-mode \"%s\""), value);
+	if (elevel >= ERROR)
+	{
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("invalid backup-mode \"%s\"", value)));
+	} else {
+		elog(elevel, "invalid backup-mode \"%s\"", value);
+	}
 	return BACKUP_MODE_INVALID;
 }
 
