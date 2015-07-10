@@ -50,7 +50,9 @@ doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_INTERRUPTED, _("interrupted during deflate"));
+			ereport(FATAL,
+				(errcode(ERROR_INTERRUPTED),
+				 errmsg("interrupted during deflate")));
 		}
 
 		status = deflate(zp, flash);
@@ -59,7 +61,9 @@ doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_SYSTEM, _("can't compress data: %s"), zp->msg);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not compress data: %s", zp->msg)));
 		}
 
 		if (fwrite(outbuf, 1, out_size - zp->avail_out, out) !=
@@ -67,7 +71,9 @@ doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_SYSTEM, _("can't write file: %s"), strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not write file: %s", strerror(errno))));
 		}
 
 		/* update CRC */
@@ -95,7 +101,9 @@ doInflate(z_stream *zp, size_t in_size, size_t out_size,void *inbuf,
 	for (;;)
 	{
 		if (interrupted)
-			elog(ERROR_INTERRUPTED, _("interrupted during inflate"));
+			ereport(FATAL,
+				(errcode(ERROR_INTERRUPTED),
+				 errmsg("interrupted during inflate")));
 
 		/* input buffer becomes empty, read it from a file. */
 		if (zp->avail_in == 0)
@@ -112,8 +120,9 @@ doInflate(z_stream *zp, size_t in_size, size_t out_size,void *inbuf,
 				{
 					fclose(in);
 					fclose(out);
-					elog(ERROR_CORRUPTED,
-						_("can't read compress file: %s"), strerror(errno_tmp));
+					ereport(ERROR,
+						(errcode(ERROR_CORRUPTED),
+						 errmsg("could not read compress file: %s", strerror(errno_tmp))));
 				}
 
 				if (read_len == 0 && *read_size == 0)
@@ -144,7 +153,9 @@ doInflate(z_stream *zp, size_t in_size, size_t out_size,void *inbuf,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_SYSTEM, _("can't uncompress data: %s"), strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not uncompress data: %s", strerror(errno))));
 		}
 	}
 
@@ -245,8 +256,10 @@ backup_data_file(const char *from_root,
 		if (errno == ENOENT)
 			return false;
 
-		elog(ERROR_SYSTEM, _("can't open backup mode file \"%s\": %s"),
-			file->path, strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open backup mode file \"%s\": %s",
+				file->path, strerror(errno))));
 	}
 
 	/* open backup file for write  */
@@ -259,8 +272,9 @@ backup_data_file(const char *from_root,
 	{
 		int errno_tmp = errno;
 		fclose(in);
-		elog(ERROR_SYSTEM, _("can't open backup file \"%s\": %s"),
-			to_path, strerror(errno_tmp));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open backup file \"%s\": %s", to_path, strerror(errno_tmp))));
 	}
 
 #ifdef HAVE_LIBZ
@@ -274,8 +288,9 @@ backup_data_file(const char *from_root,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_SYSTEM, _("can't initialize compression library: %s"),
-				z.msg);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not initialize compression library: %s", z.msg)));
 		}
 
 		z.avail_in = 0;
@@ -302,7 +317,7 @@ backup_data_file(const char *from_root,
 		if (!parse_page(&page, &page_lsn, &header.hole_offset,
 						&header.hole_length))
 		{
-			elog(LOG, "%s fall back to simple copy", file->path);
+			elog(DEBUG, "%s fall back to simple copy", file->path);
 			fclose(in);
 			fclose(out);
 			file->is_datafile = false;
@@ -342,8 +357,10 @@ backup_data_file(const char *from_root,
 				/* oops */
 				fclose(in);
 				fclose(out);
-				elog(ERROR_SYSTEM, _("can't write at block %u of \"%s\": %s"),
-					blknum, to_path, strerror(errno_tmp));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not write at block %u of \"%s\": %s",
+						blknum, to_path, strerror(errno_tmp))));
 			}
 
 			/* update CRC */
@@ -360,8 +377,9 @@ backup_data_file(const char *from_root,
 	{
 		fclose(in);
 		fclose(out);
-		elog(ERROR_SYSTEM, _("can't read backup mode file \"%s\": %s"),
-			file->path, strerror(errno_tmp));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not read backup mode file \"%s\": %s", file->path, strerror(errno_tmp))));
 	}
 
 	/*
@@ -398,9 +416,10 @@ backup_data_file(const char *from_root,
 					/* oops */
 					fclose(in);
 					fclose(out);
-					elog(ERROR_SYSTEM,
-						 _("can't write at block %u of \"%s\": %s"),
-						 blknum, to_path, strerror(errno_tmp));
+					ereport(ERROR,
+						(errcode(ERROR_SYSTEM),
+						 errmsg("could not write at block %u of \"%s\": %s",
+							blknum, to_path, strerror(errno_tmp))));
 				}
 				PGRMAN_COMP_CRC32(crc, &header, sizeof(header));
 				file->write_size += sizeof(header);
@@ -423,8 +442,10 @@ backup_data_file(const char *from_root,
 				/* oops */
 				fclose(in);
 				fclose(out);
-				elog(ERROR_SYSTEM, _("can't write at block %u of \"%s\": %s"),
-					blknum, to_path, strerror(errno_tmp));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not write at block %u of \"%s\": %s",
+						blknum, to_path, strerror(errno_tmp))));
 			}
 
 			PGRMAN_COMP_CRC32(crc, page.data, read_len);
@@ -449,7 +470,9 @@ backup_data_file(const char *from_root,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_SYSTEM, _("can't close compression stream: %s"), z.msg);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not close compression stream: %s", z.msg)));
 		}
 	}
 #endif
@@ -463,8 +486,9 @@ backup_data_file(const char *from_root,
 		int errno_tmp = errno;
 		fclose(in);
 		fclose(out);
-		elog(ERROR_SYSTEM, _("can't change mode of \"%s\": %s"), file->path,
-			strerror(errno_tmp));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not change mode of \"%s\": %s", file->path, strerror(errno_tmp))));
 	}
 
 	fclose(in);
@@ -482,8 +506,9 @@ backup_data_file(const char *from_root,
 	if (file->write_size == 0 && file->read_size > 0)
 	{
 		if (remove(to_path) == -1)
-			elog(ERROR_SYSTEM, _("can't remove file \"%s\": %s"), to_path,
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not remove file \"%s\": %s", to_path, strerror(errno))));
 		return false;
 	}
 
@@ -529,8 +554,10 @@ restore_data_file(const char *from_root,
 	in = fopen(file->path, "r");
 	if (in == NULL)
 	{
-		elog(ERROR_SYSTEM, _("can't open backup file \"%s\": %s"), file->path,
-			strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open backup file \"%s\": %s", file->path,
+				strerror(errno))));
 	}
 
 	/*
@@ -547,8 +574,10 @@ restore_data_file(const char *from_root,
 	{
 		int errno_tmp = errno;
 		fclose(in);
-		elog(ERROR_SYSTEM, _("can't open restore target file \"%s\": %s"),
-			to_path, strerror(errno_tmp));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open restore target file \"%s\": %s",
+				to_path, strerror(errno_tmp))));
 	}
 
 #ifdef HAVE_LIBZ
@@ -561,8 +590,9 @@ restore_data_file(const char *from_root,
 		z.avail_in = 0;
 
 		if (inflateInit(&z) != Z_OK)
-			elog(ERROR_SYSTEM, _("can't initialize compression library: %s"),
-				z.msg);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not initialize compression library: %s", z.msg)));
 		PGRMAN_INIT_CRC32(crc);
 		read_size = 0;
 	}
@@ -584,12 +614,15 @@ restore_data_file(const char *from_root,
 			if (status == Z_STREAM_END)
 			{
 				if (z.avail_out != sizeof(header))
-					elog(ERROR_CORRUPTED, _("backup is broken header"));
+					ereport(ERROR,
+						(errcode(ERROR_CORRUPTED),
+						 errmsg("backup is broken header")));
 				break;
 			}
 			if (z.avail_out != 0)
-				elog(ERROR_SYSTEM, _("can't read block %u of \"%s\""),
-					blknum, file->path);
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not read block %u of \"%s\"", blknum, file->path)));
 		}
 		else
 #endif
@@ -602,14 +635,17 @@ restore_data_file(const char *from_root,
 					break;		/* EOF found */
 				else if (read_len != 0 && feof(in))
 				{
-					elog(ERROR_CORRUPTED,
-						_("odd size page found at block %u of \"%s\""),
-						blknum, file->path);
+					ereport(ERROR,
+						(errcode(ERROR_CORRUPTED),
+						 errmsg("odd size page found at block %u of \"%s\"",
+							blknum, file->path)));
 				}
 				else
 				{
-					elog(ERROR_SYSTEM, _("can't read block %u of \"%s\": %s"),
-						blknum, file->path, strerror(errno_tmp));
+					ereport(ERROR,
+						(errcode(ERROR_SYSTEM),
+						 errmsg("could not read block %u of \"%s\": %s",
+							blknum, file->path, strerror(errno_tmp))));
 				}
 			}
 		}
@@ -617,8 +653,9 @@ restore_data_file(const char *from_root,
 		if (header.block < blknum || header.hole_offset > BLCKSZ ||
 			(int) header.hole_offset + (int) header.hole_length > BLCKSZ)
 		{
-			elog(ERROR_CORRUPTED, _("backup is broken at block %u"),
-				blknum);
+			ereport(ERROR,
+				(errcode(ERROR_CORRUPTED),
+				 errmsg("backup is broken at block %u", blknum)));
 		}
 
 		upper_offset = header.hole_offset + header.hole_length;
@@ -630,14 +667,15 @@ restore_data_file(const char *from_root,
 #ifdef HAVE_LIBZ
 		if (compress)
 		{
-			elog(LOG, "\n%s() %s %d %d", __FUNCTION__, file->path, header.hole_offset, upper_length);
+			elog(DEBUG, "\n%s() %s %d %d", __FUNCTION__, file->path, header.hole_offset, upper_length);
 			if (header.hole_offset > 0)
 			{
 				doInflate(&z, sizeof(inbuf), header.hole_offset, inbuf,
 					page.data, in, out, &crc, &read_size);
 				if (z.avail_out != 0)
-					elog(ERROR_SYSTEM, _("can't read block %u of \"%s\""),
-						blknum, file->path);
+					ereport(ERROR,
+						(errcode(ERROR_SYSTEM),
+						 errmsg("could not read block %u of \"%s\"", blknum, file->path)));
 			}
 
 			if (upper_length > 0)
@@ -645,8 +683,9 @@ restore_data_file(const char *from_root,
 				doInflate(&z, sizeof(inbuf), upper_length, inbuf,
 					page.data + upper_offset, in, out, &crc, &read_size);
 				if (z.avail_out != 0)
-					elog(ERROR_SYSTEM, _("can't read block %u of \"%s\""),
-						blknum, file->path);
+					ereport(ERROR,
+						(errcode(ERROR_SYSTEM),
+						 errmsg("could not read block %u of \"%s\"", blknum, file->path)));
 			}
 		}
 		else
@@ -655,8 +694,10 @@ restore_data_file(const char *from_root,
 			if (fread(page.data, 1, header.hole_offset, in) != header.hole_offset ||
 				fread(page.data + upper_offset, 1, upper_length, in) != upper_length)
 			{
-				elog(ERROR_SYSTEM, _("can't read block %u of \"%s\": %s"),
-					blknum, file->path, strerror(errno));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not read block %u of \"%s\": %s",
+						blknum, file->path, strerror(errno))));
 			}
 		}
 
@@ -666,20 +707,26 @@ restore_data_file(const char *from_root,
 		 */
 		blknum = header.block;
 		if (fseek(out, blknum * BLCKSZ, SEEK_SET) < 0)
-			elog(ERROR_SYSTEM, _("can't seek block %u of \"%s\": %s"),
-				blknum, to_path, strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not seek block %u of \"%s\": %s",
+					blknum, to_path, strerror(errno))));
 
 		if(data_checksum_enabled)
 			((PageHeader) page.data)->pd_checksum = pg_checksum_page((char *) page.data, blknum);
 
 		if (fwrite(page.data, 1, sizeof(page), out) != sizeof(page))
-			elog(ERROR_SYSTEM, _("can't write block %u of \"%s\": %s"),
-				blknum, file->path, strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not write block %u of \"%s\": %s",
+					blknum, file->path, strerror(errno))));
 	}
 
 #ifdef HAVE_LIBZ
 	if (compress && inflateEnd(&z) != Z_OK)
-		elog(ERROR_SYSTEM, _("can't close compression stream: %s"), z.msg);
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not close compression stream: %s", z.msg)));
 #endif
 
 	/* update file permission */
@@ -688,8 +735,10 @@ restore_data_file(const char *from_root,
 		int errno_tmp = errno;
 		fclose(in);
 		fclose(out);
-		elog(ERROR_SYSTEM, _("can't change mode of \"%s\": %s"), to_path,
-			strerror(errno_tmp));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not change mode of \"%s\": %s", to_path,
+				strerror(errno_tmp))));
 	}
 
 	fclose(in);
@@ -731,8 +780,10 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		if (errno == ENOENT)
 			return false;
 
-		elog(ERROR_SYSTEM, _("can't open source file \"%s\": %s"), file->path,
-			strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open source file \"%s\": %s", file->path,
+				strerror(errno))));
 	}
 
 	/* open backup file for write  */
@@ -745,8 +796,10 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 	{
 		int errno_tmp = errno;
 		fclose(in);
-		elog(ERROR_SYSTEM, _("can't open destination file \"%s\": %s"),
-			to_path, strerror(errno_tmp));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open destination file \"%s\": %s",
+				to_path, strerror(errno_tmp))));
 	}
 
 	/* stat source file to change mode of destination file */
@@ -754,8 +807,9 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 	{
 		fclose(in);
 		fclose(out);
-		elog(ERROR_SYSTEM, _("can't stat \"%s\": %s"), file->path,
-			strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not execute stat \"%s\": %s", file->path, strerror(errno))));
 	}
 
 #ifdef HAVE_LIBZ
@@ -769,8 +823,9 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_SYSTEM, _("can't initialize compression library: %s"),
-				z.msg);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not initialize compression library: %s", z.msg)));
 		}
 
 		z.avail_in = 0;
@@ -785,8 +840,9 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_SYSTEM, _("can't initialize compression library: %s"),
-				z.msg);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not  initialize compression library: %s", z.msg)));
 		}
 	}
 #endif
@@ -815,8 +871,10 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 				/* oops */
 				fclose(in);
 				fclose(out);
-				elog(ERROR_SYSTEM, _("can't write to \"%s\": %s"), to_path,
-					strerror(errno_tmp));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not  write to \"%s\": %s", to_path,
+						strerror(errno_tmp))));
 			}
 
 			file->write_size += sizeof(outbuf) - z.avail_out;
@@ -835,8 +893,10 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 				/* oops */
 				fclose(in);
 				fclose(out);
-				elog(ERROR_SYSTEM, _("can't write to \"%s\": %s"), to_path,
-					strerror(errno_tmp));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not write to \"%s\": %s", to_path,
+						strerror(errno_tmp))));
 			}
 			/* update CRC */
 			PGRMAN_COMP_CRC32(crc, buf, read_len);
@@ -850,8 +910,10 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 	{
 		fclose(in);
 		fclose(out);
-		elog(ERROR_SYSTEM, _("can't read backup mode file \"%s\": %s"),
-			file->path, strerror(errno_tmp));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not read backup mode file \"%s\": %s",
+				file->path, strerror(errno_tmp))));
 	}
 
 	/* copy odd part. */
@@ -872,8 +934,10 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 				/* oops */
 				fclose(in);
 				fclose(out);
-				elog(ERROR_SYSTEM, _("can't write to \"%s\": %s"), to_path,
-					strerror(errno_tmp));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not write to \"%s\": %s", to_path,
+						strerror(errno_tmp))));
 			}
 			/* update CRC */
 			PGRMAN_COMP_CRC32(crc, buf, read_len);
@@ -899,7 +963,9 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_SYSTEM, _("can't close compression stream: %s"), z.msg);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not close compression stream: %s", z.msg)));
 		}
 	}
 	else if (mode == DECOMPRESSION)
@@ -908,7 +974,9 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		{
 			fclose(in);
 			fclose(out);
-			elog(ERROR_SYSTEM, _("can't close compression stream: %s"), z.msg);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not close compression stream: %s", z.msg)));
 		}
 	}
 
@@ -923,8 +991,10 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		errno_tmp = errno;
 		fclose(in);
 		fclose(out);
-		elog(ERROR_SYSTEM, _("can't change mode of \"%s\": %s"), to_path,
-			strerror(errno_tmp));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not change mode of \"%s\": %s", to_path,
+				strerror(errno_tmp))));
 	}
 
 	fclose(in);

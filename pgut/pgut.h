@@ -91,7 +91,6 @@ extern const char  *host;
 extern const char  *port;
 extern const char  *username;
 extern char		   *password;
-extern bool			debug;
 extern bool			quiet;
 
 #ifndef PGUT_NO_PROMPT
@@ -110,15 +109,14 @@ extern void pgut_atexit_pop(pgut_atexit_callback callback, void *userdata);
 /*
  * Database connections
  */
-extern PGconn *pgut_connect(int elevel);
+extern PGconn *pgut_connect(void);
 extern void pgut_disconnect(PGconn *conn);
-extern PGresult *pgut_execute(PGconn* conn, const char *query, int nParams, const char **params, int elevel);
-extern void pgut_command(PGconn* conn, const char *query, int nParams, const char **params, int elevel);
-extern bool pgut_send(PGconn* conn, const char *query, int nParams, const char **params, int elevel);
+extern PGresult *pgut_execute(PGconn* conn, const char *query, int nParams, const char **params);
+extern void pgut_command(PGconn* conn, const char *query, int nParams, const char **params);
+extern bool pgut_send(PGconn* conn, const char *query, int nParams, const char **params);
 extern int pgut_wait(int num, PGconn *connections[], struct timeval *timeout);
 
-extern PGconn *reconnect_elevel(int elevel);
-extern void reconnect(void);
+extern PGconn *reconnect(void);
 extern void disconnect(void);
 
 extern const char *pgut_get_host(void);
@@ -126,8 +124,6 @@ extern const char *pgut_get_port(void);
 extern void pgut_set_host(const char *new_host);
 extern void pgut_set_port(const char *new_port);
 
-
-extern PGresult *execute_elevel(const char *query, int nParams, const char **params, int elevel);
 extern PGresult *execute(const char *query, int nParams, const char **params);
 extern void command(const char *query, int nParams, const char **params);
 
@@ -151,14 +147,14 @@ extern FILE *pgut_fopen(const char *path, const char *mode, bool missing_ok);
 /*
  * elog
  */
-#define LOG			(-5)
-#define DETAIL		(-4)
-#define INFO		(-3)
-#define NOTICE		(-2)
-#define WARNING		(-1)
-#define HELP		1
-#define ERROR		2
-#define FATAL		3
+#define DEBUG2		(-5)
+#define DEBUG		(-4)
+#define INFO		(-3)	/* always shown to stderr */
+#define NOTICE		(-2)	/* behavior changes or skips as user expected. */
+#define WARNING		(-1)	/* unexpected by user */
+#define HELP		1		/* show help messages */
+#define ERROR		2		/* ordinal errors */
+#define FATAL		3		/* errors happend by interruption */
 #define PANIC		4
 
 #define ERROR_SYSTEM			10	/* I/O or system error */
@@ -169,9 +165,23 @@ extern FILE *pgut_fopen(const char *path, const char *mode, bool missing_ok);
 #define ERROR_PG_CONNECT		15	/* PostgreSQL connection error */
 
 #undef elog
-extern void
-elog(int elevel, const char *fmt, ...)
+#undef ereport
+#define ereport(elevel, rest) \
+	(pgut_errstart(elevel) ? (pgut_errfinish rest) : (void) 0)
+
+extern void elog(int elevel, const char *fmt, ...)
 __attribute__((format(printf, 2, 3)));
+extern const char * format_elevel(int elevel);
+extern bool pgut_errstart(int elevel);
+extern void pgut_errfinish(int dummy, ...);
+extern void pgut_error(int elevel, const char *msg, const char *detail, const char *hint);
+extern int errcode(int errcode);
+extern int errmsg(const char *fmt, ...)
+__attribute__((format(printf, 1, 2)));
+extern int errdetail(const char *fmt, ...)
+__attribute__((format(printf, 1, 2)));
+extern int errhint(const char *fmt, ...)
+__attribute__((format(printf, 1, 2)));
 
 /*
  * Assert
@@ -209,8 +219,11 @@ __attribute__((format(printf, 2, 3)));
 #define appendStringInfoChar	appendPQExpBufferChar
 #define appendBinaryStringInfo	appendBinaryPQExpBuffer
 
+extern bool	appendStringInfoVA_c(StringInfo str, const char *fmt, va_list args)
+__attribute__((format(printf, 2, 0)));
 extern int appendStringInfoFile(StringInfo str, FILE *fp);
 extern int appendStringInfoFd(StringInfo str, int fd);
+extern void trimStringBuffer(StringInfo str);
 
 extern bool parse_bool(const char *value, bool *result);
 extern bool parse_bool_with_len(const char *value, size_t len, bool *result);

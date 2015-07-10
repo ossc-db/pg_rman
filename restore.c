@@ -69,14 +69,17 @@ do_restore(const char *target_time,
 
 	/* PGDATA and ARCLOG_PATH are always required */
 	if (pgdata == NULL)
-		elog(ERROR_ARGS,
-			_("required parameter not specified: PGDATA (-D, --pgdata)"));
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("required parameter not specified: PGDATA (-D, --pgdata)")));
 	if (arclog_path == NULL)
-		elog(ERROR_ARGS,
-			_("required parameter not specified: ARCLOG_PATH (-A, --arclog-path)"));
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("required parameter not specified: ARCLOG_PATH (-A, --arclog-path)")));
 	if (srvlog_path == NULL)
-		elog(ERROR_ARGS,
-			_("required parameter not specified: SRVLOG_PATH (-S, --srvlog-path)"));
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("required parameter not specified: SRVLOG_PATH (-S, --srvlog-path)")));
 
 	if (verbose)
 	{
@@ -87,24 +90,33 @@ do_restore(const char *target_time,
 	/* get exclusive lock of backup catalog */
 	ret = catalog_lock();
 	if (ret == -1)
-		elog(ERROR_SYSTEM, _("can't lock backup catalog."));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not lock backup catalog.")));
 	else if (ret == 1)
-		elog(ERROR_ALREADY_RUNNING,
-			_("another pg_rman is running, stop restore."));
+		ereport(ERROR,
+			(errcode(ERROR_ALREADY_RUNNING),
+			 errmsg("another pg_rman is running, stop restore.")));
 
 	/* confirm the PostgreSQL server is not running */
 	if (is_pg_running())
-		elog(ERROR_PG_RUNNING, _("PostgreSQL server is running"));
+		ereport(ERROR,
+			(errcode(ERROR_PG_RUNNING),
+			 errmsg("PostgreSQL server is running")));
 
 	rt = checkIfCreateRecoveryConf(target_time, target_xid, target_inclusive);
 	if(rt == NULL){
-		elog(ERROR_ARGS, _("can't create recovery.conf. specified args are invalid."));
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("could not create recovery.conf. specified args are invalid.")));
 	}
 
 	/* get list of backups. (index == 0) is the last backup */
 	backups = catalog_get_backup_list(NULL);
 	if(!backups){
-		elog(ERROR_SYSTEM, _("can't process any more."));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not get list of backup already taken.")));
 	}
 
 	cur_tli = get_current_timeline();
@@ -144,7 +156,7 @@ do_restore(const char *target_time,
 
 	/* find last full backup which can be used as base backup. */
 	if (verbose)
-		printf(_("searching recent full backup\n"));
+		printf(_("searching recent full backups\n"));
 	for (i = 0; i < parray_num(backups); i++)
 	{
 		base_backup = (pgBackup *) parray_get(backups, i);
@@ -158,15 +170,19 @@ do_restore(const char *target_time,
 		if (base_backup->compress_data &&
 			(HAVE_DATABASE(base_backup) || HAVE_ARCLOG(base_backup)))
 		{
-			elog(ERROR_SYSTEM,
-				_("can't restore from compressed backup (compression not supported in this installation)"));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not restore from compressed backup"),
+				 errdetail("compression is not supported in this installation.")));
 		}
 #endif
 		if (satisfy_timeline(timelines, base_backup) && satisfy_recovery_target(base_backup, rt))
 			goto base_backup_found;
 	}
 	/* no full backup found, can't restore */
-	elog(ERROR_NO_BACKUP, _("no full backup found, can't restore."));
+	ereport(ERROR,
+		(errcode(ERROR_NO_BACKUP),
+		 errmsg("no full backup is found.")));
 
 base_backup_found:
 
@@ -344,13 +360,15 @@ restore_database(pgBackup *backup)
 
 	/* confirm block size compatibility */
 	if (backup->block_size != BLCKSZ)
-		elog(ERROR_PG_INCOMPATIBLE,
-			_("BLCKSZ(%d) is not compatible(%d expected)"),
-			backup->block_size, BLCKSZ);
+		ereport(ERROR,
+			(errcode(ERROR_PG_INCOMPATIBLE),
+			 errmsg("BLCKSZ(%d) is not compatible(%d expected)",
+				backup->block_size, BLCKSZ)));
 	if (backup->wal_block_size != XLOG_BLCKSZ)
-		elog(ERROR_PG_INCOMPATIBLE,
-			_("XLOG_BLCKSZ(%d) is not compatible(%d expected)"),
-			backup->wal_block_size, XLOG_BLCKSZ);
+		ereport(ERROR,
+			(errcode(ERROR_PG_INCOMPATIBLE),
+			 errmsg("XLOG_BLCKSZ(%d) is not compatible(%d expected)",
+				backup->wal_block_size, XLOG_BLCKSZ)));
 
 	time2iso(timestamp, lengthof(timestamp), backup->start_time);
 	if (verbose && !check)
@@ -374,27 +392,31 @@ restore_database(pgBackup *backup)
 
 		/* keep original directory */
 		if (getcwd(pwd, sizeof(pwd)) == NULL)
-			elog(ERROR_SYSTEM, _("can't get current working directory: %s"),
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not get current working directory: %s", strerror(errno))));
 
 		/* create pgdata directory */
 		dir_create_dir(pgdata, DIR_PERMISSION);
 
 		/* change directory to pgdata */
 		if (chdir(pgdata))
-			elog(ERROR_SYSTEM, _("can't change directory: %s"),
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not change directory: %s", strerror(errno))));
 
 		/* Execute mkdirs.sh */
 		ret = system(path);
 		if (ret != 0)
-			elog(ERROR_SYSTEM, _("can't execute mkdirs.sh: %s"),
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not execute mkdirs.sh: %s", strerror(errno))));
 
 		/* go back to original directory */
 		if (chdir(pwd))
-			elog(ERROR_SYSTEM, _("can't change directory: %s"),
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not change directory: %s", strerror(errno))));
 	}
 
 	/*
@@ -422,7 +444,9 @@ restore_database(pgBackup *backup)
 
 		/* check for interrupt */
 		if (interrupted)
-			elog(ERROR_INTERRUPTED, _("interrupted during restore database"));
+			ereport(FATAL,
+				(errcode(ERROR_INTERRUPTED),
+				 errmsg("interrupted during restore database")));
 
 		/* print progress in verbose mode */
 		if (verbose && !check)
@@ -509,8 +533,9 @@ show_progress:
 	/* remove postmaster.pid */
 	snprintf(path, lengthof(path), "%s/postmaster.pid", pgdata);
 	if (remove(path) == -1 && errno != ENOENT)
-		elog(ERROR_SYSTEM, _("can't remove postmaster.pid: %s"),
-			strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not remove postmaster.pid: %s", strerror(errno))));
 
 	/* cleanup */
 	parray_walk(files, pgFileFree);
@@ -558,7 +583,9 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 
 		/* check for interrupt */
 		if (interrupted)
-			elog(ERROR_INTERRUPTED, _("interrupted during restore WAL"));
+			ereport(FATAL,
+				(errcode(ERROR_INTERRUPTED),
+				 errmsg("interrupted during restore WAL")));
 
 		/* print progress */
 		join_path_components(path, arclog_path, file->path + strlen(base_path) + 1);
@@ -599,15 +626,18 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 
 			/* even same file exist, use backup file */
 			if ((remove(path) == -1) && errno != ENOENT)
-				elog(ERROR_SYSTEM, _("can't remove file \"%s\": %s"), path,
-					strerror(errno));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not remove file \"%s\": %s", path, strerror(errno))));
 
 			if (!is_hard_copy)
 			{
 				/* create symlink */
 				if ((symlink(file->path, path) == -1))
-					elog(ERROR_SYSTEM, _("can't create link to \"%s\": %s"),
-						file->path, strerror(errno));
+					ereport(ERROR,
+						(errcode(ERROR_SYSTEM),
+						 errmsg("could not create link to \"%s\": %s",
+							file->path, strerror(errno))));
 
 				if (verbose)
 					printf(_("linked\n"));
@@ -616,8 +646,10 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 			{
 				/* create hard-copy */
 				if (!copy_file(base_path, arclog_path, file, NO_COMPRESSION))
-					elog(ERROR_SYSTEM, _("can't copy to \"%s\": %s"),
-						file->path, strerror(errno));
+					ereport(ERROR,
+						(errcode(ERROR_SYSTEM),
+						 errmsg("could not copy to \"%s\": %s",
+							file->path, strerror(errno))));
 
 				if (verbose)
 					printf(_("copied\n"));
@@ -664,8 +696,10 @@ create_recovery_conf(const char *target_time,
 		snprintf(path, lengthof(path), "%s/recovery.conf", pgdata);
 		fp = fopen(path, "wt");
 		if (fp == NULL)
-			elog(ERROR_SYSTEM, _("can't open recovery.conf \"%s\": %s"), path,
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open recovery.conf \"%s\": %s", path,
+					strerror(errno))));
 
 		fprintf(fp, "# recovery.conf generated by pg_rman %s\n",
 			PROGRAM_VERSION);
@@ -820,6 +854,7 @@ readTimeLineHistory(TimeLineID targetTLI)
 	FILE	   *fd;
 	pgTimeLine *timeline;
 	pgTimeLine *last_timeline = NULL;
+	int			i;
 
 	result = parray_new();
 
@@ -830,8 +865,10 @@ readTimeLineHistory(TimeLineID targetTLI)
 	if (fd == NULL)
 	{
 		if (errno != ENOENT)
-			elog(ERROR_SYSTEM, _("could not open file \"%s\": %s"), path,
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open file \"%s\": %s", path,
+					strerror(errno))));
 
 		/* search from restore work directory next */
 		snprintf(path, lengthof(path), "%s/%s/%s/%08X.history", backup_path,
@@ -840,8 +877,10 @@ readTimeLineHistory(TimeLineID targetTLI)
 		if (fd == NULL)
 		{
 			if (errno != ENOENT)
-				elog(ERROR_SYSTEM, _("could not open file \"%s\": %s"), path,
-						strerror(errno));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not open file \"%s\": %s", path,
+						strerror(errno))));
 		}
 	}
 
@@ -870,13 +909,14 @@ readTimeLineHistory(TimeLineID targetTLI)
 		/* expect a numeric timeline ID as first field of line */
 		timeline->tli = (TimeLineID) strtoul(ptr, &endptr, 0);
 		if (endptr == ptr)
-			elog(ERROR_CORRUPTED,
-					_("syntax error(timeline ID) in history file: %s"),
-					fline);
+			ereport(ERROR,
+				(errcode(ERROR_CORRUPTED),
+				 errmsg("syntax error(timeline ID) in history file: %s", fline)));
 
 		if (last_timeline && timeline->tli <= last_timeline->tli)
-			elog(ERROR_CORRUPTED,
-				   _("Timeline IDs must be in increasing sequence."));
+			ereport(ERROR,
+				(errcode(ERROR_CORRUPTED),
+				   errmsg("Timeline IDs must be in increasing sequence.")));
 
 		/* Build list with newest item first */
 		parray_insert(result, 0, timeline);
@@ -889,8 +929,9 @@ readTimeLineHistory(TimeLineID targetTLI)
 				break;
 		}
 		if (*ptr == '\0' || *ptr == '#')
-			elog(ERROR_CORRUPTED,
-			   _("End logfile must follow Timeline ID."));
+			ereport(ERROR,
+				(errcode(ERROR_CORRUPTED),
+				 errmsg("End logfile must follow Timeline ID.")));
 
 		sscanf(ptr, "%X/%08X", &xlogid, &xrecoff);
 		timeline->end = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
@@ -901,8 +942,9 @@ readTimeLineHistory(TimeLineID targetTLI)
 		fclose(fd);
 
 	if (last_timeline && targetTLI <= last_timeline->tli)
-		elog(ERROR_CORRUPTED,
-			_("Timeline IDs must be less than child timeline's ID."));
+		ereport(ERROR,
+			(errcode(ERROR_CORRUPTED),
+			 errmsg("Timeline IDs must be less than child timeline's ID.")));
 
 	/* append target timeline */
 	timeline = pgut_new(pgTimeLine);
@@ -911,15 +953,11 @@ readTimeLineHistory(TimeLineID targetTLI)
 	parray_insert(result, 0, timeline);
 
 	/* dump timeline branches for debug */
-	if (debug)
+	for (i = 0; i < parray_num(result); i++)
 	{
-		int i;
-		for (i = 0; i < parray_num(result); i++)
-		{
-			pgTimeLine *timeline = parray_get(result, i);
-			elog(LOG, "%s() result[%d]: %08X/%08X/%08X", __FUNCTION__, i,
-				timeline->tli, (uint32) (timeline->end >> 32), (uint32) timeline->end);
-		}
+		pgTimeLine *timeline = parray_get(result, i);
+		elog(DEBUG, "%s() result[%d]: %08X/%08X/%08X", __FUNCTION__, i,
+			timeline->tli, (uint32) (timeline->end >> 32), (uint32) timeline->end);
 	}
 
 	return result;
@@ -991,7 +1029,9 @@ get_fullbackup_timeline(parray *backups, const pgRecoveryTarget *rt)
 	}
 	/* no full backup found, can't restore */
 	if (i == parray_num(backups))
-		elog(ERROR_NO_BACKUP, _("no full backup found, can't restore."));
+		ereport(ERROR,
+			(errcode(ERROR_NO_BACKUP),
+			 errmsg("no full backup is found.")));
 
 	ret = base_backup->tli;
 
@@ -1080,20 +1120,26 @@ checkIfCreateRecoveryConf(const char *target_time,
 		if(parse_time(target_time, &dummy_time))
 			rt->recovery_target_time = dummy_time;
 		else
-			elog(ERROR_ARGS, _("can't create recovery.conf with %s"), target_time);
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("could not create recovery.conf with %s", target_time)));
 	}
 	if(target_xid){
 		rt->xid_specified = true;
 		if(parse_uint32(target_xid, &dummy_xid))
 			rt->recovery_target_xid = dummy_xid;
 		else
-			elog(ERROR_ARGS, _("can't create recovery.conf with %s"), target_xid);
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("could not create recovery.conf with %s", target_xid)));
 	}
 	if(target_inclusive){
 		if(parse_bool(target_inclusive, &dummy_bool))
 			rt->recovery_target_inclusive = dummy_bool;
 		else
-			elog(ERROR_ARGS, _("can't create recovery.conf with %s"), target_inclusive);
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("could not create recovery.conf with %s", target_inclusive)));
 	}
 
 	return rt;
@@ -1158,9 +1204,11 @@ parse_target_timeline(const char *target_tli_string, TimeLineID cur_tli,
 		if(parse_int32(target_tli_string, &tmp))
 			result = (TimeLineID) tmp;
 		else
-			elog(ERROR_ARGS, "--recovery-target-timeline, timeline value should be "
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("For --recovery-target-timeline, timeline value should be "
 							 "either an unsigned 32bit integer or the string literal "
-							 "'latest'"	);
+							 "'latest'"	)));
 	}
 	else
 	{
@@ -1230,8 +1278,9 @@ existsTimeLineHistory(TimeLineID probeTLI)
 	{
 		if (errno != ENOENT)
 		{
-			elog(ERROR_SYSTEM, _("could not open file \"%s\": %s"), path,
-				strerror(errno));
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open file \"%s\": %s", path, strerror(errno))));
 		}
 	}
 

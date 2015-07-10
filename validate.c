@@ -32,7 +32,9 @@ do_validate(pgBackupRange *range)
 	/* get backup list matches given range */
 	backup_list = catalog_get_backup_list(range);
 	if(!backup_list){
-		elog(ERROR_SYSTEM, _("can't process any more."));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not get list of backup already taken.")));
 	}
 	parray_qsort(backup_list, pgBackupCompareId);
 	for (i = 0; i < parray_num(backup_list); i++)
@@ -115,7 +117,7 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 	if(!check){
 		if (HAVE_DATABASE(backup))
 		{
-			elog(LOG, "database files...");
+			elog(INFO, "checking database files...");
 			pgBackupGetPath(backup, base_path, lengthof(base_path), DATABASE_DIR);
 			pgBackupGetPath(backup, path, lengthof(path),
 				DATABASE_FILE_LIST);
@@ -127,7 +129,7 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 		}
 		if (HAVE_ARCLOG(backup))
 		{
-			elog(LOG, "archive WAL files...");
+			elog(INFO, "checking archive WAL files...");
 			pgBackupGetPath(backup, base_path, lengthof(base_path), ARCLOG_DIR);
 			pgBackupGetPath(backup, path, lengthof(path), ARCLOG_FILE_LIST);
 			files = dir_read_file_list(base_path, path);
@@ -138,7 +140,7 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 		}
 		if (backup->with_serverlog)
 		{
-			elog(LOG, "server log files...");
+			elog(INFO, "checking server log files...");
 			pgBackupGetPath(backup, base_path, lengthof(base_path), SRVLOG_DIR);
 			pgBackupGetPath(backup, path, lengthof(path), SRVLOG_FILE_LIST);
 			files = dir_read_file_list(base_path, path);
@@ -158,7 +160,7 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 		if (corrupted)
 			elog(WARNING, "backup \"%s\" is corrupted", timestamp);
 		else
-			elog(LOG, "backup \"%s\" is valid", timestamp);
+			elog(INFO, "backup \"%s\" is valid", timestamp);
 	}
 }
 
@@ -187,14 +189,16 @@ pgBackupValidateFiles(parray *files, const char *root, bool size_only)
 		pgFile *file = (pgFile *) parray_get(files, i);
 
 		if (interrupted)
-			elog(ERROR_INTERRUPTED, _("interrupted during validate"));
+			ereport(FATAL,
+				(errcode(ERROR_INTERRUPTED),
+				 errmsg("interrupted during validate")));
 
 		/* skipped backup while incremental backup */
 		if (file->write_size == BYTES_INVALID || !S_ISREG(file->mode))
 			continue;
 
 		/* print progress */
-		elog(LOG, _("(%d/%lu) %s"), i + 1, (unsigned long) parray_num(files),
+		elog(DEBUG, _("(%d/%lu) %s"), i + 1, (unsigned long) parray_num(files),
 			get_relative_path(file->path, root));
 
 		/* always validate file size */
@@ -203,8 +207,10 @@ pgBackupValidateFiles(parray *files, const char *root, bool size_only)
 			if (errno == ENOENT)
 				elog(WARNING, _("backup file \"%s\" vanished"), file->path);
 			else
-				elog(ERROR_SYSTEM, _("can't stat backup file \"%s\": %s"),
-					get_relative_path(file->path, root), strerror(errno));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not stat backup file \"%s\": %s",
+						get_relative_path(file->path, root), strerror(errno))));
 			return false;
 		}
 		if (file->write_size != st.st_size)
