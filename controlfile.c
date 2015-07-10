@@ -36,7 +36,7 @@ read_control_file()
 
 	if ((fd = open(ControlFilePath, O_RDONLY | PG_BINARY, 0)) == -1)
 	{
-		elog(WARNING, _("can't open pg_controldata file \"%s\": %s"),
+		elog(WARNING, _("could not open pg_controldata file \"%s\": %s"),
 		ControlFilePath, strerror(errno));
 		return NULL;
 	}
@@ -45,7 +45,7 @@ read_control_file()
 
 	if (read(fd, buffer, PG_CONTROL_SIZE) != PG_CONTROL_SIZE)
 	{
-		elog(WARNING, _("can't read pg_controldata file \"%s\": %s"),
+		elog(WARNING, _("could not read pg_controldata file \"%s\": %s"),
 		ControlFilePath, strerror(errno));
 		return NULL;
 	}
@@ -61,17 +61,21 @@ read_control_file()
 
 	if (!PGRMAN_EQ_CRC32(crc, ((ControlFileData *) buffer)->crc))
 	{
-		elog(WARNING, _("Calculated CRC checksum does not match value stored in file.\n"
-			"Either the file is corrupt, or it has a different layout than this program\n"
-			"is expecting.  The results below are untrustworthy.\n"));
+		ereport(WARNING,
+			(errmsg("CRC mismatch"),
+			 errdetail("Calculated CRC checksum does not match value stored in file."),
+			 errhint("Either the file is corrupt or it has a different layout than this program "
+			"is expecting.  The results below are untrustworthy.")));
 	}
 
 	if (((ControlFileData *) buffer)->pg_control_version != PG_CONTROL_VERSION)
 	{
-		elog(WARNING, _("possible byte ordering mismatch\n"
-			"The byte ordering used to store the pg_control file might not match the one\n"
-			"used by this program.  In that case the results below would be incorrect, and\n"
-			"the PostgreSQL installation would be incompatible with this data directory.\n"));
+		ereport(WARNING,
+			(errmsg("possible byte ordering mismatch"),
+			 errdetail("The byte ordering used to store the pg_control file might not match the one "
+				"used by this program."),
+			 errhint("the results below would be incorrect, and the PostgreSQL installation "
+				"would be incompatible with this data directory.")));
 	}
 
 	return buffer;
