@@ -72,8 +72,8 @@ Connection options:
   -W, --password            force password prompt
 
 Generic options:
-  -q, --quiet               don't write any messages
-  --debug                   debug mode
+  -q, --quiet               don't show any INFO or DEBUG messages
+  --debug                   show DEBUG messages
   --help                    show this help, then exit
   --version                 output version information, then exit
 

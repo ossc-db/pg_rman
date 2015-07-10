@@ -39,7 +39,9 @@ do_init(void)
 	if (access(backup_path, F_OK) == 0){
 		results = scandir(backup_path, &dp, selects, NULL);
 		if(results != 0){
-			elog(ERROR, _("backup catalog already exist. and it's not empty."));
+			ereport(ERROR,
+				(errcode(ERROR),
+				 errmsg("backup catalog already exist. and it's not empty.")));
 		}
 	}
 
@@ -71,7 +73,9 @@ do_init(void)
 	join_path_components(path, backup_path, PG_RMAN_INI_FILE);
 	fp = fopen(path, "wt");
 	if (fp == NULL)
-		elog(ERROR_SYSTEM, _("can't create pg_rman.ini: %s"), strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not create pg_rman.ini: %s", strerror(errno))));
 
 	/* set ARCLOG_PATH referred with archive_command */
 	if (arclog_path == NULL && archive_command && archive_command[0])
@@ -113,11 +117,15 @@ do_init(void)
 		elog(INFO, "ARCLOG_PATH is set to '%s'", arclog_path);
 	}
 	else if (archive_command && archive_command[0])
-		elog(WARNING, "ARCLOG_PATH is not set because failed to parse archive_command '%s'."
-				"Please set ARCLOG_PATH in pg_rman.ini or environmental variable", archive_command);
+		ereport(WARNING,
+			(errmsg("ARCLOG_PATH is not set yet."),
+			 errdetail("Because pg_rman failed to parse archive_command '%s'.", archive_command),
+			 errhint("Please set ARCLOG_PATH in pg_rman.ini or environmental variable.")));
 	else
-		elog(WARNING, "ARCLOG_PATH is not set because archive_command is empty."
-				"Please set ARCLOG_PATH in pg_rman.ini or environmental variable");
+		ereport(WARNING,
+			(errmsg("ARCLOG_PATH is not set yet."),
+			 errdetail("Because archive_command is empty in postgresql.conf."),
+			 errhint("Please set ARCLOG_PATH in pg_rman.ini or environmental variable.")));
 
 	/* set SRVLOG_PATH referred with log_directory */
 	if (srvlog_path == NULL)
@@ -169,5 +177,5 @@ parse_postgresql_conf(const char *path,
 	options[0].var = log_directory;
 	options[1].var = archive_command;
 
-	pgut_readopt(path, options, LOG);	/* ignore unknown options */
+	pgut_readopt(path, options, DEBUG);	/* ignore unknown options */
 }

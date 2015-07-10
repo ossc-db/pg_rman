@@ -132,7 +132,9 @@ main(int argc, char *argv[])
 		else if (range2 == NULL)
 			range2 = argv[i];
 		else
-			elog(ERROR_ARGS, "too many arguments");
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("too many arguments.")));
 	}
 
 	/* command argument (backup/restore/show/...) is required. */
@@ -159,7 +161,9 @@ main(int argc, char *argv[])
 		int rc = stat(backup_path, &stat_buf);
 		if(rc != -1 && !S_ISDIR(stat_buf.st_mode)){
 			/* If rc == -1,  there is no file or directory. So it's OK. */
-			elog(ERROR_ARGS, "-B, --backup-path must be a path to directory");
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("-B, --backup-path must be a path to directory")));
 		}
 
 		join_path_components(path, backup_path, PG_RMAN_INI_FILE);
@@ -168,17 +172,27 @@ main(int argc, char *argv[])
 
 	/* BACKUP_PATH is always required */
 	if (backup_path == NULL)
-		elog(ERROR_ARGS, "required parameter not specified: BACKUP_PATH (-B, --backup-path)");
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("required parameter not specified: BACKUP_PATH (-B, --backup-path)")));
 
 	/* path must be absolute */
 	if (backup_path != NULL && !is_absolute_path(backup_path))
-		elog(ERROR_ARGS, "-B, --backup-path must be an absolute path");
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("-B, --backup-path must be an absolute path")));
 	if (pgdata != NULL && !is_absolute_path(pgdata))
-		elog(ERROR_ARGS, "-D, --pgdata must be an absolute path");
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("-D, --pgdata must be an absolute path")));
 	if (arclog_path != NULL && !is_absolute_path(arclog_path))
-		elog(ERROR_ARGS, "-A, --arclog-path must be an absolute path");
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("-A, --arclog-path must be an absolute path")));
 	if (srvlog_path != NULL && !is_absolute_path(srvlog_path))
-		elog(ERROR_ARGS, "-S, --srvlog-path must be an absolute path");
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("-S, --srvlog-path must be an absolute path")));
 
 	/* setup exclusion list for file search */
 	for (i = 0; pgdata_exclude[i]; i++)		/* find first empty slot */
@@ -218,7 +232,9 @@ main(int argc, char *argv[])
 	else if (pg_strcasecmp(cmd, "purge") == 0)
 		do_purge();
 	else
-		elog(ERROR_ARGS, "invalid command \"%s\"", cmd);
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("invalid command \"%s\"", cmd)));
 
 	return 0;
 }
@@ -320,9 +336,13 @@ parse_range(pgBackupRange *range, const char *arg1, const char *arg2)
 
 	if (num < 1){
 		if (strcmp(tmp,"") != 0)
-			elog(ERROR_ARGS, _("supplied id(%s) is invalid."), tmp);
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("supplied id(%s) is invalid.", tmp)));
 		else
-			elog(ERROR_ARGS, _("arguments are invalid. near \"%s\""), arg1);
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("arguments are invalid. near \"%s\"", arg1)));
 	}
 
 	free(tmp);
@@ -333,9 +353,11 @@ parse_range(pgBackupRange *range, const char *arg1, const char *arg2)
 		tm.tm_mon -= 1;
 	tm.tm_isdst = -1;
 
-if(!IsValidTime(tm)){
-	elog(ERROR_ARGS, _("supplied time(%s) is invalid."), arg1);
-}
+	if(!IsValidTime(tm)){
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("supplied time(%s) is invalid.", arg1)));
+	}
 	range->begin = mktime(&tm);
 
 	switch (num)
@@ -366,5 +388,5 @@ if(!IsValidTime(tm)){
 static void
 opt_backup_mode(pgut_option *opt, const char *arg)
 {
-	current.backup_mode = parse_backup_mode(arg, ERROR_ARGS);
+	current.backup_mode = parse_backup_mode(arg, ERROR);
 }

@@ -62,11 +62,13 @@ Number of remaining serverlog files: 1
 ###### switch backup mode from incremental to full ######
 incremental backup without validated full backup
 INFO: copying database files
-ERROR: There is no validated full backup with current timeline. Please take a full backup and validate it before doing an incremental backup. Or use with --full-backup-on-error command line option.
+ERROR: cannot take an incremental backup
+DETAIL: There is no validated full backup with current timeline.
+HINT: Please take a full backup and validate it before doing an incremental backup. Or use with --full-backup-on-error command line option.
 10
 incremental backup in the same situation but with --full-backup-on-error option
 INFO: copying database files
-INFO: There is no validated full backup with current timeline. Switching to full backup mode.
+NOTICE: There is no validated full backup with current timeline. Switching to full backup mode.
 INFO: copying archived WAL files
 INFO: copying server log files
 0
@@ -75,10 +77,12 @@ INFO: copying server log files
 ###### BACKUP COMMAND TEST-0011 ######
 ###### switch backup mode from archive to full ######
 archive backup without validated full backup
-ERROR: There is no validated full backup with current timeline. Please take a full backup and validate it before doing an archive backup. Or use with --full-backup-on-error command line option.
+ERROR: cannot take an incremental backup
+DETAIL: There is no validated full backup with current timeline.
+HINT: Please take a full backup and validate it before doing an archive backup. Or use with --full-backup-on-error command line option.
 10
 archive backup in the same situation but with --full-backup-on-error option
-INFO: There is no validated full backup with current timeline. Switching to full backup mode.
+NOTICE: There is no validated full backup with current timeline. Switching to full backup mode.
 INFO: copying database files
 INFO: copying archived WAL files
 INFO: copying server log files
