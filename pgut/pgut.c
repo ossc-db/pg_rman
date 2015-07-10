@@ -49,6 +49,10 @@ static PGcancel *volatile cancel_conn = NULL;
 bool			interrupted = false;
 static bool		in_cleanup = false;
 
+/* log min messages */
+int		pgut_log_level = INFO;
+int		pgut_abort_level = ERROR;
+
 static bool parse_pair(const char buffer[], char key[], char value[]);
 
 /* Connection routines */
@@ -62,10 +66,10 @@ static const char *get_username(void);
 
 static pgut_option default_options[] =
 {
-	{ 'b', '!', "debug"		, &debug },
 	{ 's', 'd', "dbname"	, &dbname },
 	{ 's', 'h', "host"		, &host },
 	{ 's', 'p', "port"		, &port },
+	{ 'b', '!', "debug"		, &debug },
 	{ 'b', 'q', "quiet"		, &quiet },
 	{ 's', 'U', "username"	, &username },
 #ifndef PGUT_NO_PROMPT
@@ -150,8 +154,10 @@ assign_option(pgut_option *opt, const char *optarg, pgut_optsrc src)
 
 	if (opt == NULL)
 	{
-		fprintf(stderr, "Try \"%s --help\" for more information.\n", PROGRAM_NAME);
-		exit_or_abort(ERROR_ARGS);
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("No option is specified."),
+			 errhint("Try \"%s --help\" for more information.\n", PROGRAM_NAME)));
 	}
 
 	if (opt->source > src)
@@ -236,17 +242,23 @@ assign_option(pgut_option *opt, const char *optarg, pgut_optsrc src)
 				message = "a boolean";
 				break;
 			default:
-				elog(ERROR, "invalid option type: %c", opt->type);
+				ereport(ERROR,
+					(errcode(ERROR_ARGS),
+					 errmsg("invalid option type: %c", opt->type)));
 				return;	/* keep compiler quiet */
 		}
 	}
 
 	if (isprint(opt->sname))
-		elog(ERROR_ARGS, "option -%c, --%s should be %s: '%s'",
-			opt->sname, opt->lname, message, optarg);
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("option -%c, --%s should be %s: '%s'",
+				opt->sname, opt->lname, message, optarg)));
 	else
-		elog(ERROR_ARGS, "option --%s should be %s: '%s'",
-			opt->lname, message, optarg);
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("option --%s should be %s: '%s'",
+				opt->lname, message, optarg)));
 }
 
 /*
@@ -691,14 +703,30 @@ pgut_readopt(const char *path, pgut_option options[], int elevel)
 				{
 					if (opt->allowed == SOURCE_DEFAULT ||
 						opt->allowed > SOURCE_FILE)
-						elog(elevel, "option %s cannot specified in file", opt->lname);
+						if (elevel >= ERROR)
+						{
+							ereport(ERROR,
+								(errcode(elevel),
+								 errmsg("option %s cannot specified in file", opt->lname)));
+						} else {
+							elog(elevel, "option %s cannot specified in file", opt->lname);
+						}
 					else if (opt->source <= SOURCE_FILE)
 						assign_option(opt, value, SOURCE_FILE);
 					break;
 				}
 			}
 			if (!options[i].type)
-				elog(elevel, "invalid option \"%s\"", key);
+			{
+				if (elevel >= ERROR)
+				{
+					ereport(ERROR,
+						(errcode(elevel),
+						 errmsg("invalid option \"%s\"", key)));
+				} else {
+					elog(elevel, "invalid option \"%s\"", key);
+				}
+			}
 		}
 	}
 
@@ -883,12 +911,14 @@ prompt_for_password(const char *username)
 #endif
 
 PGconn *
-pgut_connect(int elevel)
+pgut_connect(void)
 {
 	PGconn	   *conn;
 
 	if (interrupted && !in_cleanup)
-		elog(ERROR_INTERRUPTED, "interrupted");
+		ereport(FATAL,
+			(errcode(ERROR_INTERRUPTED),
+			 errmsg("interrupted")));
 
 #ifndef PGUT_NO_PROMPT
 	if (prompt_password == YES)
@@ -911,7 +941,9 @@ pgut_connect(int elevel)
 			continue;
 		}
 #endif
-		elog(elevel, "could not connect to database %s: %s", dbname, PQerrorMessage(conn));
+		ereport(ERROR,
+			(errcode(ERROR_PG_CONNECT),
+			 errmsg("could not connect to database %s: %s", dbname, PQerrorMessage(conn))));
 		PQfinish(conn);
 		return NULL;
 	}
@@ -932,16 +964,10 @@ pgut_disconnect(PGconn *conn)
  * the result is also available with the global variable 'connection'.
  */
 PGconn *
-reconnect_elevel(int elevel)
-{
-	disconnect();
-	return connection = pgut_connect(elevel);
-}
-
-void
 reconnect(void)
 {
-	reconnect_elevel(ERROR_PG_CONNECT);
+	disconnect();
+	return connection = pgut_connect();
 }
 
 void
@@ -980,29 +1006,29 @@ pgut_set_port(const char *new_port)
 }
 
 PGresult *
-pgut_execute(PGconn* conn, const char *query, int nParams, const char **params, int elevel)
+pgut_execute(PGconn* conn, const char *query, int nParams, const char **params)
 {
+	int			i;
 	PGresult   *res;
 
 	if (interrupted && !in_cleanup)
-		elog(ERROR_INTERRUPTED, "interrupted");
+		ereport(FATAL,
+			(errcode(ERROR_INTERRUPTED),
+			 errmsg("interrupted")));
 
-	/* write query to elog if debug */
-	if (debug)
-	{
-		int		i;
-
-		if (strchr(query, '\n'))
-			elog(LOG, "(query)\n%s", query);
-		else
-			elog(LOG, "(query) %s", query);
-		for (i = 0; i < nParams; i++)
-			elog(LOG, "\t(param:%d) = %s", i, params[i] ? params[i] : "(null)");
-	}
+	/* write query to elog with DEBUG level */
+	if (strchr(query, '\n'))
+		elog(DEBUG, "(query)\n%s", query);
+	else
+		elog(DEBUG, "(query) %s", query);
+	for (i = 0; i < nParams; i++)
+		elog(DEBUG, "\t(param:%d) = %s", i, params[i] ? params[i] : "(null)");
 
 	if (conn == NULL)
 	{
-		elog(elevel, "not connected");
+		ereport(ERROR,
+			(errcode(ERROR_PG_CONNECT),
+			 errmsg("not connected")));
 		return NULL;
 	}
 
@@ -1020,8 +1046,10 @@ pgut_execute(PGconn* conn, const char *query, int nParams, const char **params, 
 		case PGRES_COPY_IN:
 			break;
 		default:
-			elog(elevel, "query failed: %squery was: %s",
-				PQerrorMessage(conn), query);
+			ereport(ERROR,
+				(errcode(ERROR_PG_COMMAND),
+				 errmsg( "query failed: %squery was: %s",
+				PQerrorMessage(conn), query)));
 			break;
 	}
 
@@ -1029,35 +1057,35 @@ pgut_execute(PGconn* conn, const char *query, int nParams, const char **params, 
 }
 
 void
-pgut_command(PGconn* conn, const char *query, int nParams, const char **params, int elevel)
+pgut_command(PGconn* conn, const char *query, int nParams, const char **params)
 {
-	PQclear(pgut_execute(conn, query, nParams, params, elevel));
+	PQclear(pgut_execute(conn, query, nParams, params));
 }
 
 bool
-pgut_send(PGconn* conn, const char *query, int nParams, const char **params, int elevel)
+pgut_send(PGconn* conn, const char *query, int nParams, const char **params)
 {
 	int			res;
+	int			i;
 
 	if (interrupted && !in_cleanup)
-		elog(ERROR_INTERRUPTED, "interrupted");
+		ereport(FATAL,
+			(errcode(ERROR_INTERRUPTED),
+			 errmsg("interrupted")));
 
-	/* write query to elog if debug */
-	if (debug)
-	{
-		int		i;
-
-		if (strchr(query, '\n'))
-			elog(LOG, "(query)\n%s", query);
-		else
-			elog(LOG, "(query) %s", query);
-		for (i = 0; i < nParams; i++)
-			elog(LOG, "\t(param:%d) = %s", i, params[i] ? params[i] : "(null)");
-	}
+	/* write query to elog with DEBUG level */
+	if (strchr(query, '\n'))
+		elog(DEBUG, "(query)\n%s", query);
+	else
+		elog(DEBUG, "(query) %s", query);
+	for (i = 0; i < nParams; i++)
+		elog(DEBUG, "\t(param:%d) = %s", i, params[i] ? params[i] : "(null)");
 
 	if (conn == NULL)
 	{
-		elog(elevel, "not connected");
+		ereport(ERROR,
+			(errcode(ERROR_PG_CONNECT),
+			 errmsg("not connected")));
 		return false;
 	}
 
@@ -1068,8 +1096,10 @@ pgut_send(PGconn* conn, const char *query, int nParams, const char **params, int
 
 	if (res != 1)
 	{
-		elog(elevel, "query failed: %squery was: %s",
-			PQerrorMessage(conn), query);
+		ereport(ERROR,
+			(errcode(ERROR_PG_COMMAND),
+			 errmsg("query failed: %squery was: %s",
+			PQerrorMessage(conn), query)));
 		return false;
 	}
 
@@ -1130,19 +1160,13 @@ pgut_wait(int num, PGconn *connections[], struct timeval *timeout)
 	return -1;
 }
 
-PGresult *
-execute_elevel(const char *query, int nParams, const char **params, int elevel)
-{
-	return pgut_execute(connection, query, nParams, params, elevel);
-}
-
 /*
  * execute - Execute a SQL and return the result, or exit_or_abort() if failed.
  */
 PGresult *
 execute(const char *query, int nParams, const char **params)
 {
-	return execute_elevel(query, nParams, params, ERROR_PG_COMMAND);
+	return pgut_execute(connection, query, nParams, params);
 }
 
 /*
@@ -1155,56 +1179,255 @@ command(const char *query, int nParams, const char **params)
 }
 
 /*
+ * elog staffs
+ */
+typedef struct pgutErrorData
+{
+	int		elevel;
+	int		save_errno;
+	int		ecode;
+	StringInfoData	msg;
+	StringInfoData	detail;
+	StringInfoData	hint;
+} pgutErrorData;
+
+static pgutErrorData *
+getErrorData(void)
+{
+	static pgutErrorData	edata;
+	return &edata;
+}
+
+static pgutErrorData *
+pgut_errinit(int elevel)
+{
+	int save_errno = errno;
+	pgutErrorData *edata = getErrorData();
+	edata->elevel = elevel;
+	edata->save_errno = save_errno;
+	edata->ecode = (elevel >= ERROR ? 1 : 0);
+
+	if (edata->msg.data)
+		resetStringInfo(&edata->msg);
+	else
+		initStringInfo(&edata->msg);
+
+	if (edata->detail.data)
+		resetStringInfo(&edata->detail);
+	else
+		initStringInfo(&edata->detail);
+
+	if (edata->hint.data)
+		resetStringInfo(&edata->hint);
+	else
+		initStringInfo(&edata->hint);
+
+	return edata;
+}
+
+bool
+pgut_errstart(int elevel)
+{
+	if (elevel < pgut_abort_level && elevel < pgut_log_level)
+		return false;
+	
+	pgut_errinit(elevel);
+	return true;
+}
+
+void
+pgut_errfinish(int dummy, ...)
+{
+	pgutErrorData	*edata = getErrorData();
+
+	if (edata->elevel >= pgut_log_level || debug)
+		pgut_error(edata->elevel,
+				edata->msg.data ? edata->msg.data : "unknown",
+				edata->detail.data,
+				edata->hint.data);
+
+	if (pgut_abort_level <= edata->elevel && edata->elevel <= PANIC)
+		exit_or_abort(edata->ecode);
+}
+
+void
+pgut_error(int elevel, const char *msg, const char *detail, const char *hint)
+{
+	const char *tag = format_elevel(elevel);
+
+	if ((detail && detail[0]) && (hint && hint[0]))
+		fprintf(stderr, "%s: %s\nDETAIL: %s\nHINT: %s\n", tag, msg, detail, hint);
+	else if (detail && detail[0])
+		fprintf(stderr, "%s: %s\nDETAIL: %s\n", tag, msg, detail);
+	else if (hint && hint[0])
+		fprintf(stderr, "%s: %s\nHINT: %s\n", tag, msg, hint);
+	else
+		fprintf(stderr, "%s: %s\n", tag, msg);
+	fflush(stderr);
+}
+
+const char *
+format_elevel(int elevel)
+{
+	switch (elevel)
+	{
+		case DEBUG:
+			return "DEBUG";
+		case INFO:
+			return "INFO";
+		case NOTICE:
+			return "NOTICE";
+		case WARNING:
+			return "WARNING";
+		case ERROR:
+			return "ERROR";
+		case FATAL:
+			return "FATAL";
+		case PANIC:
+			return "PANIC";
+		default:
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("invalid elevel: %d", elevel)));
+			return "";
+	}
+}
+
+int
+errcode(int errcode)
+{
+	pgutErrorData *edata = getErrorData();
+	edata->ecode = errcode;
+	return 0;
+}
+
+int
+errmsg(const char *fmt, ...)
+{
+	pgutErrorData	*edata = getErrorData();
+	va_list			args;
+	size_t			len;
+	bool			ok;
+
+	do
+	{
+		va_start(args, fmt);
+		ok = appendStringInfoVA_c(&edata->msg, fmt, args);
+		va_end(args);
+	} while (!ok);
+	len = strlen(fmt);
+	if ( len > 2 && strcmp(fmt + len -2, ": ") == 0)
+		appendStringInfoString(&edata->msg, strerror(edata->save_errno));
+	trimStringBuffer(&edata->msg);
+
+	return 0;	/* return value does not matter. */
+}
+
+int
+errdetail(const char *fmt, ...)
+{
+	pgutErrorData	*edata = getErrorData();
+	va_list			args;
+	bool			ok;
+
+	do
+	{
+		va_start(args, fmt);
+		ok = appendStringInfoVA_c(&edata->detail, fmt, args);
+		va_end(args);
+	} while (!ok);
+	trimStringBuffer(&edata->detail);
+
+	return 0;	/* return value does not matter. */
+}
+
+int
+errhint(const char *fmt, ...)
+{
+	pgutErrorData	*edata = getErrorData();
+	va_list			args;
+	bool			ok;
+
+	do
+	{
+		va_start(args, fmt);
+		ok = appendStringInfoVA_c(&edata->hint, fmt, args);
+		va_end(args);
+	} while (!ok);
+	trimStringBuffer(&edata->hint);
+
+	return 0;	/* return value does not matter. */
+}
+
+/*
  * elog - log to stderr and exit if ERROR or FATAL
  */
 void
 elog(int elevel, const char *fmt, ...)
 {
-	va_list		args;
+	va_list			args;
+	bool			ok;
+	size_t			len;
+	pgutErrorData	*edata;
 
-	if (!debug && elevel <= LOG)
-		return;
 	if (quiet && elevel < WARNING)
 		return;
 
-	switch (elevel)
+	if (elevel < pgut_abort_level && elevel < pgut_log_level && !debug)
+		return;
+
+	edata = pgut_errinit(elevel);
+
+	do
 	{
-	case LOG:
-		fputs("LOG: ", stderr);
-		break;
-	case DETAIL:
-		fputs("DETAIL: ", stderr);
-		break;
-	case INFO:
-		fputs("INFO: ", stderr);
-		break;
-	case NOTICE:
-		fputs("NOTICE: ", stderr);
-		break;
-	case WARNING:
-		fputs("WARNING: ", stderr);
-		break;
-	case FATAL:
-		fputs("FATAL: ", stderr);
-		break;
-	case PANIC:
-		fputs("PANIC: ", stderr);
-		break;
-	default:
-		if (elevel >= ERROR)
-			fputs("ERROR: ", stderr);
-		break;
+		va_start(args, fmt);
+		ok = appendStringInfoVA_c(&edata->msg, fmt, args);
+		va_end(args);
+	} while (!ok);
+	len = strlen(fmt);
+	if ( len > 2 && strcmp(fmt + len -2, ": ") == 0)
+		appendStringInfoString(&edata->msg, strerror(edata->save_errno));
+	trimStringBuffer(&edata->msg);
+
+	pgut_errfinish(true);
+}
+
+/*
+ * unlike the server code, this function automaticcaly extend buffer.
+ */
+bool
+appendStringInfoVA_c(StringInfo str, const char *fmt, va_list args)
+{
+	size_t		avail;
+	int			nprinted;
+
+	Assert(str != NULL);
+	Assert(str->maxlen > 0);
+
+	avail = str->maxlen - str->len - 1;
+	nprinted = vsnprintf(str->data + str->len, avail, fmt, args);
+
+	if (nprinted >= 0 && nprinted < (int) avail - 1)
+	{
+		str->len += nprinted;
+		return true;
 	}
 
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	fputc('\n', stderr);
-	fflush(stderr);
-	va_end(args);
-
-	if (elevel > 0)
-		exit_or_abort(elevel);
+	/* Double the buffer size and try again. */
+	enlargePQExpBuffer(str, str->maxlen);
+	return false;
 }
+
+/*
+ * remove white spaces and line breaks from the end of buffer.
+ */
+void
+trimStringBuffer(StringInfo str)
+{
+	while (str->len > 0 && IsSpace(str->data[str->len - 1]))
+		str->data[--str->len] = '\0';
+}
+
 
 #ifdef WIN32
 static CRITICAL_SECTION cancelConnLock;
@@ -1394,8 +1617,8 @@ help(bool details)
 	printf("\nGeneric options:\n");
 	if (details)
 	{
-		printf("  -q, --quiet               don't write any messages\n");
-		printf("  --debug                   debug mode\n");
+		printf("  -q, --quiet               don't show any INFO or DEBUG messages\n");
+		printf("  --debug                   show DEBUG messages\n");
 	}
 	printf("  --help                    show this help, then exit\n");
 	printf("  --version                 output version information, then exit\n");
@@ -1437,8 +1660,10 @@ get_username(void)
 #endif
 
 	if (ret == NULL)
-		elog(ERROR_SYSTEM, "%s: could not get current user name: %s",
-				PROGRAM_NAME, strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("%s: could not get current user name: %s",
+				PROGRAM_NAME, strerror(errno))));
 	return ret;
 }
 
@@ -1502,8 +1727,10 @@ pgut_malloc(size_t size)
 	char *ret;
 
 	if ((ret = malloc(size)) == NULL)
-		elog(ERROR_NOMEM, "could not allocate memory (%lu bytes): %s",
-			(unsigned long) size, strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_NOMEM),
+			 errmsg("could not allocate memory (%lu bytes): %s",
+				(unsigned long) size, strerror(errno))));
 	return ret;
 }
 
@@ -1513,8 +1740,10 @@ pgut_realloc(void *p, size_t size)
 	char *ret;
 
 	if ((ret = realloc(p, size)) == NULL)
-		elog(ERROR_NOMEM, "could not re-allocate memory (%lu bytes): %s",
-			(unsigned long) size, strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_NOMEM),
+			 errmsg("could not re-allocate memory (%lu bytes): %s",
+				(unsigned long) size, strerror(errno))));
 	return ret;
 }
 
@@ -1527,8 +1756,10 @@ pgut_strdup(const char *str)
 		return NULL;
 
 	if ((ret = strdup(str)) == NULL)
-		elog(ERROR_NOMEM, "could not duplicate string \"%s\": %s",
-			str, strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_NOMEM),
+			 errmsg("could not duplicate string \"%s\": %s",
+				str, strerror(errno))));
 	return ret;
 }
 
@@ -1572,8 +1803,10 @@ pgut_fopen(const char *path, const char *mode, bool missing_ok)
 		if (missing_ok && errno == ENOENT)
 			return NULL;
 
-		elog(ERROR_SYSTEM, "could not open file \"%s\": %s",
-			path, strerror(errno));
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open file \"%s\": %s",
+				path, strerror(errno))));
 	}
 
 	return fp;
@@ -1605,9 +1838,13 @@ wait_for_sockets(int nfds, fd_set *fds, struct timeval *timeout)
 		if (i < 0)
 		{
 			if (interrupted)
-				elog(ERROR_INTERRUPTED, "interrupted");
+				ereport(FATAL,
+					(errcode(ERROR_INTERRUPTED),
+					 errmsg("interrupted")));
 			else if (errno != EINTR)
-				elog(ERROR_SYSTEM, "select failed: %s", strerror(errno));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("select failed: %s", strerror(errno))));
 		}
 		else
 			return i;
