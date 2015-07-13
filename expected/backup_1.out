@@ -71,6 +71,7 @@ INFO: copying database files
 NOTICE: There is no validated full backup with current timeline. Switching to full backup mode.
 INFO: copying archived WAL files
 INFO: copying server log files
+INFO: backup complete. Please execute 'pg_rman validate' to verify the files are correctly copied.
 0
 1
 1
@@ -86,6 +87,7 @@ NOTICE: There is no validated full backup with current timeline. Switching to fu
 INFO: copying database files
 INFO: copying archived WAL files
 INFO: copying server log files
+INFO: backup complete. Please execute 'pg_rman validate' to verify the files are correctly copied.
 0
 1
 1

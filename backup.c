@@ -926,6 +926,9 @@ do_backup(pgBackupOption bkupopt)
 		printf(_("========================================\n"));
 	}
 
+	elog(INFO, "backup complete. Please execute 'pg_rman validate'"
+		" to verify the files are correctly copied.");
+
 	/*
 	 * Delete old files (archived WAL and serverlog) after update of status.
 	 */
