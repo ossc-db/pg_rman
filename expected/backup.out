@@ -84,6 +84,7 @@ NOTICE: There is no validated full backup with current timeline. Switching to fu
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 INFO: copying archived WAL files
 INFO: copying server log files
+INFO: backup complete. Please execute 'pg_rman validate' to verify the files are correctly copied.
 0
 1
 1
@@ -100,6 +101,7 @@ INFO: copying database files
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 INFO: copying archived WAL files
 INFO: copying server log files
+INFO: backup complete. Please execute 'pg_rman validate' to verify the files are correctly copied.
 0
 1
 1
