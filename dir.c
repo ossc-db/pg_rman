@@ -60,6 +60,37 @@ dir_create_dir(const char *dir, mode_t mode)
 	return 0;
 }
 
+/* delete parent dir of each backup
+ * Each backup are located in '$BACKUP_PATH/YYYYMMDD/HHMMSS/'.
+ * This function checks whether '$BACKUP_PATH/YYYYMMDD' directory can be deleted.
+ */
+void
+delete_parent_dir(const char *path)
+{
+	char	*str;
+	char	parent_dir_path[MAXPGPATH];
+
+	str = strrchr(path, '/');
+	memset(parent_dir_path, 0, lengthof(parent_dir_path));
+	strncpy(parent_dir_path, path, str - path);
+	if ( rmdir(parent_dir_path) == -1 )
+	{
+		if (errno == ENOTEMPTY || errno == EEXIST)
+		{
+			elog(DEBUG, "the directory \"%s\" is not empty. Skip deleting.", parent_dir_path);
+		} else {
+			ereport(WARNING,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not remove directory \"%s\" : %s", parent_dir_path,
+					strerror(errno))));
+		}
+	} else {
+		elog(DEBUG, "the directory \"%s\" is deleted.", parent_dir_path);
+	}
+	return;
+}
+
+
 static pgFile *
 pgFileNew(const char *path, bool omit_symlink)
 {
