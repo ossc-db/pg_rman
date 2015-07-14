@@ -375,8 +375,12 @@ int do_purge(void)
 			}
 		}
 
-		if (!check) 
+		if (!check)
 		{
+			/* check the parent directory where deleted backup belongs to can be deleted. */
+			delete_parent_dir(path);
+
+			/* check whether there happens some errors in purging */
 			if(any_errors)
 			{
 				elog(WARNING, _("There are errors in purging backup \"%s\""), timestamp);
