@@ -230,7 +230,7 @@ main(int argc, char *argv[])
 	else if (pg_strcasecmp(cmd, "delete") == 0)
 		return do_delete(&range, force);
 	else if (pg_strcasecmp(cmd, "purge") == 0)
-		do_purge();
+		return do_purge();
 	else
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
