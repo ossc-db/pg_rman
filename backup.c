@@ -1376,8 +1376,9 @@ backup_files(const char *from_root,
 		if(tv.tv_sec < file->mtime){
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
-				 errmsg("current time may be rewound. "),
-				 errhint("Please retry with full backup mode.")));
+				 errmsg("cannot take a backup."),
+				 errdetail("current system time may be rewound. "),
+				 errhint("Please retry with the full backup mode.")));
 		}
 
 		/* check for interrupt */
