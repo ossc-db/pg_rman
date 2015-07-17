@@ -198,8 +198,9 @@ pgBackupValidateFiles(parray *files, const char *root, bool size_only)
 			continue;
 
 		/* print progress */
-		elog(DEBUG, _("(%d/%lu) %s"), i + 1, (unsigned long) parray_num(files),
-			get_relative_path(file->path, root));
+		if (verbose)
+			elog(DEBUG, _("(%d/%lu) validating %s"), i + 1, (unsigned long) parray_num(files),
+				get_relative_path(file->path, root));
 
 		/* always validate file size */
 		if (stat(file->path, &st) == -1)
