@@ -1344,7 +1344,7 @@ backup_cleanup(bool fatal, void *userdata)
 	}
 }
 
-/* take incremental backup. */
+/* take backup about listed file. */
 static void
 backup_files(const char *from_root,
 			 const char *to_root,
@@ -1374,11 +1374,15 @@ backup_files(const char *from_root,
 
 		/* If current time is rewinded, abort this backup. */
 		if(tv.tv_sec < file->mtime){
-			ereport(ERROR,
+			ereport(FATAL,
 				(errcode(ERROR_SYSTEM),
 				 errmsg("cannot take a backup."),
-				 errdetail("current system time may be rewound. "),
-				 errhint("Please retry with the full backup mode.")));
+				 errdetail("there is a file with future timestamp from system time.\n"
+						"Current system time may be rewound."),
+				 errhint("the file is %s.\n"
+						"If this is a database file, please retry with the full backup mode.\n"
+						"If this is a server log or archived WAL file, change the timestamp.",
+									file->path)));
 		}
 
 		/* check for interrupt */
