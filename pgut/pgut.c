@@ -1236,7 +1236,7 @@ pgut_errinit(int elevel)
 bool
 pgut_errstart(int elevel)
 {
-	if (elevel < pgut_abort_level && elevel < pgut_log_level)
+	if (elevel < pgut_abort_level && elevel < pgut_log_level && !debug)
 		return false;
 	
 	pgut_errinit(elevel);
