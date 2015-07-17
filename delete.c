@@ -258,7 +258,8 @@ pgBackupDeleteFiles(pgBackup *backup)
 		pgFile *file = (pgFile *) parray_get(files, i);
 
 		/* print progress */
-		elog(DEBUG, _("delete file(%d/%lu) \"%s\"\n"), i + 1,
+		if (verbose)
+			elog(DEBUG, _("delete file(%d/%lu) \"%s\"\n"), i + 1,
 				(unsigned long) parray_num(files), file->path);
 
 		/* skip actual deletion in check mode */
@@ -266,7 +267,7 @@ pgBackupDeleteFiles(pgBackup *backup)
 		{
 			if (remove(file->path))
 			{
-				elog(WARNING, _("can't remove \"%s\": %s"), file->path,
+				elog(WARNING, _("cannot remove \"%s\": %s"), file->path,
 					strerror(errno));
 				parray_walk(files, pgFileFree);
 				parray_free(files);
