@@ -317,7 +317,8 @@ backup_data_file(const char *from_root,
 		if (!parse_page(&page, &page_lsn, &header.hole_offset,
 						&header.hole_length))
 		{
-			elog(DEBUG, "%s fall back to simple copy", file->path);
+			if (verbose)
+				elog(DEBUG, "%s fall back to simple copy", file->path);
 			fclose(in);
 			fclose(out);
 			file->is_datafile = false;
