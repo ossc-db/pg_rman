@@ -163,7 +163,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	}
 
 	/*
-	 * list directories and symbolic links  with the physical path to make
+	 * list directories and symbolic links with the physical path to make
 	 * mkdirs.sh
 	 * Sort in order of path.
 	 * omit $PGDATA.
@@ -233,7 +233,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			lsn = &prev_backup->start_lsn;
 			xlogid = (uint32) (*lsn >> 32);
 			xrecoff = (uint32) *lsn;
-			elog(DEBUG, _("backup only the page that there was of the update from LSN(%X/%08X).\n"),
+			elog(DEBUG, _("backup only the page updated after LSN(%X/%08X).\n"),
 							xlogid, xrecoff);
 		}
 	}
@@ -477,6 +477,12 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		add_files(files, pgdata, false, true);
 
 		/* backup files */
+		if (current.backup_mode == BACKUP_MODE_FULL)
+		{
+			elog(DEBUG, "taking full backup of database files...");
+		} else if (current.backup_mode == BACKUP_MODE_INCREMENTAL) {
+			elog(DEBUG, "taking incremental backup of database files...");
+		}
 		pgBackupGetPath(&current, path, lengthof(path), DATABASE_DIR);
 		backup_files(pgdata, path, files, prev_files, lsn, current.compress_data, NULL);
 
@@ -631,6 +637,7 @@ do_backup_arclog(parray *backup_list)
 		}
 	}
 
+	elog(DEBUG, "taking backup of archived WAL files...");
 	pgBackupGetPath(&current, path, lengthof(path), ARCLOG_DIR);
 	backup_files(arclog_path, path, files, prev_files, NULL,
 				 current.compress_data, NULL);
@@ -882,8 +889,7 @@ do_backup(pgBackupOption bkupopt)
 				 errmsg("could not create backup directory.")));
 		pgBackupWriteIni(&current);
 	}
-	if (verbose)
-		printf(_("backup destination is initialized.\n"));
+	elog(DEBUG, "destination directories of backup are initialized.");
 
 	/* get list of backups already taken */
 	backup_list = catalog_get_backup_list(NULL);
@@ -1073,6 +1079,7 @@ get_server_version(void)
 		reconnect();
 
 	/* confirm server version */
+	elog(DEBUG, "checking PostgreSQL server version...");
 	server_version = PQserverVersion(connection);
 	if (server_version < 80200)
 		ereport(ERROR,
@@ -1081,6 +1088,10 @@ get_server_version(void)
 				server_version / 10000,
 				(server_version / 100) % 100,
 				server_version % 100)));
+	elog(DEBUG, "server version is %d.%d.%d",
+				server_version / 10000,
+				(server_version / 100) % 100,
+				server_version % 100);
 
 	/* confirm block_size (BLCKSZ) and wal_block_size (XLOG_BLCKSZ) */
 	confirm_block_size("block_size", BLCKSZ);
@@ -1100,12 +1111,19 @@ confirm_block_size(const char *name, int blcksz)
 	char	   *endp;
 	int			block_size;
 
+	elog(DEBUG, "checking block size setting...");
 	res = execute("SELECT current_setting($1)", 1, &name);
 	if (PQntuples(res) != 1 || PQnfields(res) != 1)
 		ereport(ERROR,
 			(errcode(ERROR_PG_COMMAND),
 			 errmsg("could not get %s: %s", name, PQerrorMessage(connection))));
 	block_size = strtol(PQgetvalue(res, 0, 0), &endp, 10);
+	if (strcmp(name, "block_size") == 0)
+	{
+		elog(DEBUG, "block size is %d", block_size);
+	} else if (strcmp(name, "wal_block_size") == 0) {
+		elog(DEBUG, "wal block size is %d", block_size);
+	}
 	PQclear(res);
 	if ((endp && *endp) || block_size != blcksz)
 		ereport(ERROR,
@@ -1125,6 +1143,7 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 
 	params[0] = label;
 
+	elog(DEBUG, "executing pg_start_backup()...");
 	reconnect();
 	server_version = get_server_version();
 	if (server_version >= 80400)
@@ -1142,6 +1161,10 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 	}
 	if (backup != NULL)
 		get_lsn(res, &backup->tli, &backup->start_lsn);
+		
+	elog(DEBUG, "backup start point is (WAL file: %s, xrecoff: %s)",
+			PQgetvalue(res, 0, 0), PQgetvalue(res, 0, 1));
+
 	PQclear(res);
 	disconnect();
 }
@@ -1158,14 +1181,14 @@ wait_for_archive(pgBackup *backup, const char *sql)
 	if (backup != NULL)
 	{
 		get_lsn(res, &backup->tli, &backup->stop_lsn);
-		elog(DEBUG, _("%s(): tli=%X lsn=%X/%08X"), __FUNCTION__, backup->tli,
-			(uint32) (backup->stop_lsn >> 32), (uint32) backup->stop_lsn);
+		elog(DEBUG, "backup end point is (WAL file: %s, xrecoff: %s",
+				PQgetvalue(res, 0, 0), PQgetvalue(res, 0, 1));
 	}
 
 	/* get filename from the result of pg_xlogfile_name_offset() */
+	elog(DEBUG, "waiting for %s is archived", PQgetvalue(res, 0, 0));
 	snprintf(ready_path, lengthof(ready_path),
 		"%s/pg_xlog/archive_status/%s.ready", pgdata, PQgetvalue(res, 0, 0));
-	elog(DEBUG, "%s() wait for %s", __FUNCTION__, ready_path);
 
 	PQclear(res);
 
@@ -1192,7 +1215,8 @@ wait_for_archive(pgBackup *backup, const char *sql)
 				 errmsg("switched WAL could not be archived in %d seconds",
 					TIMEOUT_ARCHIVE)));
 	}
-	elog(DEBUG, "%s() .ready deleted in %d try", __FUNCTION__, try_count);
+	elog(DEBUG, "WAL file contains backup end point is archived after %d seconds waiting",
+			try_count);
 }
 
 /*
@@ -1201,6 +1225,7 @@ wait_for_archive(pgBackup *backup, const char *sql)
 static void
 pg_stop_backup(pgBackup *backup)
 {
+	elog(DEBUG, "executing pg_stop_backup()...");
 	wait_for_archive(backup,
 		"SELECT * FROM pg_xlogfile_name_offset(pg_stop_backup())");
 }
@@ -1244,9 +1269,7 @@ get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
 	xrecoff += off_upper << XLogSegOffsetBits;
 
 	*lsn = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
-
-	elog(DEBUG, "%s():%s %s",
-		__FUNCTION__, PQgetvalue(res, 0, 0), PQgetvalue(res, 0, 1));
+	return;
 }
 
 /*
@@ -1268,7 +1291,7 @@ get_xid(PGresult *res, uint32 *xid)
 			 errmsg("result of txid_current() is invalid: %s",
 				PQerrorMessage(connection))));
 	}
-	elog(DEBUG, "%s():%s", __FUNCTION__, PQgetvalue(res, 0, 0));
+	elog(DEBUG, "current XID is %s", PQgetvalue(res, 0, 0));
 }
 
 /*
@@ -1596,7 +1619,12 @@ delete_old_files(const char *root,
 	/* delete files which satisfy both conditions */
 	if (keep_files == KEEP_INFINITE || keep_days == KEEP_INFINITE)
 	{
-		elog(DEBUG, "do not delete old backup files");
+		if (is_arclog)
+		{
+			elog(DEBUG, "do not delete old archived WAL files.");
+		} else {
+			elog(DEBUG, "do not delete old server log files.");
+		}
 		return;
 	}
 
