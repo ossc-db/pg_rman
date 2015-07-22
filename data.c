@@ -668,7 +668,8 @@ restore_data_file(const char *from_root,
 #ifdef HAVE_LIBZ
 		if (compress)
 		{
-			elog(DEBUG, "\n%s() %s %d %d", __FUNCTION__, file->path, header.hole_offset, upper_length);
+			if (verbose)
+				elog(DEBUG, "starting decompress file: %s", file->path);
 			if (header.hole_offset > 0)
 			{
 				doInflate(&z, sizeof(inbuf), header.hole_offset, inbuf,
