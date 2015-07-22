@@ -63,6 +63,7 @@ do_restore(const char *target_time,
 	parray *files;
 	parray *timelines;
 	char timeline_dir[MAXPGPATH];
+	char timestamp[20];
 	uint32 needId = 0;
 	uint32 needSeg = 0;
 	pgRecoveryTarget *rt = NULL;
@@ -120,8 +121,11 @@ do_restore(const char *target_time,
 	}
 
 	cur_tli = get_current_timeline();
+	elog(DEBUG, "the current timeline ID of database cluster is %d", cur_tli);
 	data_checksum_version = get_data_checksum_version();
+	elog(DEBUG, "the database checksum version is %d", data_checksum_version);
 	backup_tli = get_fullbackup_timeline(backups, rt);
+	elog(DEBUG, "the timeline ID of latest full backup is %d", backup_tli);
 
 	/*
 	 * determine target timeline;
@@ -130,33 +134,37 @@ do_restore(const char *target_time,
 	 * the value 'latest' is also supported.
 	 */
 	if(target_tli_string)
-		target_tli = parse_target_timeline(target_tli_string, cur_tli, &target_tli_latest);
-	else
-		target_tli = 0;
-
-	if (target_tli == 0)
-		target_tli = cur_tli != 0 ? cur_tli : backup_tli;
-
-	if (verbose)
 	{
-		printf(_("current timeline ID = %u\n"), cur_tli);
-		printf(_("latest full backup timeline ID = %u\n"), backup_tli);
-		printf(_("target timeline ID = %u\n"), target_tli);
+		target_tli = parse_target_timeline(target_tli_string, cur_tli, &target_tli_latest);
+		elog(INFO, "the specified target timeline ID is %d", target_tli);
+	} else {
+		elog(INFO, "the recovery target timeline ID is not given.");
+		if (cur_tli != 0)
+		{
+			target_tli = cur_tli;
+			elog(INFO, "use timeline ID of current database culster as recovery target: %d",
+				cur_tli);
+		} else {
+			backup_tli = get_fullbackup_timeline(backups, rt);
+			target_tli = backup_tli;
+			elog(INFO, "use timeline ID of latest full backup as recovery target: %d",
+				backup_tli);
+		}
 	}
+
 
 	/*
 	 * restore timeline history files and get timeline branches can reach
 	 * recovery target point.
 	 */
+	elog(INFO, "restoring timeline history files and calculating "
+		"timeline branches to be used to recovery target point.");
 	join_path_components(timeline_dir, backup_path, TIMELINE_HISTORY_DIR);
-	if (verbose && !check)
-		printf(_("restoring timeline history files\n"));
 	dir_copy_files(timeline_dir, arclog_path);
 	timelines = readTimeLineHistory(target_tli);
 
 	/* find last full backup which can be used as base backup. */
-	if (verbose)
-		printf(_("searching recent full backups\n"));
+	elog(INFO, "searching latest full backup which can be used as restore start point.\n");
 	for (i = 0; i < parray_num(backups); i++)
 	{
 		base_backup = (pgBackup *) parray_get(backups, i);
@@ -177,6 +185,9 @@ do_restore(const char *target_time,
 		}
 #endif
 		if (satisfy_timeline(timelines, base_backup) && satisfy_recovery_target(base_backup, rt))
+			time2iso(timestamp, lengthof(timestamp), base_backup->start_time);
+			elog(INFO, "found the full backup can be used as base in recovery: \"%s\"",
+				timestamp);
 			goto base_backup_found;
 	}
 	/* no full backup found, can't restore */
@@ -206,8 +217,8 @@ base_backup_found:
 		if (verbose)
 		{
 			printf(_("----------------------------------------\n"));
-			printf(_("clearing restore destination\n"));
 		}
+		elog(INFO, "clearing restore destination");
 		files = parray_new();
 		dir_list_file(files, pgdata, NULL, false, false);
 		parray_qsort(files, pgFileComparePathDesc);	/* delete from leaf */
@@ -234,7 +245,8 @@ base_backup_found:
 
 	/* restore following incremental backup */
 	if (verbose)
-		printf(_("searching incremental backup...\n"));
+		printf(_("----------------------------------------\n"));
+	elog(INFO, "searching incremental backup to be restored");
 	for (i = base_index - 1; i >= 0; i--)
 	{
 		pgBackup *backup = (pgBackup *) parray_get(backups, i);
@@ -249,12 +261,15 @@ base_backup_found:
 			continue;
 
 		/* is the backup is necessary for restore to target timeline ? */
-		//if (!satisfy_timeline(timelines, backup) && !satisfy_recovery_target(backup, rt))
 		if (!satisfy_timeline(timelines, backup) || !satisfy_recovery_target(backup, rt))
 			continue;
 
 		if (verbose)
 			print_backup_id(backup);
+
+		time2iso(timestamp, lengthof(timestamp), backup->start_time);
+		elog(DEBUG, "found the incremental backup can be used in recovery: \"%s\"",
+			timestamp);
 
 		restore_database(backup);
 		last_restored_index = i;
@@ -265,9 +280,6 @@ base_backup_found:
 	 * We don't check the backup->tli because a backup of archived WAL
 	 * can contain WALs which were archived in multiple timeline.
 	 */
-	if (verbose)
-		printf(_("searching backed-up WAL...\n"));
-
 	if (check)
 	{
 		pgBackup *backup = (pgBackup *) parray_get(backups, last_restored_index);
@@ -275,6 +287,9 @@ base_backup_found:
 		needSeg = (uint32) backup->start_lsn / XLogSegSize;
 	}
 
+	if (verbose)
+		printf(_("----------------------------------------\n"));
+	elog(INFO, "searching backup which contained archived WAL files to be restored");
 	for (i = last_restored_index; i >= 0; i--)
 	{
 		pgBackup *backup = (pgBackup *) parray_get(backups, i);
@@ -376,14 +391,20 @@ restore_database(pgBackup *backup)
 		printf(_("----------------------------------------\n"));
 	}
 
-	elog(INFO, _("restoring database files from backup \"%s\"."), timestamp);
-
 	/*
 	 * Validate backup files with its size, because load of CRC calculation is
-	 * not right.
+	 * not light.
 	 */
 	pgBackupValidate(backup, true, false, true);
 
+	if (backup->backup_mode == BACKUP_MODE_FULL)
+	{
+		elog(INFO, "restoring database files from the full mode backup \"%s\".",
+			timestamp);
+	} else if (backup->backup_mode == BACKUP_MODE_INCREMENTAL) {
+		elog(INFO, "restoring database files from the incremental mode backup \"%s\".",
+			timestamp);
+	}
 	/* make directories and symbolic links */
 	pgBackupGetPath(backup, path, lengthof(path), MKDIRS_SH_FILE);
 	if (!check)
@@ -566,14 +587,13 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 		printf(_("----------------------------------------\n"));
 	}
 
-	elog(INFO,_("restoring WAL files from backup \"%s\"."), timestamp);
-
 	/*
 	 * Validate backup files with its size, because load of CRC calculation is
 	 * not light.
 	 */
 	pgBackupValidate(backup, true, false, false);
 
+	elog(INFO,_("restoring WAL files from backup \"%s\"."), timestamp);
 	pgBackupGetPath(backup, list_path, lengthof(list_path), ARCLOG_FILE_LIST);
 	pgBackupGetPath(backup, base_path, lengthof(list_path), ARCLOG_DIR);
 	files = dir_read_file_list(base_path, list_path);
@@ -730,7 +750,6 @@ backup_online_files(bool re_recovery)
 	if (verbose && !check)
 	{
 		printf(_("----------------------------------------\n"));
-		printf(_("backup online WAL and serverlog start\n"));
 	}
 	
 	elog(INFO, _("copying online WAL files and server log files"));
@@ -953,11 +972,12 @@ readTimeLineHistory(TimeLineID targetTLI)
 	parray_insert(result, 0, timeline);
 
 	/* dump timeline branches for debug */
+	elog(DEBUG, "the calculated branch history is as below.");
 	for (i = 0; i < parray_num(result); i++)
 	{
 		pgTimeLine *timeline = parray_get(result, i);
-		elog(DEBUG, "%s() result[%d]: %08X/%08X/%08X", __FUNCTION__, i,
-			timeline->tli, (uint32) (timeline->end >> 32), (uint32) timeline->end);
+		elog(DEBUG, "stage %d: timeline ID = %d",
+			(int)parray_num(result) - i, timeline->tli);
 	}
 
 	return result;
@@ -966,35 +986,63 @@ readTimeLineHistory(TimeLineID targetTLI)
 static bool
 satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt)
 {
-	if(rt->xid_specified){
-//		elog(INFO, "in satisfy_recovery_target:xid::%u:%u", backup->recovery_xid, rt->recovery_target_xid);
+	char backup_timestamp[20];
+	char recovery_timestamp_of_backup[20];
+	char recovery_target_timestamp[20];
+	time2iso(backup_timestamp, lengthof(backup_timestamp), backup->start_time);
+
+	if (rt->xid_specified){
 		if(backup->recovery_xid <= rt->recovery_target_xid)
+		{
+			ereport(DEBUG,
+				(errmsg("backup \"%s\" satisfies the condition of recovery target xid.",
+					backup_timestamp),
+				 errdetail("the recovery target xid is %d, the recovery xid of the backup is %d",
+					rt->recovery_target_xid, backup->recovery_xid)));
 			return true;
-		else
+		} else {
 			return false;
+		}
 	}
-	if(rt->time_specified){
-//		elog(INFO, "in satisfy_recovery_target:time_t::%ld:%ld", backup->recovery_time, rt->recovery_target_time);
+	if (rt->time_specified){
 		if(backup->recovery_time <= rt->recovery_target_time)
+		{
+			time2iso(recovery_timestamp_of_backup, lengthof(recovery_timestamp_of_backup),
+				backup->recovery_time);
+			time2iso(recovery_target_timestamp, lengthof(recovery_target_timestamp),
+				rt->recovery_target_time);
+			ereport(DEBUG,
+			(errmsg("backup \"%s\" satisfies the condition of recovery target time.",
+				backup_timestamp),
+			 errdetail("the recovery target time is \"%s\", "
+				"the recovery time of the backup is \"%s\"",
+				recovery_target_timestamp, recovery_timestamp_of_backup)));
 			return true;
-		else
+		} else {
 			return false;
+		}
 	}
-	else{
-		return true;
-	}
+
+	return true;
 }
 
 static bool
 satisfy_timeline(const parray *timelines, const pgBackup *backup)
 {
 	int i;
+	char timestamp[20];
+
+	time2iso(timestamp, lengthof(timestamp), backup->start_time);
 	for (i = 0; i < parray_num(timelines); i++)
 	{
 		pgTimeLine *timeline = (pgTimeLine *) parray_get(timelines, i);
 		if (backup->tli == timeline->tli &&
 				backup->stop_lsn < timeline->end)
+		{
+			elog(DEBUG, "backup \"%s\" has the timeline ID %d",
+				timestamp, backup->tli);
 			return true;
+		}
 	}
 	return false;
 }
