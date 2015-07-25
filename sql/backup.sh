@@ -159,33 +159,34 @@ pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0006.log 2>&1
 grep -c OK ${TEST_BASE}/TEST-0006.log
 grep OK ${TEST_BASE}/TEST-0006.log | sed -e 's@[^-]@@g' | wc -c
 
-echo '###### BACKUP COMMAND TEST-0007 ######'
-echo '###### full backup with keep-data-generations and keep-data-days ######'
-init_catalog
-pg_rman backup -B ${BACKUP_PATH} -b full -s -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman backup -B ${BACKUP_PATH} -b full -s -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman backup -B ${BACKUP_PATH} -b full -s -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0007-before.log 2>&1
-NUM_OF_FULL_BACKUPS_BEFORE=`grep OK ${TEST_BASE}/TEST-0007-before.log | grep FULL | wc -l`
-if [ ${NUM_OF_FULL_BACKUPS_BEFORE} -gt 2 ] ; then
-	echo "The number of existing full backups validated is greater than 2."
-	echo "OK. Let's try to test --keep-data-generations=1."
-else
-	echo "The number of existing full backups validated is not greater than 2."
-	echo "NG. There was something wrong in preparation of this test."
-fi
-# The actual value of NUM_OF_FULL_BACKUPS_BEFORE can vary on env, so commented out as default.
-#echo "Number of existing full backups validated: ${NUM_OF_FULL_BACKUPS_BEFORE}"
-grep OK ${TEST_BASE}/TEST-0007-before.log | sed -e 's@[^-]@@g' | wc -c
-pg_rman backup -B ${BACKUP_PATH} -b full -s --keep-data-days=-1 --keep-data-generations=1 -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-pg_rman show detail --show-all -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0007-after.log 2>&1
-NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0007-after.log | grep FULL | wc -l`
-echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
-NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0007-after.log | wc -l`
-echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0007-after.log | sed -e 's@[^-]@@g' | wc -c
+#echo '###### BACKUP COMMAND TEST-0007 ######'
+#echo '###### full backup with keep-data-generations and keep-data-days ######'
+# test not here, but backup_management test sets
+#init_catalog
+#pg_rman backup -B ${BACKUP_PATH} -b full -s -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+#pg_rman backup -B ${BACKUP_PATH} -b full -s -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+#pg_rman backup -B ${BACKUP_PATH} -b full -s -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+#pg_rman validate -B ${BACKUP_PATH} --quiet
+#pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0007-before.log 2>&1
+#NUM_OF_FULL_BACKUPS_BEFORE=`grep OK ${TEST_BASE}/TEST-0007-before.log | grep FULL | wc -l`
+#if [ ${NUM_OF_FULL_BACKUPS_BEFORE} -gt 2 ] ; then
+#	echo "The number of existing full backups validated is greater than 2."
+#	echo "OK. Let's try to test --keep-data-generations=1."
+#else
+#	echo "The number of existing full backups validated is not greater than 2."
+#	echo "NG. There was something wrong in preparation of this test."
+#fi
+## The actual value of NUM_OF_FULL_BACKUPS_BEFORE can vary on env, so commented out as default.
+##echo "Number of existing full backups validated: ${NUM_OF_FULL_BACKUPS_BEFORE}"
+#grep OK ${TEST_BASE}/TEST-0007-before.log | sed -e 's@[^-]@@g' | wc -c
+#pg_rman backup -B ${BACKUP_PATH} -b full -s --keep-data-days=-1 --keep-data-generations=1 -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+#pg_rman validate -B ${BACKUP_PATH} --quiet
+#pg_rman show detail --show-all -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0007-after.log 2>&1
+#NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0007-after.log | grep FULL | wc -l`
+#echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
+#NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0007-after.log | wc -l`
+#echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
+#grep OK ${TEST_BASE}/TEST-0007-after.log | sed -e 's@[^-]@@g' | wc -c
 
 echo '###### BACKUP COMMAND TEST-0008 ######'
 echo '###### full backup with keep-arclog-files and keep-arclog-days ######'
