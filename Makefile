@@ -30,7 +30,7 @@ OBJS = $(SRCS:.c=.o)
 PG_CPPFLAGS = -I$(libpq_srcdir) -lm
 PG_LIBS = $(libpq_pgport)
 
-REGRESS = init option show delete purge backup restore backup_from_standby
+REGRESS = init option show delete purge backup backup_management restore backup_from_standby
 
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
@@ -53,6 +53,7 @@ myinstallcheck:
 		sed -i 's/^wal_level/#wal_level/g' sql/delete.sh; \
 		sed -i 's/^wal_level/#wal_level/g' sql/purge.sh; \
 		sed -i 's/^wal_level/#wal_level/g' sql/backup.sh; \
+		sed -i 's/^wal_level/#wal_level/g' sql/backup_management.sh; \
 		sed -i 's/^wal_level/#wal_level/g' sql/restore.sh; \
 		sed -i 's/^wal_level/#wal_level/g' sql/backup_from_standby.sh; \
 	 fi
@@ -70,6 +71,7 @@ myclean:
 	-@sed -i 's/^#wal_level/wal_level/g' sql/delete.sh;
 	-@sed -i 's/^#wal_level/wal_level/g' sql/purge.sh;
 	-@sed -i 's/^#wal_level/wal_level/g' sql/backup.sh;
+	-@sed -i 's/^#wal_level/wal_level/g' sql/backup_management.sh;
 	-@sed -i 's/^#wal_level/wal_level/g' sql/restore.sh;
 	-@sed -i 's/^#wal_level/wal_level/g' sql/backup_from_standby.sh;
 	-@sed -i 's/^#synchronous_standby_names/synchronous_standby_names/g' sql/backup_from_standby.sh;

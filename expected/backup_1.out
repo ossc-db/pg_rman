@@ -30,18 +30,6 @@
 0
 1
 3
-###### BACKUP COMMAND TEST-0007 ######
-###### full backup with keep-data-generations and keep-data-days ######
-0
-0
-0
-The number of existing full backups validated is greater than 2.
-OK. Let's try to test --keep-data-generations=1.
-9
-0
-Number of remaining full backups validated: 2
-Number of deleted backups : 2
-6
 ###### BACKUP COMMAND TEST-0008 ######
 ###### full backup with keep-arclog-files and keep-arclog-days ######
 The number of existing archive log files already backuped is greater than 2.
