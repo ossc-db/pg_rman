@@ -586,7 +586,7 @@ $ pg_ctl start
 <li><strong><code>--keep-data-generations</code> / <code>--keep-data-days</code></strong>
 
 <ul>
-<li>バックアップしたデータの保持期限を指定します。 <code>--keep-data-generations</code> では保存する世代数を、<code>--keep-data-days</code> では最低保存日数を指定します。有効にするためには両方のオプションを指定する必要があります。両方の閾値を超えた全体バックアップだけが削除されます。</li>
+<li>バックアップしたデータの保持期限を指定します。 <code>--keep-data-generations</code> では保存する世代数を、<code>--keep-data-days</code> では最低保存日数を指定します。同時に指定した場合は、両方の閾値を超えたバックアップが削除されます。</li>
 </ul>
 </li>
 <li><strong><code>--keep-arclog-files</code> / <code>--keep-arclog-days</code></strong>

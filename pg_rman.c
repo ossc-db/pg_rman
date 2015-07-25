@@ -273,12 +273,8 @@ pgut_help(bool details)
 	printf(_("                               if pg_rman cannot find validate full backup\n"));
 	printf(_("                               on current timeline\n"));
 	printf(_("      NOTE: this option is only used in --backup-mode=incremental or archive.\n"));
-	printf(_("  --keep-data-generations=N keep GENERATION of full data backup\n"));
-	printf(_("      NOTE: This number does not include the latest full backup in a count.\n"));
-	printf(_("  --keep-data-days=DAY      keep enough data backup to recover to DAY days age\n"));
-	printf(_("      NOTE: Need to use the above two options together. \n"));
-	printf(_("            Full backups older than both condition are deleted automatically.\n"));
-	printf(_("                ex.) --keep-data-generations=10 --keep-data-days=100 \n"));
+	printf(_("  --keep-data-generations=NUM keep NUM generations of full data backup\n"));
+	printf(_("  --keep-data-days=NUM        keep enough data backup to recover to N days ago\n"));
 	printf(_("  --keep-arclog-files=NUM   keep NUM of archived WAL\n"));
 	printf(_("  --keep-arclog-days=DAY    keep archived WAL modified in DAY days\n"));
 	printf(_("      NOTE: Need to use the above two options together. \n"));
