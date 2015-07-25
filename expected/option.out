@@ -31,12 +31,8 @@ Backup options:
                                if pg_rman cannot find validate full backup
                                on current timeline
       NOTE: this option is only used in --backup-mode=incremental or archive.
-  --keep-data-generations=N keep GENERATION of full data backup
-      NOTE: This number does not include the latest full backup in a count.
-  --keep-data-days=DAY      keep enough data backup to recover to DAY days age
-      NOTE: Need to use the above two options together. 
-            Full backups older than both condition are deleted automatically.
-                ex.) --keep-data-generations=10 --keep-data-days=100 
+  --keep-data-generations=NUM keep NUM generations of full data backup
+  --keep-data-days=NUM        keep enough data backup to recover to N days ago
   --keep-arclog-files=NUM   keep NUM of archived WAL
   --keep-arclog-days=DAY    keep archived WAL modified in DAY days
       NOTE: Need to use the above two options together. 

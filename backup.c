@@ -582,7 +582,7 @@ do_backup_arclog(parray *backup_list)
 	int64		arclog_write_bytes = 0;
 	char		last_wal[MAXPGPATH];
 
-	if (!HAVE_ARCLOG(&current))
+	if (!HAVE_ARCLOG(&current) || check)
 		return NULL;
 
 	if (verbose)
