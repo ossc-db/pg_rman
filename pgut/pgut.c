@@ -1228,6 +1228,8 @@ pgut_errinit(int elevel)
 bool
 pgut_errstart(int elevel)
 {
+	if (quiet && elevel < WARNING)
+		return false;
 	if (elevel < pgut_abort_level && elevel < pgut_log_level && !debug)
 		return false;
 	

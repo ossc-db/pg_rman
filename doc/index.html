@@ -558,7 +558,7 @@ $ pg_ctl start
 <li><strong><code>--keep-data-generations</code> / <code>--keep-data-days</code></strong>
 
 <ul>
-<li>Specify how long backuped data files will be kept. <code>--keep-data-generations</code> means number of backup generations. <code>--keep-data-days</code> means days to be kept. If you want to do with these options, you have to specify both options. Only files exceeded both settings are deleted.</li>
+<li>Specify how long backuped data files will be kept. <code>--keep-data-generations</code> means number of backup generations. <code>--keep-data-days</code> means days to be kept. If these two options are specified together, old files exceeded both settings are deleted.</li>
 </ul>
 </li>
 <li><strong><code>--keep-arclog-files</code> / <code>--keep-arclog-days</code></strong>
