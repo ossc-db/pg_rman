@@ -564,13 +564,13 @@ $ pg_ctl start
 <li><strong><code>--keep-arclog-files</code> / <code>--keep-arclog-days</code></strong>
 
 <ul>
-<li>Specify how long archive WAL files already archived will be kept. <code>--keep-arclog-files</code> means number of files. <code>--keep-arclog-days</code> means days to be kept. When you do backup, only files which have been already backuped and exceeded both settings are deleted from archive log directory ($ARCLOG_PATH). If you want to do with these options, you have to specify both options <code>--keep-arclog-files</code> and <code>--keep-arclog-days</code>.</li>
+<li>Specify how long archive WAL files already archived will be kept. <code>--keep-arclog-files</code> means number of files. <code>--keep-arclog-days</code> means days to be kept. When you do backup, only files which have been already backuped and exceeded specified condition are deleted from archive log directory ($ARCLOG_PATH). If these two options are given together, pg_rman deletes files which are old enough against both conditions.</li>
 </ul>
 </li>
 <li><strong><code>--keep-srvlog-files</code> / <code>--keep-srvlog-days</code></strong>
 
 <ul>
-<li>Specify how long backuped serverlog files will be kept. <code>--keep-srvlog-files</code> means number of files. <code>--keep-srvlog-days</code> means days to be kept. When you do backup, only files exceeded both settings are deleted from server log directory (log_directory). This option works when you specify <code>--with-serverlog</code> and <code>--srvlog-path</code> options in backup command. And If you want to do with these options, you have to specify both options <code>--keep-srvlog-files</code> and <code>--keep-srvlog-days</code>.</li>
+<li>Specify how long backuped serverlog files will be kept. <code>--keep-srvlog-files</code> means number of files. <code>--keep-srvlog-days</code> means days to be kept. When you do backup, only files exceeded specified condition are deleted from server log directory (log_directory). This option works when you specify <code>--with-serverlog</code> and <code>--srvlog-path</code> options in backup command. If these two options are given toghether, pg_rman deletes files which are old enough against both conditions.</li>
 </ul>
 </li>
 </ul>
