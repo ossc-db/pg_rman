@@ -11,7 +11,6 @@
 #include <time.h>
 
 static int pgBackupDeleteFiles(pgBackup *backup);
-static char * getCountSuffix(int number);
 
 /*
  *  Check backup lists and decide which to delete.
@@ -507,7 +506,7 @@ int do_purge(void)
 /*
  * Utility function for selecting suffix for number.
  */
-static char* getCountSuffix(int number)
+char* getCountSuffix(int number)
 {
 	return (1 == (number % 100)) ? "st"
 				: (2 == (number %100)) ? "nd"

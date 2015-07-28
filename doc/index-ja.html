@@ -592,13 +592,13 @@ $ pg_ctl start
 <li><strong><code>--keep-arclog-files</code> / <code>--keep-arclog-days</code></strong>
 
 <ul>
-<li>バックアップ済みのアーカイブ WAL の保持期限を指定します。<code>--keep-arclog-files</code> では保存ファイル数を、<code>--keep-arclog-days</code> では保存日数を指定し、どちらの閾値も超えたファイルだけがアーカイブ格納領域から削除されます。 保存期限を有効にするには、<code>--keep-arclog-files</code>、<code>--keep-arclog-days</code> 両方のオプションを指定する必要があります。</li>
+<li>バックアップ済みのアーカイブ WAL の保持期限を指定します。<code>--keep-arclog-files</code> では保存ファイル数を、<code>--keep-arclog-days</code> では保存日数を指定します。これらのオプションを明示的に指定した場合、閾値を超えたファイルがアーカイブ格納領域から削除されます。 これらのオプションを同時に指定した場合は両方の閾値を超えたファイルが削除されます。</li>
 </ul>
 </li>
 <li><strong><code>--keep-srvlog-files</code> / <code>--keep-srvlog-days</code></strong>
 
 <ul>
-<li>バックアップ済みのサーバログの保持期限を指定します。<code>--keep-srvlog-files</code> では保存ファイル数を、<code>--keep-srvlog-days</code> では保存日数を指定し、どちらの閾値も超えたファイルだけがサーバログが保存されるディレクトリ (log_directory) から削除されます。 本オプションは、<code>--with-serverlog</code>、<code>--srvlog-path</code> を指定してバックアップを取得した場合に限ります。 また、保存期限を有効にするには、<code>--keep-srvlog-files</code>、<code>--keep-srvlog-days</code> 両方のオプションを指定する必要があります。</li>
+<li>バックアップ済みのサーバログの保持期限を指定します。<code>--keep-srvlog-files</code> では保存ファイル数を、<code>--keep-srvlog-days</code> では保存日数を指定します。これらのオプションを明示的に指定した場合、閾値を超えたファイルがサーバログが保存されるディレクトリ (log_directory) から削除されます。 本オプションは、<code>--with-serverlog</code>、<code>--srvlog-path</code> を指定してバックアップを取得した場合に限ります。 これらのオプションを同時に指定した場合は両方の閾値を超えたファイルが削除されます。</li>
 </ul>
 </li>
 </ul>
