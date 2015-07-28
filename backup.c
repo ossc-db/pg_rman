@@ -1585,8 +1585,8 @@ show_progress:
 }
 
 /*
- * Delete files modified before than KEEP_xxx_DAYS or more than KEEP_xxx_FILES
- * of newer files exist.
+ * Delete server log and archived WAL files through KEEP_xxx_DAYS
+ * or more than KEEP_xxx_FILES.
  */
 static void
 delete_old_files(const char *root,
@@ -1599,37 +1599,59 @@ delete_old_files(const char *root,
 	int		i;
 	int		j;
 	int		file_num = 0;
-	time_t	days_threshold = current.start_time - (keep_days * 60 * 60 * 24);
+	char	*target_file;
+	char	*target_path;
+	time_t	tim;
+	time_t	days_threshold;
+	struct	tm *ltm;
+	char 	files_str[100];
+	char 	days_str[100];
+	char	days_threshold_timestamp[20];
 
-	if (verbose)
+
+	if (files == NULL)
+		return;
+
+	target_file = is_arclog ? "archived WAL" : "server";
+	target_path = is_arclog ? "ARCLOG_PATH" : "SRVLOG_PATH";
+
+	if (keep_files == KEEP_INFINITE)
+		strncpy(files_str, "INFINITE", lengthof(files_str));
+	else
+		snprintf(files_str, lengthof(files_str), "%d", keep_files);
+
+	if (keep_days == KEEP_INFINITE)
+		strncpy(days_str, "INFINITE", lengthof(days_str));
+	else
+		snprintf(days_str, lengthof(days_str), "%d", keep_days);
+
+	/* delete files through the given conditions */
+	if (keep_files != KEEP_INFINITE && keep_days != KEEP_INFINITE)
 	{
-		char files_str[100];
-		char days_str[100];
-
-		if (keep_files == KEEP_INFINITE)
-			strncpy(files_str, "INFINITE", lengthof(files_str));
-		else
-			snprintf(files_str, lengthof(files_str), "%d", keep_files);
-
-		if (keep_days == KEEP_INFINITE)
-			strncpy(days_str, "INFINITE", lengthof(days_str));
-		else
-			snprintf(days_str, lengthof(days_str), "%d", keep_days);
-
-		printf(_("delete old files from \"%s\" (files=%s, days=%s)\n"),
-			root, files_str, days_str);
+		elog(INFO, "start deleting old %s files from %s (keep files = %s, keep days = %s)",
+			target_file, target_path, files_str, days_str);
+	} else if (keep_files != KEEP_INFINITE) {
+		elog(INFO, "start deleting old %s files from %s (keep files = %s)",
+			target_file, target_path, files_str);
+	} else if (keep_days != KEEP_INFINITE) {
+		elog(INFO, "start deleting old %s files from %s (keep days = %s)",
+			target_file, target_path, days_str);
+	} else {
+		elog(DEBUG, "do not delete old %s files.", target_file);
+		return;
 	}
 
-	/* delete files which satisfy both conditions */
-	if (keep_files == KEEP_INFINITE || keep_days == KEEP_INFINITE)
+	/* calculate the threshold day from given keep_days. */
+	if ( keep_days != KEEP_INFINITE)
 	{
-		if (is_arclog)
-		{
-			elog(DEBUG, "do not delete old archived WAL files.");
-		} else {
-			elog(DEBUG, "do not delete old server log files.");
-		}
-		return;
+		tim = current.start_time - (keep_days * 60 * 60 * 24);
+		ltm = localtime(&tim);
+		ltm->tm_hour = 0;
+		ltm->tm_min  = 0;
+		ltm->tm_sec  = 0;
+		days_threshold = mktime(ltm);
+		time2iso(days_threshold_timestamp, lengthof(days_threshold_timestamp), days_threshold);
+		elog(INFO, "the threshold timestamp calculated by keep days is \"%s\".", days_threshold_timestamp);
 	}
 
 	parray_qsort(files, pgFileCompareMtime);
@@ -1637,49 +1659,55 @@ delete_old_files(const char *root,
 	{
 		pgFile *file = (pgFile *) parray_get(files, i);
 
-		elog(DEBUG, "%s() %s", __FUNCTION__, file->path);
+		elog(DEBUG, "checking \"%s\"", file->path);
 		/* Delete completed WALs only. */
 		if (is_arclog && !xlog_is_complete_wal(file, server_version))
 		{
-			elog(DEBUG, "%s() not complete WAL", __FUNCTION__);
+			elog(DEBUG, "this is not complete WAL: \"%s\"", file->path);
 			continue;
 		}
 
 		file_num++;
 
 		/*
-		 * If the mtime of the file is older than the threshold and there are
-		 * enough number of files newer than the files, delete the file.
+		 * If the mtime of the file is older than the threshold,
+		 * or there are enough number of files newer than the files,
+		 * delete the file.
 		 */
-		if (file->mtime >= days_threshold)
+		if (keep_files != KEEP_INFINITE)
 		{
-			elog(DEBUG, "%s() %lu is not older than %lu", __FUNCTION__,
-				file->mtime, days_threshold);
-			continue;
+			if (file_num <= keep_files)
+			{
+				ereport(DEBUG,
+					(errmsg("keep the file : \"%s\"", file->path),
+					 errdetail("this is the %d%s latest file with keep files",
+						file_num, getCountSuffix(file_num))));
+				continue;
+			}
 		}
-		elog(DEBUG, "%s() %lu is older than %lu", __FUNCTION__,
-			file->mtime, days_threshold);
-
-		if (file_num <= keep_files)
+		if (keep_days != KEEP_INFINITE)
 		{
-			elog(DEBUG, "%s() newer files are only %d", __FUNCTION__, file_num);
-			continue;
+			if (file->mtime >= days_threshold)
+			{
+				ereport(DEBUG,
+					(errmsg("keep the file : \"%s\"", file->path),
+					 errdetail("this is newer than the threshold \"%s\"", days_threshold_timestamp)));
+				continue;
+			}
 		}
 
 		/* Now we found a file should be deleted. */
-		if (verbose)
-			printf(_("delete \"%s\"\n"), file->path + strlen(root) + 1);
+		elog(INFO, ("delete \"%s\""), file->path + strlen(root) + 1);
 
-		/* delete corresponding backup history file if exists */
 		file = (pgFile *) parray_remove(files, i);
+		/* delete corresponding backup history file if exists */
 		for (j = parray_num(files) - 1; j >= 0; j--)
 		{
 			pgFile *file2 = (pgFile *)parray_get(files, j);
 			if (strstr(file2->path, file->path) == file2->path)
 			{
 				file2 = (pgFile *)parray_remove(files, j);
-				if (verbose)
-					printf(_("delete \"%s\"\n"),
+				elog(INFO, "delete \"%s\"\n",
 						file2->path + strlen(root) + 1);
 				if (!check)
 					pgFileDelete(file2);

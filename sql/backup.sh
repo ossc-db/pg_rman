@@ -188,50 +188,52 @@ grep OK ${TEST_BASE}/TEST-0006.log | sed -e 's@[^-]@@g' | wc -c
 #echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
 #grep OK ${TEST_BASE}/TEST-0007-after.log | sed -e 's@[^-]@@g' | wc -c
 
-echo '###### BACKUP COMMAND TEST-0008 ######'
-echo '###### full backup with keep-arclog-files and keep-arclog-days ######'
-init_catalog
-NUM_OF_ARCLOG_FILES_BEFORE=`ls ${ARCLOG_PATH} | grep -v backup | wc -l`
-if [ ${NUM_OF_ARCLOG_FILES_BEFORE} -gt 2 ] ; then
-	echo "The number of existing archive log files already backuped is greater than 2."
-	echo "OK. Let's try to test --keep-arclog-files=2."
-else
-	echo "The number of existing archive log files already backuped is not greater than 2."
-	echo "NG. There was something wrong in preparation of this test."
-fi
-# The actual value of NUM_OF_ARCLOG_FILES_BEFORE can vary on env, so commented out as default.
-# echo "Number of existing archivelog files: ${NUM_OF_ARCLOG_FILES_BEFORE}"
-pg_rman backup -B ${BACKUP_PATH} -b full -s --keep-arclog-days=-2 --keep-arclog-files=2 -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0008.log 2>&1
-grep -c OK ${TEST_BASE}/TEST-0008.log
-grep OK ${TEST_BASE}/TEST-0008.log | sed -e 's@[^-]@@g' | wc -c
-NUM_OF_ARCLOG_FILES_AFTER=`ls ${ARCLOG_PATH} | grep -v backup | wc -l`
-echo "Number of remaining archivelog files: ${NUM_OF_ARCLOG_FILES_AFTER}"
-
-echo '###### BACKUP COMMAND TEST-0009 ######'
-echo '###### full backup with keep-srvlog-files and keep-srvlog-days ######'
-init_catalog
-pg_ctl restart -w -t 300 > /dev/null 2>&1
-pg_ctl restart -w -t 300 > /dev/null 2>&1
-pg_ctl restart -w -t 300 > /dev/null 2>&1
-NUM_OF_SRVLOG_FILES_BEFORE=`ls ${SRVLOG_PATH} | wc -l`
-if [ ${NUM_OF_SRVLOG_FILES_BEFORE} -gt 1 ] ; then
-	echo "The number of existing server log files already backuped is greater than 1."
-	echo "OK. Let's try to test --keep-srvlog-files=1."
-else
-	echo "The number of existing server log files already backuped is not greater than 1."
-	echo "NG. There was something wrong in preparation of this test."
-fi
-# The actual value of NUM_OF_SRVLOG_FILES_BEFORE can vary on env, so commented out as default.
-#echo "Number of existing server log files: ${NUM_OF_SRVLOG_FILES_BEFORE}"
-pg_rman backup -B ${BACKUP_PATH} -b full -s --keep-srvlog-days=-1 --keep-srvlog-files=1 -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0009.log 2>&1
-grep -c OK ${TEST_BASE}/TEST-0009.log
-grep OK ${TEST_BASE}/TEST-0009.log | sed -e 's@[^-]@@g' | wc -c
-NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH} | wc -l`
-echo "Number of remaining serverlog files: ${NUM_OF_SRVLOG_FILES_AFTER}"
+#echo '###### BACKUP COMMAND TEST-0008 ######'
+#echo '###### full backup with keep-arclog-files and keep-arclog-days ######'
+# test not here, but arc_srv_log_management test sets
+#init_catalog
+#NUM_OF_ARCLOG_FILES_BEFORE=`ls ${ARCLOG_PATH} | grep -v backup | wc -l`
+#if [ ${NUM_OF_ARCLOG_FILES_BEFORE} -gt 2 ] ; then
+#	echo "The number of existing archive log files already backuped is greater than 2."
+#	echo "OK. Let's try to test --keep-arclog-files=2."
+#else
+#	echo "The number of existing archive log files already backuped is not greater than 2."
+#	echo "NG. There was something wrong in preparation of this test."
+#fi
+## The actual value of NUM_OF_ARCLOG_FILES_BEFORE can vary on env, so commented out as default.
+## echo "Number of existing archivelog files: ${NUM_OF_ARCLOG_FILES_BEFORE}"
+#pg_rman backup -B ${BACKUP_PATH} -b full -s --keep-arclog-days=-2 --keep-arclog-files=2 -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+#pg_rman validate -B ${BACKUP_PATH} --quiet
+#pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0008.log 2>&1
+#grep -c OK ${TEST_BASE}/TEST-0008.log
+#grep OK ${TEST_BASE}/TEST-0008.log | sed -e 's@[^-]@@g' | wc -c
+#NUM_OF_ARCLOG_FILES_AFTER=`ls ${ARCLOG_PATH} | grep -v backup | wc -l`
+#echo "Number of remaining archivelog files: ${NUM_OF_ARCLOG_FILES_AFTER}"
+#
+#echo '###### BACKUP COMMAND TEST-0009 ######'
+#echo '###### full backup with keep-srvlog-files and keep-srvlog-days ######'
+# test not here, but arc_srv_log_management test sets
+#init_catalog
+#pg_ctl restart -w -t 300 > /dev/null 2>&1
+#pg_ctl restart -w -t 300 > /dev/null 2>&1
+#pg_ctl restart -w -t 300 > /dev/null 2>&1
+#NUM_OF_SRVLOG_FILES_BEFORE=`ls ${SRVLOG_PATH} | wc -l`
+#if [ ${NUM_OF_SRVLOG_FILES_BEFORE} -gt 1 ] ; then
+#	echo "The number of existing server log files already backuped is greater than 1."
+#	echo "OK. Let's try to test --keep-srvlog-files=1."
+#else
+#	echo "The number of existing server log files already backuped is not greater than 1."
+#	echo "NG. There was something wrong in preparation of this test."
+#fi
+## The actual value of NUM_OF_SRVLOG_FILES_BEFORE can vary on env, so commented out as default.
+##echo "Number of existing server log files: ${NUM_OF_SRVLOG_FILES_BEFORE}"
+#pg_rman backup -B ${BACKUP_PATH} -b full -s --keep-srvlog-days=-1 --keep-srvlog-files=1 -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+#pg_rman validate -B ${BACKUP_PATH} --quiet
+#pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0009.log 2>&1
+#grep -c OK ${TEST_BASE}/TEST-0009.log
+#grep OK ${TEST_BASE}/TEST-0009.log | sed -e 's@[^-]@@g' | wc -c
+#NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH} | wc -l`
+#echo "Number of remaining serverlog files: ${NUM_OF_SRVLOG_FILES_AFTER}"
 
 echo '###### BACKUP COMMAND TEST-0010 ######'
 echo '###### switch backup mode from incremental to full ######'

@@ -30,7 +30,7 @@ OBJS = $(SRCS:.c=.o)
 PG_CPPFLAGS = -I$(libpq_srcdir) -lm
 PG_LIBS = $(libpq_pgport)
 
-REGRESS = init option show delete purge backup backup_management restore backup_from_standby
+REGRESS = init option show delete purge backup backup_management restore backup_from_standby arc_srv_log_management
 
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
@@ -56,6 +56,7 @@ myinstallcheck:
 		sed -i 's/^wal_level/#wal_level/g' sql/backup_management.sh; \
 		sed -i 's/^wal_level/#wal_level/g' sql/restore.sh; \
 		sed -i 's/^wal_level/#wal_level/g' sql/backup_from_standby.sh; \
+		sed -i 's/^wal_level/#wal_level/g' sql/arc_srv_log_management.sh; \
 	 fi
 	@if [ `expr "$(MAJORVERSION) < 9.1" | bc` -eq 1 ]; \
 	 then \
@@ -74,4 +75,5 @@ myclean:
 	-@sed -i 's/^#wal_level/wal_level/g' sql/backup_management.sh;
 	-@sed -i 's/^#wal_level/wal_level/g' sql/restore.sh;
 	-@sed -i 's/^#wal_level/wal_level/g' sql/backup_from_standby.sh;
+	-@sed -i 's/^#wal_level/wal_level/g' sql/arc_srv_log_management.sh;
 	-@sed -i 's/^#synchronous_standby_names/synchronous_standby_names/g' sql/backup_from_standby.sh;
