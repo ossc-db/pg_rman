@@ -256,6 +256,7 @@ extern int do_show(pgBackupRange *range, bool show_detail, bool show_all);
 extern int do_delete(pgBackupRange *range, bool force);
 extern void pgBackupDelete(int keep_generations, int keep_days);
 extern int do_purge(void);
+extern char * getCountSuffix(int number);
 
 /* in validate.c */
 extern int do_validate(pgBackupRange *range);
