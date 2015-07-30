@@ -90,23 +90,26 @@ do_restore(const char *target_time,
 	if (ret == -1)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not lock backup catalog.")));
+			 errmsg("could not lock backup catalog")));
 	else if (ret == 1)
 		ereport(ERROR,
 			(errcode(ERROR_ALREADY_RUNNING),
-			 errmsg("another pg_rman is running, stop restore.")));
+			 errmsg("could not lock backup catalog"),
+			 errdetail("Another pg_rman is just running.")));
 
 	/* confirm the PostgreSQL server is not running */
 	if (is_pg_running())
 		ereport(ERROR,
 			(errcode(ERROR_PG_RUNNING),
-			 errmsg("PostgreSQL server is running")));
+			 errmsg("PostgreSQL server is running"),
+			 errhint("Please stop PostgreSQL server before exectute restore.")));
 
 	rt = checkIfCreateRecoveryConf(target_time, target_xid, target_inclusive);
 	if(rt == NULL){
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
-			 errmsg("could not create recovery.conf. specified args are invalid.")));
+			 errmsg("could not create recovery.conf"),
+			 errdetail("The specified options are invalid.")));
 	}
 
 	/* get list of backups. (index == 0) is the last backup */
@@ -114,7 +117,7 @@ do_restore(const char *target_time,
 	if(!backups){
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not get list of backup already taken.")));
+			 errmsg("could not get list of backup already taken")));
 	}
 
 	cur_tli = get_current_timeline();
@@ -133,7 +136,7 @@ do_restore(const char *target_time,
 		target_tli = parse_target_timeline(target_tli_string, cur_tli, &target_tli_latest);
 		elog(INFO, "the specified target timeline ID is %d", target_tli);
 	} else {
-		elog(INFO, "the recovery target timeline ID is not given.");
+		elog(INFO, "the recovery target timeline ID is not given");
 		if (cur_tli != 0)
 		{
 			target_tli = cur_tli;
@@ -152,14 +155,13 @@ do_restore(const char *target_time,
 	 * restore timeline history files and get timeline branches can reach
 	 * recovery target point.
 	 */
-	elog(INFO, "restoring timeline history files and calculating "
-		"timeline branches to be used to recovery target point.");
+	elog(INFO, "calculating timeline branches to be used to recovery target point");
 	join_path_components(timeline_dir, backup_path, TIMELINE_HISTORY_DIR);
 	dir_copy_files(timeline_dir, arclog_path);
 	timelines = readTimeLineHistory(target_tli);
 
 	/* find last full backup which can be used as base backup. */
-	elog(INFO, "searching latest full backup which can be used as restore start point.\n");
+	elog(INFO, "searching latest full backup which can be used as restore start point");
 	for (i = 0; i < parray_num(backups); i++)
 	{
 		base_backup = (pgBackup *) parray_get(backups, i);
@@ -176,7 +178,7 @@ do_restore(const char *target_time,
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
 				 errmsg("could not restore from compressed backup"),
-				 errdetail("compression is not supported in this installation.")));
+				 errdetail("Compression is not supported in this installation.")));
 		}
 #endif
 		if (satisfy_timeline(timelines, base_backup) && satisfy_recovery_target(base_backup, rt))
@@ -188,7 +190,8 @@ do_restore(const char *target_time,
 	/* no full backup found, can't restore */
 	ereport(ERROR,
 		(errcode(ERROR_NO_BACKUP),
-		 errmsg("no full backup is found.")));
+		 errmsg("cannot do restore"),
+		 errdetail("There is no valid full backup which can be used for given recovery condition.")));
 
 base_backup_found:
 
@@ -320,12 +323,12 @@ base_backup_found:
 	{
 		char	xlogpath[MAXPGPATH];
 		if (verbose)
-			printf(_("searching archived WAL...\n"));
+			printf(_("searching archived WAL\n"));
 
 		search_next_wal(arclog_path, &needId, &needSeg, timelines);
 
 		if (verbose)
-			printf(_("searching online WAL...\n"));
+			printf(_("searching online WAL\n"));
 
 		join_path_components(xlogpath, pgdata, PG_XLOG_DIR);
 		search_next_wal(xlogpath, &needId, &needSeg, timelines);
@@ -351,7 +354,9 @@ base_backup_found:
 		printf(_("========================================\n"));
 	}
 	if (!check)
-		elog(INFO, _("restore complete. Recovery starts automatically when the PostgreSQL server is started."));
+		ereport(INFO,
+			(errmsg("restore complete"),
+			 errhint("Recovery will start automatically when the PostgreSQL server is started.")));
 
 	return 0;
 }	
@@ -374,12 +379,12 @@ restore_database(pgBackup *backup)
 	if (backup->block_size != BLCKSZ)
 		ereport(ERROR,
 			(errcode(ERROR_PG_INCOMPATIBLE),
-			 errmsg("BLCKSZ(%d) is not compatible(%d expected)",
+			 errmsg("BLCKSZ(%d) is not compatible (%d expected)",
 				backup->block_size, BLCKSZ)));
 	if (backup->wal_block_size != XLOG_BLCKSZ)
 		ereport(ERROR,
 			(errcode(ERROR_PG_INCOMPATIBLE),
-			 errmsg("XLOG_BLCKSZ(%d) is not compatible(%d expected)",
+			 errmsg("XLOG_BLCKSZ(%d) is not compatible (%d expected)",
 				backup->wal_block_size, XLOG_BLCKSZ)));
 
 	time2iso(timestamp, lengthof(timestamp), backup->start_time);
@@ -396,10 +401,10 @@ restore_database(pgBackup *backup)
 
 	if (backup->backup_mode == BACKUP_MODE_FULL)
 	{
-		elog(INFO, "restoring database files from the full mode backup \"%s\".",
+		elog(INFO, "restoring database files from the full mode backup \"%s\"",
 			timestamp);
 	} else if (backup->backup_mode == BACKUP_MODE_INCREMENTAL) {
-		elog(INFO, "restoring database files from the incremental mode backup \"%s\".",
+		elog(INFO, "restoring database files from the incremental mode backup \"%s\"",
 			timestamp);
 	}
 	/* make directories and symbolic links */
@@ -590,7 +595,7 @@ restore_archive_logs(pgBackup *backup, bool is_hard_copy)
 	 */
 	pgBackupValidate(backup, true, false, false);
 
-	elog(INFO,_("restoring WAL files from backup \"%s\"."), timestamp);
+	elog(INFO,_("restoring WAL files from backup \"%s\""), timestamp);
 	pgBackupGetPath(backup, list_path, lengthof(list_path), ARCLOG_FILE_LIST);
 	pgBackupGetPath(backup, base_path, lengthof(list_path), ARCLOG_DIR);
 	files = dir_read_file_list(base_path, list_path);
@@ -932,7 +937,7 @@ readTimeLineHistory(TimeLineID targetTLI)
 		if (last_timeline && timeline->tli <= last_timeline->tli)
 			ereport(ERROR,
 				(errcode(ERROR_CORRUPTED),
-				   errmsg("Timeline IDs must be in increasing sequence.")));
+				   errmsg("timeline IDs must be in increasing sequence, but not")));
 
 		/* Build list with newest item first */
 		parray_insert(result, 0, timeline);
@@ -947,7 +952,7 @@ readTimeLineHistory(TimeLineID targetTLI)
 		if (*ptr == '\0' || *ptr == '#')
 			ereport(ERROR,
 				(errcode(ERROR_CORRUPTED),
-				 errmsg("End logfile must follow Timeline ID.")));
+				 errmsg("end of log file must follow timeline ID, but not")));
 
 		if (!xlog_logfname2lsn(ptr, &timeline->end))
 			elog(ERROR_CORRUPTED,
@@ -961,7 +966,7 @@ readTimeLineHistory(TimeLineID targetTLI)
 	if (last_timeline && targetTLI <= last_timeline->tli)
 		ereport(ERROR,
 			(errcode(ERROR_CORRUPTED),
-			 errmsg("Timeline IDs must be less than child timeline's ID.")));
+			 errmsg("timeline IDs must be less than child timeline's ID, but not")));
 
 	/* append target timeline */
 	timeline = pgut_new(pgTimeLine);
@@ -972,7 +977,7 @@ readTimeLineHistory(TimeLineID targetTLI)
 	parray_insert(result, 0, timeline);
 
 	/* dump timeline branches for debug */
-	elog(DEBUG, "the calculated branch history is as below.");
+	elog(DEBUG, "the calculated branch history is as below;");
 	for (i = 0; i < parray_num(result); i++)
 	{
 		pgTimeLine *timeline = parray_get(result, i);
@@ -995,9 +1000,9 @@ satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt)
 		if(backup->recovery_xid <= rt->recovery_target_xid)
 		{
 		ereport(DEBUG,
-			(errmsg("backup \"%s\" satisfies the condition of recovery target xid.",
+			(errmsg("backup \"%s\" satisfies the condition of recovery target xid",
 				backup_timestamp),
-			 errdetail("the recovery target xid is %d, the recovery xid of the backup is %d",
+			 errdetail("The recovery target xid is %d, the recovery xid of the backup is %d",
 				rt->recovery_target_xid, backup->recovery_xid)));
 			return true;
 		} else {
@@ -1012,9 +1017,9 @@ satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt)
 			time2iso(recovery_target_timestamp, lengthof(recovery_target_timestamp),
 				rt->recovery_target_time);
 			ereport(DEBUG,
-				(errmsg("backup \"%s\" satisfies the condition of recovery target time.",
+				(errmsg("backup \"%s\" satisfies the condition of recovery target time",
 					backup_timestamp),
-				 errdetail("the recovery target time is \"%s\", "
+				 errdetail("The recovery target time is \"%s\", "
 						"the recovery time of the backup is \"%s\"",
 					recovery_target_timestamp, recovery_timestamp_of_backup)));
 			return true;
@@ -1079,7 +1084,8 @@ get_fullbackup_timeline(parray *backups, const pgRecoveryTarget *rt)
 	if (i == parray_num(backups))
 		ereport(ERROR,
 			(errcode(ERROR_NO_BACKUP),
-			 errmsg("no full backup is found.")));
+			 errmsg("cannot do restore"),
+			 errdetail("There is no valid full backup which can be used for given recovery condition.")));
 
 	ret = base_backup->tli;
 
@@ -1235,9 +1241,9 @@ parse_target_timeline(const char *target_tli_string, TimeLineID cur_tli,
 		else
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
-				 errmsg("For --recovery-target-timeline, timeline value should be "
-							 "either an unsigned 32bit integer or the string literal "
-							 "'latest'"	)));
+				 errmsg("given value for --recovery-target-timeline is invalid"),
+				 errdetail("Timeline value should be either an unsigned 32bit integer "
+						"or the string literal 'latest'")));
 	}
 	else
 	{
