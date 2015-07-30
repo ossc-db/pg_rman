@@ -156,8 +156,8 @@ assign_option(pgut_option *opt, const char *optarg, pgut_optsrc src)
 	{
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
-			 errmsg("No option is specified."),
-			 errhint("Try \"%s --help\" for more information.\n", PROGRAM_NAME)));
+			 errmsg("option is not specified"),
+			 errhint("Try \"%s --help\" for more information.", PROGRAM_NAME)));
 	}
 
 	if (opt->source > src)
@@ -1514,7 +1514,7 @@ on_interrupt(void)
 	if (!in_cleanup && cancel_conn != NULL &&
 		PQcancel(cancel_conn, errbuf, sizeof(errbuf)))
 	{
-		elog(WARNING, "Cancel request sent");
+		elog(WARNING, "cancel request was sent");
 	}
 
 	errno = save_errno;			/* just in case the write changed it */

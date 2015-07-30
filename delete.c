@@ -33,7 +33,8 @@ do_delete(pgBackupRange *range, bool force)
 	if (!pgBackupRangeIsValid(range))
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
-			 errmsg("required delete range option not specified: delete DATE")));
+			 errmsg("delete range option not specified"),
+			 errhint("Please run with 'pg_rman delete DATE'.")));
 
 	found_boundary_to_keep = false;
 	time2iso(given_timestamp, lengthof(given_timestamp), range->begin);
@@ -43,18 +44,19 @@ do_delete(pgBackupRange *range, bool force)
 	if (ret == -1)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not  lock backup catalog.")));
+			 errmsg("could not lock backup catalog")));
 	else if (ret == 1)
 		ereport(ERROR,
 			(errcode(ERROR_ALREADY_RUNNING),
-			 errmsg("another pg_rman is running, stop delete.")));
+			 errmsg("could not lock backup catalog"),
+			 errdetail("Another pg_rman is just running.")));
 
 	/* get list of backups. */
 	backup_list = catalog_get_backup_list(NULL);
 	if(!backup_list){
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not get list of backup already taken.")));
+			 errmsg("could not get list of backup already taken")));
 	}
 
 	/* check each backups and delete if possible */
@@ -78,14 +80,14 @@ do_delete(pgBackupRange *range, bool force)
 				{
 					ereport(WARNING,
 						(errmsg("cannot delete backup with start time \"%s\"", backup_timestamp),
-						 errdetail("it is the latest full backup necessary for successful recovery")));
+						 errdetail("This is the latest full backup necessary for successful recovery.")));
 					found_boundary_to_keep = true;
 				} else {
 					backup_mode = (backup->backup_mode == BACKUP_MODE_INCREMENTAL) ? "incremental" : "archive";
 					ereport(WARNING,
 						(errmsg("cannot delete backup with start time \"%s\"", backup_timestamp),
-						errdetail("it is an %s backup necessary"
-								" for successful recovery", backup_mode)));
+						errdetail("This is the %s backup necessary"
+								" for successful recovery.", backup_mode)));
 				}
 
 				/* keep this backup */
@@ -201,7 +203,7 @@ pgBackupDelete(int keep_generations, int keep_days)
             backup->start_time);
 
 		elog(DEBUG, "--------------------------------------------");
-		elog(DEBUG, "checking backup : \"%s\"...", backup_timestamp);
+		elog(DEBUG, "checking backup : \"%s\"", backup_timestamp);
 
 		if (check_generations)
 		{
@@ -224,7 +226,7 @@ pgBackupDelete(int keep_generations, int keep_days)
 					count_suffix = getCountSuffix(existed_generations);
 					ereport(INFO,
 						(errmsg("backup \"%s\" should be kept", backup_timestamp),
-						 errdetail("this is the %d%s latest full backup",
+						 errdetail("This is the %d%s latest full backup.",
 								existed_generations, count_suffix)));
 				} else if ( ((backup->backup_mode == BACKUP_MODE_INCREMENTAL)
 							|| (backup->backup_mode == BACKUP_MODE_ARCHIVE))
@@ -235,12 +237,12 @@ pgBackupDelete(int keep_generations, int keep_days)
 					count_suffix = getCountSuffix(existed_generations + 1);
 					ereport(INFO,
 						(errmsg("backup \"%s\" should be kept", backup_timestamp),
-						 errdetail("this belongs to the %d%s latest full backup",
+						 errdetail("This belongs to the %d%s latest full backup.",
 								existed_generations + 1, count_suffix)));
 				} else {
 					ereport(WARNING,
 						(errmsg("backup \"%s\" is not taken into account", backup_timestamp),
-						 errdetail("this is not a valid backup")));
+						 errdetail("This is not a valid backup.")));
 				}
 				/* move to next backup */
 				continue;
@@ -274,18 +276,18 @@ pgBackupDelete(int keep_generations, int keep_days)
 				{
 					ereport(INFO,
 							(errmsg("backup \"%s\" should be kept", backup_timestamp),
-							 errdetail("this is taken after \"%s\"", keep_after_timestamp)));
+							 errdetail("This is taken after \"%s\".", keep_after_timestamp)));
 				} else if (backup->start_time < keep_after
 							&& !last_checked_is_valid_full_backup) {
 					ereport(WARNING,
 							(errmsg("backup \"%s\" should be kept", backup_timestamp),
-							 errdetail("this is taken before \"%s\" but there is an incremental "
-										"or archive backup to be kept which requires this backup",
+							 errdetail("This is taken before \"%s\", but there is an incremental "
+										"or archive backup to be kept which requires this backup.",
 										keep_after_timestamp)));
 				} else {
 					ereport(WARNING,
 						(errmsg("backup \"%s\" is not taken int account", backup_timestamp),
-						 errdetail("this is not valid backup")));
+						 errdetail("This is not valid backup.")));
 				}
 
 				if(backup->backup_mode == BACKUP_MODE_FULL
@@ -329,8 +331,7 @@ pgBackupDeleteFiles(pgBackup *backup)
 	 */
 	if (backup->status == BACKUP_STATUS_DELETED)
 	{
-		if (verbose)
-			elog(INFO, "backup \"%s\" has been already deleted.", timestamp);
+		elog(DEBUG, "backup \"%s\" has been already deleted", timestamp);
 		return 0;
 	}
 
@@ -377,7 +378,7 @@ pgBackupDeleteFiles(pgBackup *backup)
 		{
 			if (remove(file->path))
 			{
-				elog(WARNING, _("cannot remove \"%s\": %s"), file->path,
+				elog(WARNING, _("could not remove \"%s\": %s"), file->path,
 					strerror(errno));
 				parray_walk(files, pgFileFree);
 				parray_free(files);
@@ -421,18 +422,19 @@ int do_purge(void)
 	if (ret == -1)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not lock backup catalog.")));
+			 errmsg("could not lock backup catalog")));
 	else if (ret == 1)
 		ereport(ERROR,
 			(errcode(ERROR_ALREADY_RUNNING),
-			errmsg("another pg_rman is running, stop delete.")));
+			 errmsg("could not lock backup catalog"),
+			 errdetail("Another pg_rman is just running.")));
 
 	/* get list of backups. */
 	backup_list = catalog_get_backup_list(NULL);
 	if(!backup_list){
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not get list of backup already taken.")));
+			 errmsg("could not get list of backup already taken")));
 	}
 
 	for (i=0; i < parray_num(backup_list); i++)
@@ -448,8 +450,9 @@ int do_purge(void)
 		
 		if (check)
 		{
-			elog(INFO, _("The DELETED backup \"%s\" will be purged."), timestamp);
-			elog(INFO, _("The path is %s"), path);
+			ereport(INFO,
+				(errmsg("DELETED backup \"%s\" will be purged", timestamp),
+				 errdetail("The path is %s", path)));
 		}
 
 		files = parray_new();
@@ -494,9 +497,9 @@ int do_purge(void)
 			/* check whether there happens some errors in purging */
 			if(any_errors)
 			{
-				elog(WARNING, _("There are errors in purging backup \"%s\""), timestamp);
+				elog(WARNING, _("some errors are occurred in purging backup \"%s\""), timestamp);
 			} else {
-				elog(INFO, _("The DELETED backup \"%s\" is purged."), timestamp);
+				elog(INFO, _("DELETED backup \"%s\" is purged"), timestamp);
 			}
 		}
 	}

@@ -19,8 +19,8 @@ results/init/backup/pg_rman.ini
 results/init/backup/timeline_history/
 ###### INIT COMMAND TEST-0003 ######
 ###### success without archive_command ######
-WARNING: ARCLOG_PATH is not set yet.
-DETAIL: Because archive_command is empty in postgresql.conf.
+WARNING: ARCLOG_PATH is not set yet
+DETAIL: The archive_command is not set in postgresql.conf.
 HINT: Please set ARCLOG_PATH in pg_rman.ini or environmental variable.
 0
 results/init/backup/
@@ -31,7 +31,7 @@ results/init/backup/pg_rman.ini
 results/init/backup/timeline_history/
 ###### INIT COMMAND TEST-0004 ######
 ###### failure with backup catalog already existed ######
-ERROR: backup catalog already exist. and it's not empty.
+ERROR: backup catalog already exist and it's not empty
 2
 
 ###### INIT COMMAND TEST-0005 ######
