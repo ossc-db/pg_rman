@@ -109,7 +109,8 @@ ERROR: invalid backup-mode "bad"
 
 ###### COMMAND OPTION TEST-0008 ######
 ###### delete failure without DATE ######
-ERROR: required delete range option not specified: delete DATE
+ERROR: delete range option not specified
+HINT: Please run with 'pg_rman delete DATE'.
 12
 
 ###### COMMAND OPTION TEST-0009 ######
