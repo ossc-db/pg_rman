@@ -7,7 +7,7 @@
 </head>
 
 <body>
-<h1 id="pg_rman">pg_rman 1.2</h1>
+<h1 id="pg_rman">pg_rman 1.3</h1>
     <a href="index-ja.html">documentation in Japanese</a>
 <hr />
 
@@ -256,42 +256,36 @@ STATUS=OK
 <p> The following example deletes unneeded backup files to recovery at 12:00 11, September 2009.</p>
 
 <pre><code>$ pg_rman show
- ==========================================================
+==========================================================
  StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
- 2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
- 2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
- 2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
- 2015-03-27 11:43:31  INCR        0m    54kB     1  OK
- 2015-03-27 11:43:19  INCR        0m    69kB     1  OK
- 2015-03-27 11:43:04  INCR        0m   151kB     1  OK
- 2015-03-27 11:42:56  INCR        0m    96kB     1  OK
- 2015-03-27 11:34:55  FULL        0m  5312kB     1  OK
+==========================================================
+2015-07-30 13:31:08  FULL        0m    14MB    15  OK
+2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
+2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
+2015-07-30 13:30:11  FULL        0m    14MB    15  OK
+2015-07-30 13:28:10  INCR        0m   120kB    14  OK
+2015-07-30 13:27:45  INCR        0m    54kB    14  OK
+2015-07-30 13:27:32  INCR        0m    54kB    14  OK
+2015-07-30 13:27:25  INCR        0m    54kB    14  OK
+2015-07-30 13:24:02  FULL        0m    14MB    14  OK
 
- $ pg_rman delete 2015-03-27 14:59:00
- INFO: The backup with start time 2015-03-27 14:59:47 cannot be deleted.
- INFO: Because this backup started later than 2015-03-27 14:59:00.
- INFO: The backup with start time 2015-03-27 14:59:19 cannot be deleted.
- INFO: Because this backup is not a latest full backup until 2015-03-27 14:59:00.
- INFO: The backup with start time 2015-03-27 14:59:00 cannot be deleted.
- INFO: Because this backup is not a latest full backup until 2015-03-27 14:59:00.
- INFO: The backup with start time 2015-03-27 14:58:46 cannot be deleted.
- INFO: Because this is the latest and validated full backup until 2015-03-27 14:59:00.
- INFO: delete the backup with start time: 2015-03-27 11:43:31
- INFO: delete the backup with start time: 2015-03-27 11:43:19
- INFO: delete the backup with start time: 2015-03-27 11:43:04
- INFO: delete the backup with start time: 2015-03-27 11:42:56
- INFO: delete the backup with start time: 2015-03-27 11:34:55
+$ pg_rman delete 2015-07-30 13:30:30
+WARNING: cannot delete backup with start time "2015-07-30 13:30:11"
+DETAIL: This is the latest full backup necessary for successful recovery.
+INFO: delete the backup with start time: "2015-07-30 13:28:10"
+INFO: delete the backup with start time: "2015-07-30 13:27:45"
+INFO: delete the backup with start time: "2015-07-30 13:27:32"
+INFO: delete the backup with start time: "2015-07-30 13:27:25"
+INFO: delete the backup with start time: "2015-07-30 13:24:02"
 
- $ pg_rman show
- ==========================================================
-  StartTime           Mode  Duration    Size   TLI  Status
-  ==========================================================
-  2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
-  2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
-  2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
-  2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
+$ pg_rman show
+==========================================================
+ StartTime           Mode  Duration    Size   TLI  Status
+==========================================================
+2015-07-30 13:31:08  FULL        0m    14MB    15  OK
+2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
+2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
+2015-07-30 13:30:11  FULL        0m    14MB    15  OK
 </code></pre>
 
 
@@ -299,34 +293,34 @@ STATUS=OK
 <p>Though <code>delete</code> command removes actual data from file system, there remains some catalog information of deleted backups. In order to remove this, execute <code>purge</code> command.</p>
 
 <pre><code>$ pg_rman show -a
- ==========================================================
+==========================================================
  StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
- 2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
- 2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
- 2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
- 2015-03-27 11:43:31  INCR        0m    54kB     1  DELETED
- 2015-03-27 11:43:19  INCR        0m    69kB     1  DELETED
- 2015-03-27 11:43:04  INCR        0m   151kB     1  DELETED
- 2015-03-27 11:42:56  INCR        0m    96kB     1  DELETED
- 2015-03-27 11:34:55  FULL        0m  5312kB     1  DELETED
+==========================================================
+2015-07-30 13:31:08  FULL        0m    14MB    15  OK
+2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
+2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
+2015-07-30 13:30:11  FULL        0m    14MB    15  OK
+2015-07-30 13:28:10  INCR        0m   120kB    14  DELETED
+2015-07-30 13:27:45  INCR        0m    54kB    14  DELETED
+2015-07-30 13:27:32  INCR        0m    54kB    14  DELETED
+2015-07-30 13:27:25  INCR        0m    54kB    14  DELETED
+2015-07-30 13:24:02  FULL        0m    14MB    14  DELETED
 
- $ pg_rman purge
- INFO: The DELETED backup 2015-03-27 11:43:31 is purged.
- INFO: The DELETED backup 2015-03-27 11:43:19 is purged.
- INFO: The DELETED backup 2015-03-27 11:43:04 is purged.
- INFO: The DELETED backup 2015-03-27 11:42:56 is purged.
- INFO: The DELETED backup 2015-03-27 11:34:55 is purged.
+$ pg_rman purge
+INFO: DELETED backup "2015-07-30 13:28:10" is purged
+INFO: DELETED backup "2015-07-30 13:27:45" is purged
+INFO: DELETED backup "2015-07-30 13:27:32" is purged
+INFO: DELETED backup "2015-07-30 13:27:25" is purged
+INFO: DELETED backup "2015-07-30 13:24:02" is purged
 
- $ pg_rman show -a
- ==========================================================
-  StartTime           Mode  Duration    Size   TLI  Status
-  ==========================================================
-  2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
-  2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
-  2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
-  2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
+$ pg_rman show -a
+==========================================================
+ StartTime           Mode  Duration    Size   TLI  Status
+==========================================================
+2015-07-30 13:31:08  FULL        0m    14MB    15  OK
+2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
+2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
+2015-07-30 13:30:11  FULL        0m    14MB    15  OK
 </code></pre>
 
 <h2 id="Standby-site.Backup">Standby-site Backup</h2>
@@ -403,11 +397,8 @@ SRVLOG_PATH = /home/postgres/pgdata/pg_log
 BACKUP_MODE = F
 COMPRESS_DATA = YES
 KEEP_ARCLOG_FILES = 10
-KEEP_ARCLOG_DAYS = 10
 KEEP_DATA_GENERATIONS = 3
-KEEP_DATA_DAYS = 120
 KEEP_SRVLOG_FILES = 10
-KEEP_SRVLOG_DAYS = 10
 </code></pre>
 
 <p>Then, do a backup.
@@ -415,18 +406,32 @@ It should be start from a full backup.
 Here, we will also take server log files.
 </p>
 
-<pre><code>$ pg_rman backup --backup-mode=full --with-serverlog
-INFO: database backup start
+<pre><code>$ pg_rman backup --backup-mode=full --with-serverlog --progress
+INFO: copying database files
+Processed 1760 of 1760 files, skipped 0
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+INFO: copying archived WAL files
+Processed 21 of 21 files, skipped 0
+INFO: copying server log files
+Processed 1 of 1 files, skipped 0
+INFO: backup complete
+HINT: Please execute 'pg_rman validate' to verify the files are correctly copied.
+INFO: start deleting old archived WAL files from ARCLOG_PATH (keep files = 10)
+INFO: delete "0000000E0000000100000092"
+INFO: delete "0000000E0000000100000092.00000028.backup"
+INFO: delete "0000000E0000000100000093"
+INFO: start deleting old server files from SRVLOG_PATH (keep files = 10)
+INFO: start deleting old backup (keep generations = 3)
+INFO: does not include the backup just taken
 </code></pre>
 
 <p>Check the result by <code>show</code> command.</p>
 
 <pre><code>$ pg_rman show
- ==========================================================
+==========================================================
  StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 15:16:15  FULL        0m   463MB     3  DONE
+==========================================================
+2015-07-30 13:36:38  FULL        0m    15MB    15  DONE
 </code></pre>
 
 <p>
@@ -436,13 +441,14 @@ So, do <code>validate</code> command next.
 </p>
 
 <pre><code>$ pg_rman validate
- INFO: validate: 2015-03-27 15:16:15 backup and archive log files by CRC
+INFO: validate: "2015-07-30 13:36:38" backup, archive log files and server log files by CRC
+INFO: backup "2015-07-30 13:36:38" is valid
 
- $ pg_rman show
- ==========================================================
+$ pg_rman show
+==========================================================
  StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 15:16:15  FULL        0m   463MB     3  OK
+==========================================================
+2015-07-30 13:36:38  FULL        0m    15MB    15  OK
 </code></pre>
 
 <p>
@@ -979,7 +985,6 @@ $ pg_ctl start
 <li>Requires to read database cluster directory and write backup catalog directory. For example, you need to mount the disk where backup catalog is placed with NFS from database server.</li>
 <li>Block sizes of pg_rman and server should be matched. BLCKSZ and XLOG_BLCKSZ also should be matched.</li>
 <li>If there are some unreadable files/directories in database cluster directory, WAL directory or archived WAL directory, the backup or restore would be failed.</li>
-<li>In using pg_rman 1.2.10 or before, after creating a database, it should be taken a FULL backup. If one took an incremental backup after creating a database, pg_rman cannot take a consistent backup data. If one use this inconsistent backup to restore, PostgreSQL may show &ldquo;PANIC:  could not open critical system index 2662&rdquo; after recovery. After pg_rman 1.2.11, this restriction has been removed.</li>
 <li>When taking an incremental backup, pg_rman check the timeline ID of the target database whether it is the same with the one of the full backup in backup list. But, pg_rman does not check whether the data itself is same with the full backup in backup list. So, you can take an incremental backup over the full backup against the database which has the same timeline ID but has different data.</li>
 </ul>
 
