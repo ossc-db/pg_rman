@@ -35,14 +35,8 @@ Backup options:
   --keep-data-days=NUM        keep enough data backup to recover to N days ago
   --keep-arclog-files=NUM   keep NUM of archived WAL
   --keep-arclog-days=DAY    keep archived WAL modified in DAY days
-      NOTE: Need to use the above two options together. 
-            Archive log files older than both condition are deleted automatically.
-                ex.) --keep-arclog-files=100 --keep-arclog-days=10 
   --keep-srvlog-files=NUM   keep NUM of serverlogs
   --keep-srvlog-days=DAY    keep serverlog modified in DAY days
-      NOTE: Need to use the above two options together. 
-            Server log files older than both condition are deleted automatically.
-                ex.) --keep-arclog-files=100 --keep-arclog-days=10 
   --standby-host=HOSTNAME   standby host when taking backup from standby
   --standby-port=PORT       standby port when taking backup from standby
 

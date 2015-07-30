@@ -277,14 +277,8 @@ pgut_help(bool details)
 	printf(_("  --keep-data-days=NUM        keep enough data backup to recover to N days ago\n"));
 	printf(_("  --keep-arclog-files=NUM   keep NUM of archived WAL\n"));
 	printf(_("  --keep-arclog-days=DAY    keep archived WAL modified in DAY days\n"));
-	printf(_("      NOTE: Need to use the above two options together. \n"));
-	printf(_("            Archive log files older than both condition are deleted automatically.\n"));
-	printf(_("                ex.) --keep-arclog-files=100 --keep-arclog-days=10 \n"));
 	printf(_("  --keep-srvlog-files=NUM   keep NUM of serverlogs\n"));
 	printf(_("  --keep-srvlog-days=DAY    keep serverlog modified in DAY days\n"));
-	printf(_("      NOTE: Need to use the above two options together. \n"));
-	printf(_("            Server log files older than both condition are deleted automatically.\n"));
-	printf(_("                ex.) --keep-arclog-files=100 --keep-arclog-days=10 \n"));
 	printf(_("  --standby-host=HOSTNAME   standby host when taking backup from standby\n"));
 	printf(_("  --standby-port=PORT       standby port when taking backup from standby\n"));
 	printf(_("\nRestore options:\n"));
