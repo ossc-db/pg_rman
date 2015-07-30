@@ -30,7 +30,7 @@ do_show(pgBackupRange *range, bool show_detail, bool show_all)
 		{
 			char timestamp[100];
 			time2iso(timestamp, lengthof(timestamp), range->begin);
-			elog(NOTICE, _("backup taken at \"%s\" does not exist."),
+			elog(NOTICE, _("backup taken at \"%s\" does not exist"),
 				timestamp);
 			/* This is not error case */
 			return 0;
@@ -48,7 +48,7 @@ do_show(pgBackupRange *range, bool show_detail, bool show_all)
 		if (backup_list == NULL){
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
-				 errmsg("could not get list of backup already taken.")));
+				 errmsg("could not get list of backup already taken")));
 		}
 
 		if (!show_detail)

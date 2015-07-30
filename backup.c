@@ -96,8 +96,9 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			{
 				if (current.full_backup_on_error)
 				{
-					elog(NOTICE, _("There is no validated full backup with current timeline. "
-						"Switching to full backup mode."));
+					ereport(NOTICE,
+						(errmsg("turn to take a full backup"),
+						 errdetail("There is no validated full backup with current timeline.")));
 					current.backup_mode = BACKUP_MODE_FULL;
 				} else {
 					ereport(ERROR,
@@ -140,7 +141,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		pg_stop_backup(NULL);
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("backup_label does not exist in PGDATA.")));
+			 errmsg("backup_label does not exist in $PGDATA")));
 	}
 	else if (has_recovery_conf)
 	{
@@ -150,14 +151,14 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			pg_stop_backup(NULL);
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
-				 errmsg("cannot specify standby host or port.")));
+				 errmsg("cannot specify standby host or port")));
 		}
 		if (!execute_restartpoint(bkupopt, &current))
 		{
 			pg_stop_backup(NULL);
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
-				 errmsg("could not execute restartpoint.")));
+				 errmsg("could not execute restartpoint")));
 		}
 		current.is_from_standby = true;
 	}
@@ -209,8 +210,9 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		{
 			if (current.full_backup_on_error)
 			{
-				elog(NOTICE, _("There is no validated full backup with current timeline. "
-					"Switching to full backup mode."));
+				ereport(NOTICE,
+					(errmsg("turn to take a full backup"),
+					 errdetail("There is no validated full backup with current timeline.")));
 				current.backup_mode = BACKUP_MODE_FULL;
 			} else {
 				ereport(ERROR,
@@ -233,7 +235,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			lsn = &prev_backup->start_lsn;
 			xlogid = (uint32) (*lsn >> 32);
 			xrecoff = (uint32) *lsn;
-			elog(DEBUG, _("backup only the page updated after LSN(%X/%08X).\n"),
+			elog(DEBUG, _("backup only the page updated after LSN(%X/%08X)"),
 							xlogid, xrecoff);
 		}
 	}
@@ -258,7 +260,8 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			pg_stop_backup(NULL);
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
-				 errmsg("backup from standby server with snapshot-script is not supported.")));
+				 errmsg("cannot take a backup"),
+				 errdetail("Taking backup from standby server with snapshot-script is not supported")));
 		}
 
 		tblspc_list = parray_new();
@@ -479,9 +482,9 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		/* backup files */
 		if (current.backup_mode == BACKUP_MODE_FULL)
 		{
-			elog(DEBUG, "taking full backup of database files...");
+			elog(DEBUG, "taking full backup of database files");
 		} else if (current.backup_mode == BACKUP_MODE_INCREMENTAL) {
-			elog(DEBUG, "taking incremental backup of database files...");
+			elog(DEBUG, "taking incremental backup of database files");
 		}
 		pgBackupGetPath(&current, path, lengthof(path), DATABASE_DIR);
 		backup_files(pgdata, path, files, prev_files, lsn, current.compress_data, NULL);
@@ -603,8 +606,8 @@ do_backup_arclog(parray *backup_list)
 	 * backup is needed.
 	 */
 	prev_backup = catalog_get_last_arclog_backup(backup_list);
-	if (verbose && prev_backup == NULL)
-		printf(_("no previous full backup, performing a full backup instead\n"));
+	if (prev_backup == NULL)
+		elog(DEBUG, "turn to take a full backup of archived WAL files");
 
 	if (prev_backup)
 	{
@@ -636,7 +639,7 @@ do_backup_arclog(parray *backup_list)
 		}
 	}
 
-	elog(DEBUG, "taking backup of archived WAL files...");
+	elog(DEBUG, "taking backup of archived WAL files");
 	pgBackupGetPath(&current, path, lengthof(path), ARCLOG_DIR);
 	backup_files(arclog_path, path, files, prev_files, NULL,
 				 current.compress_data, NULL);
@@ -730,8 +733,8 @@ do_backup_srvlog(parray *backup_list)
 	 * backup is needed.
 	 */
 	prev_backup = catalog_get_last_srvlog_backup(backup_list);
-	if (verbose && prev_backup == NULL)
-		printf(_("no previous full backup, performing a full backup instead\n"));
+	if (prev_backup == NULL)
+		elog(DEBUG, "turn to take a full backup of server log files");
 
 	if (prev_backup)
 	{
@@ -829,8 +832,7 @@ do_backup(pgBackupOption bkupopt)
 #ifndef HAVE_LIBZ
 	if (current.compress_data)
 	{
-		elog(WARNING, _("requested compression not available in this installation. "
-			"archive will not be compressed"));
+		elog(WARNING, "compression is not available in this installation");
 		current.compress_data = false;
 	}
 #endif
@@ -856,11 +858,12 @@ do_backup(pgBackupOption bkupopt)
 	if (ret == -1)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not lock backup catalog.")));
+			 errmsg("could not lock backup catalog")));
 	else if (ret == 1)
 		ereport(ERROR,
 			(errcode(ERROR_ALREADY_RUNNING),
-			 errmsg("another pg_rman is running, skip this backup.")));
+			 errmsg("could not lock backup catalog"),
+			 errdetail("Another pg_rman is just running. Skip this backup.")));
 
 	/* initialize backup result */
 	current.status = BACKUP_STATUS_RUNNING;
@@ -885,17 +888,17 @@ do_backup(pgBackupOption bkupopt)
 		if (pgBackupCreateDir(&current))
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
-				 errmsg("could not create backup directory.")));
+				 errmsg("could not create backup directory")));
 		pgBackupWriteIni(&current);
 	}
-	elog(DEBUG, "destination directories of backup are initialized.");
+	elog(DEBUG, "destination directories of backup are initialized");
 
 	/* get list of backups already taken */
 	backup_list = catalog_get_backup_list(NULL);
 	if(!backup_list){
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not get list of backup already taken.")));
+			 errmsg("could not get list of backup already taken")));
 	}
 
 	/* set the error processing function for the backup process */
@@ -928,8 +931,9 @@ do_backup(pgBackupOption bkupopt)
 		printf(_("========================================\n"));
 	}
 
-	elog(INFO, "backup complete. Please execute 'pg_rman validate'"
-		" to verify the files are correctly copied.");
+	ereport(INFO,
+		(errmsg("backup complete"),
+		 errhint("Please execute 'pg_rman validate' to verify the files are correctly copied.")));
 
 	/*
 	 * Delete old files (archived WAL and serverlog) after update of status.
@@ -986,12 +990,12 @@ remove_stopinfo_from_backup_label(char *arclog_path, char *dest_path, pgFile *cu
 	if ((read  = fopen(current_arc_file->path, "r")) == NULL)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not open backup history file for standby backup.")));
+			 errmsg("could not open backup history file for standby backup")));
 	join_path_components(tmp_bkup_label, arclog_path, PG_BACKUP_LABEL_FILE);
 	if ((write = fopen(tmp_bkup_label, "w")) == NULL)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not open temporary backup label file for standby backup.")));
+			 errmsg("could not open temporary backup label file for standby backup")));
 	while (fgets(buf, lengthof(buf), read) != NULL)
 	{
 		if (strstr(buf, "STOP") - buf == 0)
@@ -1078,12 +1082,12 @@ get_server_version(void)
 		reconnect();
 
 	/* confirm server version */
-	elog(DEBUG, "checking PostgreSQL server version...");
+	elog(DEBUG, "checking PostgreSQL server version");
 	server_version = PQserverVersion(connection);
-	if (server_version < 80200)
+	if (server_version < 80400)
 		ereport(ERROR,
 			(errcode(ERROR_PG_INCOMPATIBLE),
-			 errmsg("server version is %d.%d.%d, but must be 8.2 or higher.",
+			 errmsg("server version is %d.%d.%d, but must be 8.4 or higher",
 				server_version / 10000,
 				(server_version / 100) % 100,
 				server_version % 100)));
@@ -1110,7 +1114,7 @@ confirm_block_size(const char *name, int blcksz)
 	char	   *endp;
 	int			block_size;
 
-	elog(DEBUG, "checking block size setting...");
+	elog(DEBUG, "checking block size setting");
 	res = execute("SELECT current_setting($1)", 1, &name);
 	if (PQntuples(res) != 1 || PQnfields(res) != 1)
 		ereport(ERROR,
@@ -1142,7 +1146,7 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 
 	params[0] = label;
 
-	elog(DEBUG, "executing pg_start_backup()...");
+	elog(DEBUG, "executing pg_start_backup()");
 	reconnect();
 	server_version = get_server_version();
 	if (server_version >= 80400)
@@ -1180,7 +1184,7 @@ wait_for_archive(pgBackup *backup, const char *sql)
 	if (backup != NULL)
 	{
 		get_lsn(res, &backup->tli, &backup->stop_lsn);
-		elog(DEBUG, "backup end point is (WAL file: %s, xrecoff: %s",
+		elog(DEBUG, "backup end point is (WAL file: %s, xrecoff: %s)",
 				PQgetvalue(res, 0, 0), PQgetvalue(res, 0, 1));
 	}
 
@@ -1224,7 +1228,7 @@ wait_for_archive(pgBackup *backup, const char *sql)
 static void
 pg_stop_backup(pgBackup *backup)
 {
-	elog(DEBUG, "executing pg_stop_backup()...");
+	elog(DEBUG, "executing pg_stop_backup()");
 	wait_for_archive(backup,
 		"SELECT * FROM pg_xlogfile_name_offset(pg_stop_backup())");
 }
@@ -1343,8 +1347,7 @@ backup_cleanup(bool fatal, void *userdata)
 	make_native_path(path);
 	if (fileExists(path) || current.is_from_standby)
 	{
-		if (verbose)
-			printf(_("backup_label exists, stop backup\n"));
+		elog(DEBUG, "backup_label exists, stop backup");
 		pg_stop_backup(NULL);	/* don't care stop_lsn on error case */
 	}
 
@@ -1354,8 +1357,7 @@ backup_cleanup(bool fatal, void *userdata)
 	 */
 	if (current.status == BACKUP_STATUS_RUNNING && current.end_time == 0)
 	{
-		if (verbose)
-			printf(_("backup is running, update its status to ERROR\n"));
+		elog(DEBUG, "update bakckup status from RUNNING to ERROR");
 		current.end_time = time(NULL);
 		current.status = BACKUP_STATUS_ERROR;
 		pgBackupWriteIni(&current);
@@ -1394,10 +1396,10 @@ backup_files(const char *from_root,
 		if(tv.tv_sec < file->mtime){
 			ereport(FATAL,
 				(errcode(ERROR_SYSTEM),
-				 errmsg("cannot take a backup."),
-				 errdetail("there is a file with future timestamp from system time.\n"
+				 errmsg("cannot take a backup"),
+				 errdetail("There is a file with future timestamp from system time.\n"
 						"Current system time may be rewound."),
-				 errhint("the file is %s.\n"
+				 errhint("The file is %s.\n"
 						"If this is a database file, please retry with the full backup mode.\n"
 						"If this is a server log or archived WAL file, change the timestamp.",
 									file->path)));
@@ -1442,7 +1444,7 @@ backup_files(const char *from_root,
 					printf("\n");
 				ereport(ERROR,
 					(errcode(ERROR_SYSTEM),
-					 errmsg("could not stat backup mode. \"%s\": %s",
+					 errmsg("could not stat \"%s\": %s",
 						file->path, strerror(errno))));
 			}
 		}
@@ -1632,7 +1634,7 @@ delete_old_files(const char *root,
 		elog(INFO, "start deleting old %s files from %s (keep days = %s)",
 			target_file, target_path, days_str);
 	} else {
-		elog(DEBUG, "do not delete old %s files.", target_file);
+		elog(DEBUG, "do not delete old %s files", target_file);
 		return;
 	}
 
@@ -1646,7 +1648,7 @@ delete_old_files(const char *root,
 		ltm->tm_sec  = 0;
 		days_threshold = mktime(ltm);
 		time2iso(days_threshold_timestamp, lengthof(days_threshold_timestamp), days_threshold);
-		elog(INFO, "the threshold timestamp calculated by keep days is \"%s\".", days_threshold_timestamp);
+		elog(INFO, "the threshold timestamp calculated by keep days is \"%s\"", days_threshold_timestamp);
 	}
 
 	parray_qsort(files, pgFileCompareMtime);
@@ -1675,7 +1677,7 @@ delete_old_files(const char *root,
 			{
 				ereport(DEBUG,
 					(errmsg("keep the file : \"%s\"", file->path),
-					 errdetail("this is the %d%s latest file with keep files",
+					 errdetail("This is the %d%s latest file.",
 						file_num, getCountSuffix(file_num))));
 				continue;
 			}
@@ -1686,7 +1688,7 @@ delete_old_files(const char *root,
 			{
 				ereport(DEBUG,
 					(errmsg("keep the file : \"%s\"", file->path),
-					 errdetail("this is newer than the threshold \"%s\"", days_threshold_timestamp)));
+					 errdetail("This is newer than the threshold \"%s\".", days_threshold_timestamp)));
 				continue;
 			}
 		}
@@ -1702,7 +1704,7 @@ delete_old_files(const char *root,
 			if (strstr(file2->path, file->path) == file2->path)
 			{
 				file2 = (pgFile *)parray_remove(files, j);
-				elog(INFO, "delete \"%s\"\n",
+				elog(INFO, "delete \"%s\"",
 						file2->path + strlen(root) + 1);
 				if (!check)
 					pgFileDelete(file2);
