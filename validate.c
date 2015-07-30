@@ -34,7 +34,7 @@ do_validate(pgBackupRange *range)
 	if(!backup_list){
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not get list of backup already taken.")));
+			 errmsg("could not get list of backup already taken")));
 	}
 	parray_qsort(backup_list, pgBackupCompareId);
 	for (i = 0; i < parray_num(backup_list); i++)
@@ -117,7 +117,7 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 	if(!check){
 		if (HAVE_DATABASE(backup))
 		{
-			elog(INFO, "checking database files...");
+			elog(DEBUG, "checking database files");
 			pgBackupGetPath(backup, base_path, lengthof(base_path), DATABASE_DIR);
 			pgBackupGetPath(backup, path, lengthof(path),
 				DATABASE_FILE_LIST);
@@ -129,7 +129,7 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 		}
 		if (HAVE_ARCLOG(backup))
 		{
-			elog(INFO, "checking archive WAL files...");
+			elog(DEBUG, "checking archive WAL files");
 			pgBackupGetPath(backup, base_path, lengthof(base_path), ARCLOG_DIR);
 			pgBackupGetPath(backup, path, lengthof(path), ARCLOG_FILE_LIST);
 			files = dir_read_file_list(base_path, path);
@@ -140,7 +140,7 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 		}
 		if (backup->with_serverlog)
 		{
-			elog(INFO, "checking server log files...");
+			elog(DEBUG, "checking server log files");
 			pgBackupGetPath(backup, base_path, lengthof(base_path), SRVLOG_DIR);
 			pgBackupGetPath(backup, path, lengthof(path), SRVLOG_FILE_LIST);
 			files = dir_read_file_list(base_path, path);

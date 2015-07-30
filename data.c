@@ -619,7 +619,7 @@ restore_data_file(const char *from_root,
 				if (z.avail_out != sizeof(header))
 					ereport(ERROR,
 						(errcode(ERROR_CORRUPTED),
-						 errmsg("backup is broken header")));
+						 errmsg("backup has a broken header")));
 				break;
 			}
 			if (z.avail_out != 0)
@@ -874,7 +874,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 				fclose(out);
 				ereport(ERROR,
 					(errcode(ERROR_SYSTEM),
-					 errmsg("could not  write to \"%s\": %s", to_path,
+					 errmsg("could not write to \"%s\": %s", to_path,
 						strerror(errno_tmp))));
 			}
 

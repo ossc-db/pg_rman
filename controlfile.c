@@ -72,7 +72,7 @@ read_control_file()
 			(errmsg("possible byte ordering mismatch"),
 			 errdetail("The byte ordering used to store the pg_control file might not match the one "
 				"used by this program."),
-			 errhint("the results below would be incorrect, and the PostgreSQL installation "
+			 errhint("The results below would be incorrect, and the PostgreSQL installation "
 				"would be incompatible with this data directory.")));
 	}
 

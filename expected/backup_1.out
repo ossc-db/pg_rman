@@ -40,10 +40,12 @@ HINT: Please take a full backup and validate it before doing an incremental back
 10
 incremental backup in the same situation but with --full-backup-on-error option
 INFO: copying database files
-NOTICE: There is no validated full backup with current timeline. Switching to full backup mode.
+NOTICE: turn to take a full backup
+DETAIL: There is no validated full backup with current timeline.
 INFO: copying archived WAL files
 INFO: copying server log files
-INFO: backup complete. Please execute 'pg_rman validate' to verify the files are correctly copied.
+INFO: backup complete
+HINT: Please execute 'pg_rman validate' to verify the files are correctly copied.
 0
 1
 1
@@ -55,11 +57,13 @@ DETAIL: There is no validated full backup with current timeline.
 HINT: Please take a full backup and validate it before doing an archive backup. Or use with --full-backup-on-error command line option.
 10
 archive backup in the same situation but with --full-backup-on-error option
-NOTICE: There is no validated full backup with current timeline. Switching to full backup mode.
+NOTICE: turn to take a full backup
+DETAIL: There is no validated full backup with current timeline.
 INFO: copying database files
 INFO: copying archived WAL files
 INFO: copying server log files
-INFO: backup complete. Please execute 'pg_rman validate' to verify the files are correctly copied.
+INFO: backup complete
+HINT: Please execute 'pg_rman validate' to verify the files are correctly copied.
 0
 1
 1

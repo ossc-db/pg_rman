@@ -77,7 +77,7 @@ delete_parent_dir(const char *path)
 	{
 		if (errno == ENOTEMPTY || errno == EEXIST)
 		{
-			elog(DEBUG, "the directory \"%s\" is not empty. Skip deleting.", parent_dir_path);
+			elog(DEBUG, "the directory \"%s\" is not empty, skip deleting", parent_dir_path);
 		} else {
 			ereport(WARNING,
 				(errcode(ERROR_SYSTEM),
@@ -85,7 +85,7 @@ delete_parent_dir(const char *path)
 					strerror(errno))));
 		}
 	} else {
-		elog(DEBUG, "the directory \"%s\" is deleted.", parent_dir_path);
+		elog(DEBUG, "the directory \"%s\" is deleted", parent_dir_path);
 	}
 	return;
 }
