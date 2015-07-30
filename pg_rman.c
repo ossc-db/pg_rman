@@ -134,7 +134,7 @@ main(int argc, char *argv[])
 		else
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
-				 errmsg("too many arguments.")));
+				 errmsg("too many arguments")));
 	}
 
 	/* command argument (backup/restore/show/...) is required. */
@@ -334,7 +334,7 @@ parse_range(pgBackupRange *range, const char *arg1, const char *arg2)
 		if (strcmp(tmp,"") != 0)
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
-				 errmsg("supplied id(%s) is invalid.", tmp)));
+				 errmsg("supplied id(%s) is invalid", tmp)));
 		else
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
@@ -352,7 +352,7 @@ parse_range(pgBackupRange *range, const char *arg1, const char *arg2)
 	if(!IsValidTime(tm)){
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
-			 errmsg("supplied time(%s) is invalid.", arg1)));
+			 errmsg("supplied time(%s) is invalid", arg1)));
 	}
 	range->begin = mktime(&tm);
 

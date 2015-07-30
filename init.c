@@ -41,7 +41,7 @@ do_init(void)
 		if(results != 0){
 			ereport(ERROR,
 				(errcode(ERROR),
-				 errmsg("backup catalog already exist. and it's not empty.")));
+				 errmsg("backup catalog already exist and it's not empty")));
 		}
 	}
 
@@ -118,13 +118,13 @@ do_init(void)
 	}
 	else if (archive_command && archive_command[0])
 		ereport(WARNING,
-			(errmsg("ARCLOG_PATH is not set yet."),
-			 errdetail("Because pg_rman failed to parse archive_command '%s'.", archive_command),
+			(errmsg("ARCLOG_PATH is not set yet"),
+			 errdetail("Pg_rman failed to parse archive_command '%s'.", archive_command),
 			 errhint("Please set ARCLOG_PATH in pg_rman.ini or environmental variable.")));
 	else
 		ereport(WARNING,
-			(errmsg("ARCLOG_PATH is not set yet."),
-			 errdetail("Because archive_command is empty in postgresql.conf."),
+			(errmsg("ARCLOG_PATH is not set yet"),
+			 errdetail("The archive_command is not set in postgresql.conf."),
 			 errhint("Please set ARCLOG_PATH in pg_rman.ini or environmental variable.")));
 
 	/* set SRVLOG_PATH referred with log_directory */
