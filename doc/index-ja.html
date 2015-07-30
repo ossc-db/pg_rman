@@ -7,7 +7,7 @@
 </head>
 
 <body>
-<h1 id="pg_rman">pg_rman 1.2</h1>
+<h1 id="pg_rman">pg_rman 1.3</h1>
     <a href="index.html">documentation in English</a>
 <hr />
 
@@ -278,76 +278,70 @@ pg_control が存在しない場合は、リストアのベースとなる全体
 <p><code>delete</code> コマンドで日時を指定すると、そこまでのリカバリに不要なバックアップを削除できます。以下の例では、2015年3月27日の 14:59:00 時点にリカバリするのに不要なバックアップを削除しています。</p>
 
 <pre><code>$ pg_rman show
- ==========================================================
+==========================================================
  StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
- 2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
- 2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
- 2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
- 2015-03-27 11:43:31  INCR        0m    54kB     1  OK
- 2015-03-27 11:43:19  INCR        0m    69kB     1  OK
- 2015-03-27 11:43:04  INCR        0m   151kB     1  OK
- 2015-03-27 11:42:56  INCR        0m    96kB     1  OK
- 2015-03-27 11:34:55  FULL        0m  5312kB     1  OK
+==========================================================
+2015-07-30 13:31:08  FULL        0m    14MB    15  OK
+2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
+2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
+2015-07-30 13:30:11  FULL        0m    14MB    15  OK
+2015-07-30 13:28:10  INCR        0m   120kB    14  OK
+2015-07-30 13:27:45  INCR        0m    54kB    14  OK
+2015-07-30 13:27:32  INCR        0m    54kB    14  OK
+2015-07-30 13:27:25  INCR        0m    54kB    14  OK
+2015-07-30 13:24:02  FULL        0m    14MB    14  OK
 
- $ pg_rman delete 2015-03-27 14:59:00
- INFO: The backup with start time 2015-03-27 14:59:47 cannot be deleted.
- INFO: Because this backup started later than 2015-03-27 14:59:00.
- INFO: The backup with start time 2015-03-27 14:59:19 cannot be deleted.
- INFO: Because this backup is not a latest full backup until 2015-03-27 14:59:00.
- INFO: The backup with start time 2015-03-27 14:59:00 cannot be deleted.
- INFO: Because this backup is not a latest full backup until 2015-03-27 14:59:00.
- INFO: The backup with start time 2015-03-27 14:58:46 cannot be deleted.
- INFO: Because this is the latest and validated full backup until 2015-03-27 14:59:00.
- INFO: delete the backup with start time: 2015-03-27 11:43:31
- INFO: delete the backup with start time: 2015-03-27 11:43:19
- INFO: delete the backup with start time: 2015-03-27 11:43:04
- INFO: delete the backup with start time: 2015-03-27 11:42:56
- INFO: delete the backup with start time: 2015-03-27 11:34:55
+$ pg_rman delete 2015-07-30 13:30:30
+WARNING: cannot delete backup with start time "2015-07-30 13:30:11"
+DETAIL: This is the latest full backup necessary for successful recovery.
+INFO: delete the backup with start time: "2015-07-30 13:28:10"
+INFO: delete the backup with start time: "2015-07-30 13:27:45"
+INFO: delete the backup with start time: "2015-07-30 13:27:32"
+INFO: delete the backup with start time: "2015-07-30 13:27:25"
+INFO: delete the backup with start time: "2015-07-30 13:24:02"
  
- $ pg_rman show
- ==========================================================
-  StartTime           Mode  Duration    Size   TLI  Status
-  ==========================================================
-  2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
-  2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
-  2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
-  2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
+$ pg_rman show
+==========================================================
+ StartTime           Mode  Duration    Size   TLI  Status
+==========================================================
+2015-07-30 13:31:08  FULL        0m    14MB    15  OK
+2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
+2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
+2015-07-30 13:30:11  FULL        0m    14MB    15  OK
 </code></pre>
 
 <h3>削除済みバックアップの消去</h3>
 <p><code>delete</code> コマンドで削除したバックアップは、データ自体はファイルシステムから削除されますが、管理情報が残ります。これらの管理情報をファイルシステムから除外するには <code>purge</code> コマンドを実行してください。
 
 <pre><code>$ pg_rman show -a
- ==========================================================
+==========================================================
  StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
- 2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
- 2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
- 2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
- 2015-03-27 11:43:31  INCR        0m    54kB     1  DELETED
- 2015-03-27 11:43:19  INCR        0m    69kB     1  DELETED
- 2015-03-27 11:43:04  INCR        0m   151kB     1  DELETED
- 2015-03-27 11:42:56  INCR        0m    96kB     1  DELETED
- 2015-03-27 11:34:55  FULL        0m  5312kB     1  DELETED
+==========================================================
+2015-07-30 13:31:08  FULL        0m    14MB    15  OK
+2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
+2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
+2015-07-30 13:30:11  FULL        0m    14MB    15  OK
+2015-07-30 13:28:10  INCR        0m   120kB    14  DELETED
+2015-07-30 13:27:45  INCR        0m    54kB    14  DELETED
+2015-07-30 13:27:32  INCR        0m    54kB    14  DELETED
+2015-07-30 13:27:25  INCR        0m    54kB    14  DELETED
+2015-07-30 13:24:02  FULL        0m    14MB    14  DELETE
 
- $ pg_rman purge
- INFO: The DELETED backup 2015-03-27 11:43:31 is purged.
- INFO: The DELETED backup 2015-03-27 11:43:19 is purged.
- INFO: The DELETED backup 2015-03-27 11:43:04 is purged.
- INFO: The DELETED backup 2015-03-27 11:42:56 is purged.
- INFO: The DELETED backup 2015-03-27 11:34:55 is purged.
+$ pg_rman purge
+INFO: DELETED backup "2015-07-30 13:28:10" is purged
+INFO: DELETED backup "2015-07-30 13:27:45" is purged
+INFO: DELETED backup "2015-07-30 13:27:32" is purged
+INFO: DELETED backup "2015-07-30 13:27:25" is purged
+INFO: DELETED backup "2015-07-30 13:24:02" is purged
 
- $ pg_rman show -a
- ==========================================================
-  StartTime           Mode  Duration    Size   TLI  Status
-  ==========================================================
-  2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
-  2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
-  2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
-  2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
+$ pg_rman show -a
+==========================================================
+ StartTime           Mode  Duration    Size   TLI  Status
+==========================================================
+2015-07-30 13:31:08  FULL        0m    14MB    15  OK
+2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
+2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
+2015-07-30 13:30:11  FULL        0m    14MB    15  OK
 </code></pre>
 
 <h3>スタンバイサイトでのバックアップ</h3>
@@ -431,11 +425,8 @@ SRVLOG_PATH = /home/postgres/pgdata/pg_log
 BACKUP_MODE = F
 COMPRESS_DATA = YES
 KEEP_ARCLOG_FILES = 10
-KEEP_ARCLOG_DAYS = 10
 KEEP_DATA_GENERATIONS = 3
-KEEP_DATA_DAYS = 120
 KEEP_SRVLOG_FILES = 10
-KEEP_SRVLOG_DAYS = 10
 </code></pre>
 
 <p>バックアップを行います。
@@ -443,18 +434,32 @@ KEEP_SRVLOG_DAYS = 10
 今回は合わせてサーバログもバックアップするとします。
 </p>
 
-<pre><code>$ pg_rman backup --backup-mode=full --with-serverlog
-INFO: database backup start
+<pre><code>$ pg_rman backup --backup-mode=full --with-serverlog --progress
+INFO: copying database files
+Processed 1760 of 1760 files, skipped 0
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+INFO: copying archived WAL files
+Processed 21 of 21 files, skipped 0
+INFO: copying server log files
+Processed 1 of 1 files, skipped 0
+INFO: backup complete
+HINT: Please execute 'pg_rman validate' to verify the files are correctly copied.
+INFO: start deleting old archived WAL files from ARCLOG_PATH (keep files = 10)
+INFO: delete "0000000E0000000100000092"
+INFO: delete "0000000E0000000100000092.00000028.backup"
+INFO: delete "0000000E0000000100000093"
+INFO: start deleting old server files from SRVLOG_PATH (keep files = 10)
+INFO: start deleting old backup (keep generations = 3)
+INFO: does not include the backup just taken
 </code></pre>
 
 
 
 <pre><code>$ pg_rman show
- ==========================================================
+==========================================================
  StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 15:16:15  FULL        0m   463MB     3  DONE
+==========================================================
+2015-07-30 13:36:38  FULL        0m    15MB    15  DONE
 </code></pre>
 
 <p>
@@ -463,13 +468,14 @@ Status列の値がDONEになっているのは、バックアップ取得は完�
 </p>
 
 <pre><code>$ pg_rman validate
-INFO: validate: 2015-03-27 15:16:15 backup and archive log files by CRC
+INFO: validate: "2015-07-30 13:36:38" backup, archive log files and server log files by CRC
+INFO: backup "2015-07-30 13:36:38" is valid
 
- $ pg_rman show
- ==========================================================
+$ pg_rman show
+==========================================================
  StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 15:16:15  FULL        0m   463MB     3  OK
+==========================================================
+2015-07-30 13:36:38  FULL        0m    15MB    15  OK
 </code></pre>
 
 <p>
@@ -1009,7 +1015,6 @@ $ pg_ctl start
 <li>pg_rman とサーバの「ブロックサイズ」を一致させる必要があります。同一のバージョンであっても、BLCKSZ、XLOG_BLCKSZ が異なる組合せではバックアップできません。</li>
 <li>データベースクラスタや WAL 格納先、アーカイブ WAL 格納先に読み取り不可のファイル/ディレクトリが存在するとバックアップ/リストアに失敗します。</li>
 <li>WALアーカイブ先が別サーバ上に存在する場合、DBサーバよりもシステム時刻が進んでいるとバックアップ/リカバリに失敗します。</li>
-<li>pg_rman 1.2.10までを使用する場合、データベース作成を行った後には必ず全体バックアップを取得し直してください。もし増分バックアップしか取得しなかった場合、バックアップ自体は成功しますが必要なファイルを取得出来ていない可能性があります。その場合、増分バックアップを用いたリストアを行うと、PostgreSQLを立ち上げてリカバリが完了した後にアクセスしようとすると「PANIC:  could not open critical system index 2662」というエラーが発生してPostgreSQLがクラッシュします。pg_rman 1.2.11からはこの制約は無くなっています。</li>
 <li>pg_rmanがバックアップ取得中に異常終了した場合、PostgreSQLサーバはオンライン・バックアップ取得中のステータスのままになってしまうことがあります。その場合は、手動で"SELECT pg_stop_backup()&ldquo;を行う必要があります。</li>
 <li>pg_rmanは増分バックアップ取得の際に、対象データベースのタイムラインをチェックして増分バックアップのベースとなる全体バックアップのタイムラインと一致しているかをチェックします。しかし、全く異なるデータベースだがタイムラインが同じというデータベースを指定してしまうと、pg_rmanはそれに気づかず、誤った増分バックアップを取得してしまいます。</li>
 </ul>
