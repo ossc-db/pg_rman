@@ -67,17 +67,25 @@ function init_catalog()
 
 function create_dummy_backup()
 {
-	YEAR_STRING=`date +"%Y"`
-	MONTH_STRING=`date +"%m"`
 	if [ $1 = "1" ]; then
+		YEAR_STRING=`date +"%Y" -d '1 days ago'`
+		MONTH_STRING=`date +"%m" -d '1 days ago'`
 		DAY_STRING=`date +"%d" -d '1 days ago'`
 	elif [ $1 = "2" ]; then
+		YEAR_STRING=`date +"%Y" -d '2 days ago'`
+		MONTH_STRING=`date +"%m" -d '2 days ago'`
 		DAY_STRING=`date +"%d" -d '2 days ago'`
 	elif [ $1 = "3" ]; then
+		YEAR_STRING=`date +"%Y" -d '3 days ago'`
+		MONTH_STRING=`date +"%m" -d '3 days ago'`
 		DAY_STRING=`date +"%d" -d '3 days ago'`
 	elif [ $1 = "4" ]; then
+		YEAR_STRING=`date +"%Y" -d '4 days ago'`
+		MONTH_STRING=`date +"%m" -d '4 days ago'`
 		DAY_STRING=`date +"%d" -d '4 days ago'`
 	else
+		YEAR_STRING=`date +"%Y" -d '10 days ago'`
+		MONTH_STRING=`date +"%m" -d '10 days ago'`
 		DAY_STRING=`date +"%d" -d '10 days ago'`
 	fi
 		
@@ -140,7 +148,7 @@ pg_rman backup -B ${BACKUP_PATH} -b inc -Z -p ${TEST_PGPORT} -d postgres --quiet
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0002-before.log 2>&1
 grep OK ${TEST_BASE}/TEST-0002-before.log | sed -e 's@[^-]@@g' | wc -c
-pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
 #pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
