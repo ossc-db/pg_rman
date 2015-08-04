@@ -20,7 +20,6 @@ NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 0
 21
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 0
 Number of remaining full backups validated: 2
 Number of deleted backups : 1
