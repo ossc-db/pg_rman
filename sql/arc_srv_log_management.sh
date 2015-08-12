@@ -73,12 +73,7 @@ function create_dummy_files()
 
 function change_files_timestamp()
 {
-    if [ $1 = "1" ]; then
-        TIMESTAMP=`date +"%Y%m%d%H%M" -d '1 days ago'`
-    elif [ $1 = "2" ]; then
-        TIMESTAMP=`date +"%Y%m%d%H%M" -d '2 days ago'`
-	fi
-
+	TIMESTAMP=`date +"%Y%m%d%H%M" -d "$1 days ago"`
 	for file in $2/*; do
 		touch -t ${TIMESTAMP} ${file}
 	done
