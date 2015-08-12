@@ -67,27 +67,10 @@ function init_catalog()
 
 function create_dummy_backup()
 {
-	if [ $1 = "1" ]; then
-		YEAR_STRING=`date +"%Y" -d '1 days ago'`
-		MONTH_STRING=`date +"%m" -d '1 days ago'`
-		DAY_STRING=`date +"%d" -d '1 days ago'`
-	elif [ $1 = "2" ]; then
-		YEAR_STRING=`date +"%Y" -d '2 days ago'`
-		MONTH_STRING=`date +"%m" -d '2 days ago'`
-		DAY_STRING=`date +"%d" -d '2 days ago'`
-	elif [ $1 = "3" ]; then
-		YEAR_STRING=`date +"%Y" -d '3 days ago'`
-		MONTH_STRING=`date +"%m" -d '3 days ago'`
-		DAY_STRING=`date +"%d" -d '3 days ago'`
-	elif [ $1 = "4" ]; then
-		YEAR_STRING=`date +"%Y" -d '4 days ago'`
-		MONTH_STRING=`date +"%m" -d '4 days ago'`
-		DAY_STRING=`date +"%d" -d '4 days ago'`
-	else
-		YEAR_STRING=`date +"%Y" -d '10 days ago'`
-		MONTH_STRING=`date +"%m" -d '10 days ago'`
-		DAY_STRING=`date +"%d" -d '10 days ago'`
-	fi
+
+	YEAR_STRING=`date +"%Y" -d "$1 days ago"`
+	MONTH_STRING=`date +"%m" -d "$1 days ago"`
+	DAY_STRING=`date +"%d" -d "$1 days ago"`
 		
 	DUMMY_PATH=${BACKUP_PATH}/${YEAR_STRING}${MONTH_STRING}${DAY_STRING}/101010
 	mkdir -p ${DUMMY_PATH}
