@@ -182,10 +182,12 @@ do_restore(const char *target_time,
 		}
 #endif
 		if (satisfy_timeline(timelines, base_backup) && satisfy_recovery_target(base_backup, rt))
+		{
 			time2iso(timestamp, lengthof(timestamp), base_backup->start_time);
 			elog(INFO, "found the full backup can be used as base in recovery: \"%s\"",
 				timestamp);
 			goto base_backup_found;
+		}
 	}
 	/* no full backup found, can't restore */
 	ereport(ERROR,
