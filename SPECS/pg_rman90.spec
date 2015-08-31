@@ -9,12 +9,12 @@
 ## Set general information for pg_rman.
 Summary:    Backup and Recovery Tool for PostgreSQL
 Name:       pg_rman
-Version:    1.3.0
+Version:    1.3.1
 Release:    1%{?dist}
 License:    BSD
 Group:      Applications/Databases
 Source0:    %{name}-%{version}.tar.gz
-URL:        http://sourceforge.net/projects/pg-rman/
+URL:        https://github.com/ossc-db/pg_rman
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-%(%{__id_u} -n)
 Vendor:	    NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 
