@@ -19,6 +19,7 @@
 #include <math.h>
 
 #include "libpq/pqsignal.h"
+#include "catalog/pg_control.h"
 #include "pgut/pgut-port.h"
 
 #define TIMEOUT_ARCHIVE		10		/* wait 10 sec until WAL archive complete */
@@ -796,8 +797,16 @@ do_backup(pgBackupOption bkupopt)
 	parray *files_database;
 	parray *files_arclog;
 	parray *files_srvlog;
-	int		server_version;
-	int		ret;
+	int    server_version;
+	int    ret;
+	char   path[MAXPGPATH];
+	FILE   *fp;
+	char   buf[1024];
+	char   key[1024];
+	char   value[1024];
+	uint64 result;
+	char   *buffer;
+	char   sysident_str[32];
 
 	/* repack the necesary options */
 	int	keep_arclog_files = bkupopt.keep_arclog_files;
@@ -840,6 +849,38 @@ do_backup(pgBackupOption bkupopt)
 
 	/* confirm data block size and xlog block size are compatible */
 	server_version = get_server_version();
+
+	/* get system identifier of backup configuration */
+	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);
+	fp = pgut_fopen(path, "rt", true);
+	while (fgets(buf, lengthof(buf), fp) != NULL)
+	{
+		size_t      i;
+		for (i = strlen(buf); i > 0 && IsSpace(buf[i - 1]); i--)
+		buf[i - 1] = '\0';
+		if (parse_pair(buf, key, value))
+			elog(DEBUG, "the initially configured target database : %s = %s", key, value);
+	}
+	fclose(fp);
+
+	/* get system identifier of the current database.*/
+	buffer = read_control_file();
+	if(buffer != NULL)
+		result = (uint64) ((ControlFileData *) buffer)->system_identifier;
+	pg_free(buffer);
+	elog(DEBUG, "the system identifier of current target database : %ld", result);
+	snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, result);
+
+	if ( strcmp(value, sysident_str) != 0)
+	{
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not start backup"),
+			 errdetail("system identifier of target database is different"
+				" from the one of initially configured database")));
+	} else {
+		elog(DEBUG, "the backup target database is the same as initial configured one.");
+	}
 
 	/* setup cleanup callback function */
 	in_backup = true;

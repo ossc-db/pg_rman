@@ -53,7 +53,6 @@ static bool		in_cleanup = false;
 int		pgut_log_level = INFO;
 int		pgut_abort_level = ERROR;
 
-static bool parse_pair(const char buffer[], char key[], char value[]);
 
 /* Connection routines */
 static void init_cancel_handler(void);
@@ -825,7 +824,7 @@ get_next_token(const char *src, char *dst, const char *line)
 	return s + i;
 }
 
-static bool
+bool
 parse_pair(const char buffer[], char key[], char value[])
 {
 	const char *start;
