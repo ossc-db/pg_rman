@@ -853,6 +853,12 @@ do_backup(pgBackupOption bkupopt)
 	/* get system identifier of backup configuration */
 	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);
 	fp = pgut_fopen(path, "rt", true);
+
+	if (fp == NULL)
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open system identifier file \"%s\"", path)));
+
 	while (fgets(buf, lengthof(buf), fp) != NULL)
 	{
 		size_t      i;

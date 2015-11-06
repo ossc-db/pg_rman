@@ -87,7 +87,7 @@ do_init(void)
 	{
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("could not create pg_rman.ini: %s", strerror(errno))));
+			 errmsg("could not create system identifier file: %s", strerror(errno))));
 	} else {
 		fprintf(fp, "SYSTEM_IDENTIFIER='%lu'\n", sysid);
 	}
