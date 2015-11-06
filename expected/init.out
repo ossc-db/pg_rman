@@ -7,6 +7,7 @@ results/init/backup/backup/
 results/init/backup/backup/pg_xlog/
 results/init/backup/backup/srvlog/
 results/init/backup/pg_rman.ini
+results/init/backup/system_identifier
 results/init/backup/timeline_history/
 ###### INIT COMMAND TEST-0002 ######
 ###### success with archive_command and log_directory ######
@@ -16,6 +17,7 @@ results/init/backup/backup/
 results/init/backup/backup/pg_xlog/
 results/init/backup/backup/srvlog/
 results/init/backup/pg_rman.ini
+results/init/backup/system_identifier
 results/init/backup/timeline_history/
 ###### INIT COMMAND TEST-0003 ######
 ###### success without archive_command ######
@@ -28,6 +30,7 @@ results/init/backup/backup/
 results/init/backup/backup/pg_xlog/
 results/init/backup/backup/srvlog/
 results/init/backup/pg_rman.ini
+results/init/backup/system_identifier
 results/init/backup/timeline_history/
 ###### INIT COMMAND TEST-0004 ######
 ###### failure with backup catalog already existed ######
