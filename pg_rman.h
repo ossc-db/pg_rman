@@ -24,20 +24,21 @@
 
 /* Directory/File names */
 #define DATABASE_DIR			"database"
-#define ARCLOG_DIR			"arclog"
-#define SRVLOG_DIR			"srvlog"
+#define ARCLOG_DIR				"arclog"
+#define SRVLOG_DIR				"srvlog"
 #define RESTORE_WORK_DIR		"backup"
-#define PG_XLOG_DIR			"pg_xlog"
+#define PG_XLOG_DIR				"pg_xlog"
 #define PG_TBLSPC_DIR			"pg_tblspc"
-#define TIMELINE_HISTORY_DIR		"timeline_history"
+#define TIMELINE_HISTORY_DIR	"timeline_history"
 #define BACKUP_INI_FILE			"backup.ini"
 #define PG_RMAN_INI_FILE		"pg_rman.ini"
+#define SYSTEM_IDENTIFIER_FILE	"system_identifier"
 #define MKDIRS_SH_FILE			"mkdirs.sh"
 #define DATABASE_FILE_LIST		"file_database.txt"
 #define ARCLOG_FILE_LIST		"file_arclog.txt"
 #define SRVLOG_FILE_LIST		"file_srvlog.txt"
-#define SNAPSHOT_SCRIPT_FILE		"snapshot_script"
-#define PG_BACKUP_LABEL_FILE		"backup_label"
+#define SNAPSHOT_SCRIPT_FILE	"snapshot_script"
+#define PG_BACKUP_LABEL_FILE	"backup_label"
 #define PG_BLACK_LIST			"black_list"
 
 /* Snapshot script command */
