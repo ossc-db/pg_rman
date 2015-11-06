@@ -65,10 +65,15 @@ function cleanup()
     mkdir -p ${TBLSPC_PATH}
 }
 
-function init_backup()
+function init_database()
 {
-    # cleanup environment
-    cleanup
+    rm -rf ${PGDATA_PATH}
+    rm -fr ${ARCLOG_PATH}
+    rm -fr ${SRVLOG_PATH}
+    rm -fr ${TBLSPC_PATH}
+    mkdir -p ${ARCLOG_PATH}
+    mkdir -p ${SRVLOG_PATH}
+    mkdir -p ${TBLSPC_PATH}
 
     # create new database cluster
     initdb ${USE_DATA_CHECKSUM} --no-locale -D ${PGDATA_PATH} > ${TEST_BASE}/initdb.log 2>&1
@@ -94,8 +99,6 @@ EOF
 
     pgbench -i -s ${SCALE} -p ${TEST_PGPORT} -d pgbench > ${TEST_BASE}/pgbench.log 2>&1
 
-    # init backup catalog
-    init_catalog
 }
 
 function init_catalog()
@@ -104,7 +107,9 @@ function init_catalog()
     pg_rman init -B ${BACKUP_PATH} --quiet
 }
 
-init_backup
+cleanup
+init_database
+init_catalog
 
 echo '###### BACKUP COMMAND TEST-0001 ######'
 echo '###### full backup mode ######'
@@ -259,6 +264,14 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0011.log 2>&1
 grep OK ${TEST_BASE}/TEST-0011.log | grep FULL | wc -l
 grep ERROR ${TEST_BASE}/TEST-0011.log | grep ARCH | wc -l
+
+echo '###### BACKUP COMMAND TEST-0012 ######'
+echo '###### failure in backup with different system identifier database ######'
+init_catalog
+pg_ctl stop -m immediate > /dev/null 2>&1
+init_database
+pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+
 
 # cleanup
 ## clean up the temporal test data

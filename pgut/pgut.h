@@ -232,6 +232,7 @@ extern bool parse_uint32(const char *value, uint32 *result);
 extern bool parse_int64(const char *value, int64 *result);
 extern bool parse_uint64(const char *value, uint64 *result);
 extern bool parse_time(const char *value, time_t *time);
+extern bool parse_pair(const char buffer[], char key[], char value[]);
 
 #define IsSpace(c)		(isspace((unsigned char)(c)))
 #define IsAlpha(c)		(isalpha((unsigned char)(c)))

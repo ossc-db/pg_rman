@@ -9,6 +9,8 @@
 
 #include "pg_rman.h"
 
+#include "catalog/pg_control.h"
+
 #include <unistd.h>
 #include <dirent.h>
 
@@ -36,6 +38,8 @@ do_init(void)
 
 	struct dirent **dp;
 	int results;
+	uint64      sysid;
+	char        *buffer;
 	if (access(backup_path, F_OK) == 0){
 		results = scandir(backup_path, &dp, selects, NULL);
 		if(results != 0){
@@ -68,6 +72,28 @@ do_init(void)
 		join_path_components(path, pgdata, "postgresql.conf");
 		parse_postgresql_conf(path, &log_directory, &archive_command);
 	}
+
+	/* get system identifier of the current database.*/
+	buffer = read_control_file();
+
+	if(buffer != NULL)
+	{
+		sysid = (uint64) ((ControlFileData *) buffer)->system_identifier;
+		free(buffer);
+	}
+
+	/* register system identifier of target database. */
+	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);
+	fp = fopen(path, "wt");
+	if (fp == NULL)
+	{
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not create system identifier file: %s", strerror(errno))));
+	} else {
+		fprintf(fp, "SYSTEM_IDENTIFIER='%lu'\n", sysid);
+	}
+	fclose(fp);
 
 	/* create pg_rman.ini */
 	join_path_components(path, backup_path, PG_RMAN_INI_FILE);
