@@ -75,3 +75,8 @@ HINT: Please execute 'pg_rman validate' to verify the files are correctly copied
 0
 1
 1
+###### BACKUP COMMAND TEST-0012 ######
+###### failure in backup with different system identifier database ######
+ERROR: could not start backup
+DETAIL: system identifier of target database is different from the one of initially configured database
+10
