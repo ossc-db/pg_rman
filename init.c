@@ -77,8 +77,10 @@ do_init(void)
 	buffer = read_control_file();
 
 	if(buffer != NULL)
+	{
 		sysid = (uint64) ((ControlFileData *) buffer)->system_identifier;
-	pg_free(buffer);
+		free(buffer);
+	}
 
 	/* register system identifier of target database. */
 	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);
