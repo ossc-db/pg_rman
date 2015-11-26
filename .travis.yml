@@ -50,3 +50,8 @@ script: make installcheck
 
 after_script:
   - cat /home/travis/build/ossc-db/pg_rman/postgres/regression.diffs
+
+notifications:
+  email:
+    on_success: change
+    on_failure: always
