@@ -146,7 +146,7 @@ do_restore(const char *target_time,
 		if (cur_tli != 0)
 		{
 			target_tli = cur_tli;
-			elog(INFO, "use timeline ID of current database culster as recovery target: %d",
+			elog(INFO, "use timeline ID of current database cluster as recovery target: %d",
 				cur_tli);
 		} else {
 			backup_tli = get_fullbackup_timeline(backups, rt);
