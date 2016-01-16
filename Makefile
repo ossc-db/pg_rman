@@ -1,7 +1,7 @@
 #
 # pg_rman: Makefile
 #
-#  Portions Copyright (c) 2008-2015, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+#  Portions Copyright (c) 2008-2016, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 #
 PROGRAM = pg_rman
 SRCS = \
