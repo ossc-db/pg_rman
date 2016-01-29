@@ -558,7 +558,7 @@ $ pg_ctl start
 <li><strong><code>-C</code> / <code>--smooth-checkpoint</code></strong>
 
 <ul>
-<li>Checkpoint is performed on every backups. If the option is specified, do smooth checkpoint then. See also the second argument for <a href="http://www.postgresql.org/docs/devel/static/functions-admin.html"><code>pg_start_backup()</code></a>.</li>
+<li>Checkpoint is performed on every backups. If the option is specified, do smooth checkpoint then. See also the second argument for <a href="http://www.postgresql.org/docs/current/static/functions-admin.html"><code>pg_start_backup()</code></a>.</li>
 </ul>
 </li>
 <li><strong><code>--keep-data-generations</code> / <code>--keep-data-days</code></strong>
@@ -584,7 +584,7 @@ $ pg_ctl start
 
 <h2>Restore options</h2>
 
-<p>The parameters which are started with &ndash;recovery are same as parameters in recovery.conf. See also &ldquo;<a href="http://www.postgresql.org/docs/devel/static/recovery-config.html">Recovery Configuration</a>&rdquo; for details.</p>
+<p>The parameters which are started with &ndash;recovery are same as parameters in recovery.conf. See also &ldquo;<a href="http://www.postgresql.org/docs/current/static/recovery-config.html">Recovery Configuration</a>&rdquo; for details.</p>
 
 <ul>
 <li><strong><code>--recovery-target-timeline TIMELINE</code></strong>
@@ -975,7 +975,7 @@ $ pg_ctl start
 </ul>
 
 
-<p>This utility, like most other PostgreSQL utilities, also uses the environment variables supported by libpq (see <a href="http://www.postgresql.org/docs/devel/static/libpq-envars.html">Environment Variables</a>)</p>
+<p>This utility, like most other PostgreSQL utilities, also uses the environment variables supported by libpq (see <a href="http://www.postgresql.org/docs/current/static/libpq-envars.html">Environment Variables</a>)</p>
 
 <h1 id="restrictions">Restrictions</h1>
 
@@ -1025,7 +1025,7 @@ $ pg_ctl start
 
 <h2>Recovery to Point-in-Time</h2>
 
-<p>pg_rman can recover to point-in-time if timeline, transaction ID, or timestamp are specified in recovery. pg_xlogdump(<a href="http://www.postgresql.org/docs/current/static/pgxlogdump.html">9.3 or later</a>)xlogdump(<a href="http://github.com/snaga/xlogdump/">9.2 or before</a>) is an useful tool to check the contents of WAL files and determine when to recover. See <a href="http://www.postgresql.org/docs/devel/static/continuous-archiving.html">Continuous Archiving and Point-in-Time Recovery (PITR)</a> for the details.</p>
+<p>pg_rman can recover to point-in-time if timeline, transaction ID, or timestamp are specified in recovery. pg_xlogdump(<a href="http://www.postgresql.org/docs/current/static/pgxlogdump.html">9.3 or later</a>)xlogdump(<a href="http://github.com/snaga/xlogdump/">9.2 or before</a>) is an useful tool to check the contents of WAL files and determine when to recover. See <a href="http://www.postgresql.org/docs/current/static/continuous-archiving.html">Continuous Archiving and Point-in-Time Recovery (PITR)</a> for the details.</p>
 
 <h2>Configuration file</h2>
 
@@ -1358,7 +1358,7 @@ $ make install
 
 
 <h1 id="seealso">See Also</h2>
-<a href="http://www.postgresql.org/docs/9.4/interactive/backup.html">Backup and Restore</a>
+<a href="http://www.postgresql.org/docs/current/interactive/backup.html">Backup and Restore</a>
 
 <hr />
 
