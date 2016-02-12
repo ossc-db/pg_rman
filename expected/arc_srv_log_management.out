@@ -44,7 +44,7 @@ NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 Number of existing server log files: 7
 do --keep-srvlog-days=1
 0
-Number of remaining server log files: 4
+Number of remaining server log files: 3
 ###### LOG FILE MANAGEMENT TEST-0006 ######
 ###### keep-srvlog-files and keep-srvlog-days together ######
 NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
