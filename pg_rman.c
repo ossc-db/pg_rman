@@ -159,12 +159,12 @@ main(int argc, char *argv[])
 		/* Check if backup_path is directory. */
 		struct stat stat_buf;
 		int rc = stat(backup_path, &stat_buf);
-		if(rc != -1 && !S_ISDIR(stat_buf.st_mode)){
-			/* If rc == -1,  there is no file or directory. So it's OK. */
+
+		/* If rc == -1,  there is no file or directory. So it's OK. */
+		if(rc != -1 && !S_ISDIR(stat_buf.st_mode))
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
 				 errmsg("-B, --backup-path must be a path to directory")));
-		}
 
 		join_path_components(path, backup_path, PG_RMAN_INI_FILE);
 		pgut_readopt(path, options, ERROR_ARGS);
@@ -219,10 +219,9 @@ main(int argc, char *argv[])
 		bkupopt.standby_port		    = standby_port;
 		return do_backup(bkupopt);
 	}
-	else if (pg_strcasecmp(cmd, "restore") == 0){
+	else if (pg_strcasecmp(cmd, "restore") == 0)
 		return do_restore(target_time, target_xid,
 					target_inclusive, target_tli_string, is_hard_copy);
-	}
 	else if (pg_strcasecmp(cmd, "show") == 0)
 		return do_show(&range, show_detail, show_all);
 	else if (pg_strcasecmp(cmd, "validate") == 0)
@@ -324,7 +323,8 @@ parse_range(pgBackupRange *range, const char *arg1, const char *arg2)
 		&tm.tm_year, &tm.tm_mon, &tm.tm_mday,
 		&tm.tm_hour, &tm.tm_min, &tm.tm_sec);
 
-	if (num < 1){
+	if (num < 1)
+	{
 		if (strcmp(tmp,"") != 0)
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
@@ -343,11 +343,11 @@ parse_range(pgBackupRange *range, const char *arg1, const char *arg2)
 		tm.tm_mon -= 1;
 	tm.tm_isdst = -1;
 
-	if(!IsValidTime(tm)){
+	if(!IsValidTime(tm))
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
 			 errmsg("supplied time(%s) is invalid", arg1)));
-	}
+
 	range->begin = mktime(&tm);
 
 	switch (num)
