@@ -404,10 +404,8 @@ backup_data_file(const char *from_root,
 
 #ifdef HAVE_LIBZ
 			if (compress)
-			{
 				doDeflate(&z, sizeof(header), sizeof(outbuf), &header, outbuf,
 					in, out, &crc, &file->write_size, Z_NO_FLUSH);
-			}
 			else
 #endif
 			{
@@ -430,10 +428,8 @@ backup_data_file(const char *from_root,
 		/* write odd size page image */
 #ifdef HAVE_LIBZ
 		if (compress)
-		{
 			doDeflate(&z, read_len, sizeof(outbuf), page.data, outbuf, in, out,
 				&crc, &file->write_size, Z_NO_FLUSH);
-		}
 		else
 #endif
 		{
@@ -485,6 +481,7 @@ backup_data_file(const char *from_root,
 	if (!check && chmod(to_path, FILE_PERMISSION) == -1)
 	{
 		int errno_tmp = errno;
+
 		fclose(in);
 		fclose(out);
 		ereport(ERROR,
@@ -571,9 +568,11 @@ restore_data_file(const char *from_root,
 
 	if (out == NULL && errno == ENOENT)
 		out = fopen(to_path, "w");
+
 	if (out == NULL)
 	{
 		int errno_tmp = errno;
+
 		fclose(in);
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
@@ -620,6 +619,7 @@ restore_data_file(const char *from_root,
 						 errmsg("backup has a broken header")));
 				break;
 			}
+
 			if (z.avail_out != 0)
 				ereport(ERROR,
 					(errcode(ERROR_SYSTEM),
@@ -632,32 +632,27 @@ restore_data_file(const char *from_root,
 			if (read_len != sizeof(header))
 			{
 				int errno_tmp = errno;
+
 				if (read_len == 0 && feof(in))
 					break;		/* EOF found */
 				else if (read_len != 0 && feof(in))
-				{
 					ereport(ERROR,
 						(errcode(ERROR_CORRUPTED),
 						 errmsg("odd size page found at block %u of \"%s\"",
 							blknum, file->path)));
-				}
 				else
-				{
 					ereport(ERROR,
 						(errcode(ERROR_SYSTEM),
 						 errmsg("could not read block %u of \"%s\": %s",
 							blknum, file->path, strerror(errno_tmp))));
-				}
 			}
 		}
 
 		if (header.block < blknum || header.hole_offset > BLCKSZ ||
 			(int) header.hole_offset + (int) header.hole_length > BLCKSZ)
-		{
 			ereport(ERROR,
 				(errcode(ERROR_CORRUPTED),
 				 errmsg("backup is broken at block %u", blknum)));
-		}
 
 		upper_offset = header.hole_offset + header.hole_length;
 		upper_length = BLCKSZ - upper_offset;
@@ -670,6 +665,7 @@ restore_data_file(const char *from_root,
 		{
 			if (verbose)
 				elog(DEBUG, "starting decompress file: %s", file->path);
+
 			if (header.hole_offset > 0)
 			{
 				doInflate(&z, sizeof(inbuf), header.hole_offset, inbuf,
@@ -695,12 +691,10 @@ restore_data_file(const char *from_root,
 		{
 			if (fread(page.data, 1, header.hole_offset, in) != header.hole_offset ||
 				fread(page.data + upper_offset, 1, upper_length, in) != upper_length)
-			{
 				ereport(ERROR,
 					(errcode(ERROR_SYSTEM),
 					 errmsg("could not read block %u of \"%s\": %s",
 						blknum, file->path, strerror(errno))));
-			}
 		}
 
 		/*
@@ -793,6 +787,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		snprintf(to_path, lengthof(to_path), "%s/tmp", backup_path);
 	else
 		join_path_components(to_path, to_root, file->path + strlen(from_root) + 1);
+
 	out = fopen(to_path, "w");
 	if (out == NULL)
 	{
