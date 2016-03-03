@@ -40,13 +40,15 @@ do_init(void)
 	int results;
 	uint64      sysid;
 	char        *buffer;
-	if (access(backup_path, F_OK) == 0){
+
+	if (access(backup_path, F_OK) == 0)
+	{
 		results = scandir(backup_path, &dp, selects, NULL);
-		if(results != 0){
+
+		if(results != 0)
 			ereport(ERROR,
 				(errcode(ERROR),
 				 errmsg("backup catalog already exist and it's not empty")));
-		}
 	}
 
 	/* create backup catalog root directory */
@@ -86,13 +88,12 @@ do_init(void)
 	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);
 	fp = fopen(path, "wt");
 	if (fp == NULL)
-	{
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not create system identifier file: %s", strerror(errno))));
-	} else {
+	else
 		fprintf(fp, "SYSTEM_IDENTIFIER='%lu'\n", sysid);
-	}
+
 	fclose(fp);
 
 	/* create pg_rman.ini */

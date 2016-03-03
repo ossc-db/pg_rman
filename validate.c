@@ -31,11 +31,11 @@ do_validate(pgBackupRange *range)
 
 	/* get backup list matches given range */
 	backup_list = catalog_get_backup_list(range);
-	if(!backup_list){
+	if(!backup_list)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not get list of backup already taken")));
-	}
+
 	parray_qsort(backup_list, pgBackupCompareId);
 	for (i = 0; i < parray_num(backup_list); i++)
 	{
@@ -43,7 +43,9 @@ do_validate(pgBackupRange *range)
 
 		/* clean extra backups (switch STATUS to ERROR) */
 		if(!another_pg_rman &&
-		   (backup->status == BACKUP_STATUS_RUNNING || backup->status == BACKUP_STATUS_DELETING)){
+		   (backup->status == BACKUP_STATUS_RUNNING ||
+			backup->status == BACKUP_STATUS_DELETING))
+		{
 			backup->status = BACKUP_STATUS_ERROR;
 			pgBackupWriteIni(backup);
 		}
@@ -78,43 +80,48 @@ pgBackupValidate(pgBackup *backup, bool size_only, bool for_get_timeline, bool w
 	bool	corrupted = false;
 
 	time2iso(timestamp, lengthof(timestamp), backup->start_time);
-	if(!for_get_timeline){
-		if (with_database && backup->with_serverlog){
-			if (check){
+	if(!for_get_timeline)
+	{
+		if (with_database && backup->with_serverlog)
+		{
+			if (check)
 				elog(INFO, "will validate: \"%s\" backup, archive log files and server log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
-			} else{
+			else
 				elog(INFO, "validate: \"%s\" backup, archive log files and server log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
-			}
-		} else if (with_database){
-			if (check){
+		}
+		else if (with_database)
+		{
+			if (check)
 				elog(INFO, "will validate: \"%s\" backup and archive log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
-			} else{
+			else
 				elog(INFO, "validate: \"%s\" backup and archive log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
-			}
-		} else if ((backup->backup_mode == BACKUP_MODE_ARCHIVE) && backup->with_serverlog) {
-			if (check){
+		}
+		else if ((backup->backup_mode == BACKUP_MODE_ARCHIVE) && backup->with_serverlog)
+		{
+			if (check)
 				elog(INFO, "will validate: \"%s\" archive log files and server log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
-			} else{
+			else
 				elog(INFO, "validate: \"%s\" archive log files and server log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
-			}
-		} else if (backup->backup_mode == BACKUP_MODE_ARCHIVE) {
-			if (check){
+		}
+		else if (backup->backup_mode == BACKUP_MODE_ARCHIVE)
+		{
+			if (check)
 				elog(INFO, "will validate: \"%s\" archive log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
-			} else{
+			else
 				elog(INFO, "validate: \"%s\" archive log files by %s",
 						timestamp, (size_only ? "SIZE" : "CRC"));
-			}
 		}
 	}
 
-	if(!check){
+	if(!check)
+	{
 		if (HAVE_DATABASE(backup))
 		{
 			elog(DEBUG, "checking database files");
