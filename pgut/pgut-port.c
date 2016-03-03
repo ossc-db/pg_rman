@@ -117,6 +117,7 @@ readlink(const char *path, char *target, size_t size)
 			wpath += 4;
 			wlen -= 4;
 		}
+
 		r = WideCharToMultiByte(CP_ACP, 0, wpath, wlen, target, size, NULL, NULL);
 	}
 
@@ -138,9 +139,7 @@ pgut_flock(int fd, int operation)
 	DWORD	hi = 0;
 
 	if (operation & LOCK_UN)
-	{
 		ret = UnlockFileEx(handle, 0, lo, hi, NULL);
-	}
 	else
 	{
 		DWORD	flags = 0;
