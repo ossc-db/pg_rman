@@ -58,23 +58,19 @@ read_control_file()
 	FIN_CRC32(crc);
 
 	if (!EQ_CRC32(crc, ((ControlFileData *) buffer)->crc))
-	{
 		ereport(WARNING,
 			(errmsg("CRC mismatch"),
 			 errdetail("Calculated CRC checksum does not match value stored in file."),
 			 errhint("Either the file is corrupt or it has a different layout than this program "
 			"is expecting.  The results below are untrustworthy.")));
-	}
 
 	if (((ControlFileData *) buffer)->pg_control_version != PG_CONTROL_VERSION)
-	{
 		ereport(WARNING,
 			(errmsg("possible byte ordering mismatch"),
 			 errdetail("The byte ordering used to store the pg_control file might not match the one "
 				"used by this program."),
 			 errhint("The results below would be incorrect, and the PostgreSQL installation "
 				"would be incompatible with this data directory.")));
-	}
 
 	return buffer;
 }

@@ -76,17 +76,16 @@ delete_parent_dir(const char *path)
 	if ( rmdir(parent_dir_path) == -1 )
 	{
 		if (errno == ENOTEMPTY || errno == EEXIST)
-		{
 			elog(DEBUG, "the directory \"%s\" is not empty, skip deleting", parent_dir_path);
-		} else {
+		else
 			ereport(WARNING,
 				(errcode(ERROR_SYSTEM),
 				 errmsg("could not remove directory \"%s\" : %s", parent_dir_path,
 					strerror(errno))));
-		}
-	} else {
-		elog(DEBUG, "the directory \"%s\" is deleted", parent_dir_path);
 	}
+	else
+		elog(DEBUG, "the directory \"%s\" is deleted", parent_dir_path);
+
 	return;
 }
 
@@ -275,12 +274,14 @@ dir_list_file(parray *files, const char *root, const char *exclude[], bool omit_
 	    fileExists(path))
 	{
 		FILE *black_list_file = NULL;
+
 		black_list = parray_new();
 		black_list_file = fopen(path, "r");
 		if (black_list_file == NULL)
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
 				 errmsg("could not open black_list: %s", strerror(errno))));
+
 		while (fgets(buf, lengthof(buf), black_list_file) != NULL)
 		{
 			join_path_components(black_item, pgdata, buf);
@@ -457,13 +458,10 @@ dir_print_mkdirs_sh(FILE *out, const parray *files, const char *root)
 		pgFile *file = (pgFile *) parray_get(files, i);
 		if (S_ISDIR(file->mode))
 		{
-			if (strstr(file->path, root) == file->path) {
-				fprintf(out, "mkdir -m 700 -p %s\n", file->path + strlen(root)
-					+ 1);
-			}
-			else {
+			if (strstr(file->path, root) == file->path)
+				fprintf(out, "mkdir -m 700 -p %s\n", file->path + strlen(root) + 1);
+			else
 				fprintf(out, "mkdir -m 700 -p %s\n", file->path);
-			}
 		}
 	}
 
@@ -573,17 +571,15 @@ dir_read_file_list(const char *root, const char *file_txt)
 			path, &type, &write_size, &crc, &mode,
 			&tm.tm_year, &tm.tm_mon, &tm.tm_mday,
 			&tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 11)
-		{
 			ereport(ERROR,
 				(errcode(ERROR_CORRUPTED),
 				 errmsg("invalid format found in \"%s\"", file_txt)));
-		}
+
 		if (type != 'f' && type != 'F' && type != 'd' && type != 'l')
-		{
 			ereport(ERROR,
 				(errcode(ERROR_CORRUPTED),
 				 errmsg("invalid type '%c' found in \"%s\"", type, file_txt)));
-		}
+
 		tm.tm_isdst = -1;
 
 		file = (pgFile *) pgut_malloc(offsetof(pgFile, path) +
@@ -638,9 +634,8 @@ dir_copy_files(const char *from_root, const char *to_root)
 			if (verbose && !check)
 				printf(_("create directory \"%s\"\n"),
 					file->path + strlen(from_root) + 1);
-			if (!check) {
+			if (!check)
 				dir_create_dir(to_path, DIR_PERMISSION);
-			}
 			continue;
 		}
 		else if(S_ISREG(file->mode))

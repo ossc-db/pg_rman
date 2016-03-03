@@ -55,6 +55,7 @@ catalog_lock(void)
 		else
 		{
 			int errno_tmp = errno;
+
 			close(lock_fd);
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
@@ -382,7 +383,9 @@ pgBackupWriteResultSection(FILE *out, pgBackup *backup)
 		time2iso(timestamp, lengthof(timestamp), backup->end_time);
 		fprintf(out, "END_TIME='%s'\n", timestamp);
 	}
+
 	fprintf(out, "RECOVERY_XID=%u\n", backup->recovery_xid);
+
 	if (backup->recovery_time > 0)
 	{
 		time2iso(timestamp, lengthof(timestamp), backup->recovery_time);
@@ -474,9 +477,8 @@ catalog_read_ini(const char *path)
 		{ 0 }
 	};
 
-	if (access(path, F_OK) != 0){
+	if (access(path, F_OK) != 0)
 		return NULL;
-	}
 
 	backup = pgut_new(pgBackup);
 	catalog_init_config(backup);
@@ -580,13 +582,12 @@ parse_backup_mode(const char *value, int elevel)
 		return BACKUP_MODE_ARCHIVE;
 
 	if (elevel >= ERROR)
-	{
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
 			 errmsg("invalid backup-mode \"%s\"", value)));
-	} else {
+	else
 		elog(elevel, "invalid backup-mode \"%s\"", value);
-	}
+
 	return BACKUP_MODE_INVALID;
 }
 

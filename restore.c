@@ -105,20 +105,18 @@ do_restore(const char *target_time,
 			 errhint("Please stop PostgreSQL server before exectute restore.")));
 
 	rt = checkIfCreateRecoveryConf(target_time, target_xid, target_inclusive);
-	if(rt == NULL){
+	if(rt == NULL)
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
 			 errmsg("could not create recovery.conf"),
 			 errdetail("The specified options are invalid.")));
-	}
 
 	/* get list of backups. (index == 0) is the last backup */
 	backups = catalog_get_backup_list(NULL);
-	if(!backups){
+	if(!backups)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not get list of backup already taken")));
-	}
 
 	cur_tli = get_current_timeline();
 	elog(DEBUG, "the current timeline ID of database cluster is %d", cur_tli);
@@ -135,14 +133,19 @@ do_restore(const char *target_time,
 	{
 		target_tli = parse_target_timeline(target_tli_string, cur_tli, &target_tli_latest);
 		elog(INFO, "the specified target timeline ID is %d", target_tli);
-	} else {
+	}
+	else
+	{
 		elog(INFO, "the recovery target timeline ID is not given");
+
 		if (cur_tli != 0)
 		{
 			target_tli = cur_tli;
 			elog(INFO, "use timeline ID of current database cluster as recovery target: %d",
 				cur_tli);
-		} else {
+		} 
+		else
+		{
 			backup_tli = get_fullbackup_timeline(backups, rt);
 			target_tli = backup_tli;
 			elog(INFO, "use timeline ID of latest full backup as recovery target: %d",
@@ -215,9 +218,8 @@ base_backup_found:
 		int i;
 
 		if (verbose)
-		{
 			printf(_("----------------------------------------\n"));
-		}
+
 		elog(INFO, "clearing restore destination");
 		files = parray_new();
 		dir_list_file(files, pgdata, NULL, false, false);
@@ -401,13 +403,12 @@ restore_database(pgBackup *backup)
 	pgBackupValidate(backup, true, false, true);
 
 	if (backup->backup_mode == BACKUP_MODE_FULL)
-	{
 		elog(INFO, "restoring database files from the full mode backup \"%s\"",
 			timestamp);
-	} else if (backup->backup_mode == BACKUP_MODE_INCREMENTAL) {
+	else if (backup->backup_mode == BACKUP_MODE_INCREMENTAL)
 		elog(INFO, "restoring database files from the incremental mode backup \"%s\"",
 			timestamp);
-	}
+
 	/* make directories and symbolic links */
 	pgBackupGetPath(backup, path, lengthof(path), MKDIRS_SH_FILE);
 	if (!check)
@@ -751,9 +752,7 @@ backup_online_files(bool re_recovery)
 	parray *files;
 
 	if (verbose && !check)
-	{
 		printf(_("----------------------------------------\n"));
-	}
 	
 	elog(INFO, _("copying online WAL files and server log files"));
 
@@ -949,6 +948,7 @@ readTimeLineHistory(TimeLineID targetTLI)
 			if (!IsSpace(*ptr))
 				break;
 		}
+
 		if (*ptr == '\0' || *ptr == '#')
 			ereport(ERROR,
 				(errcode(ERROR_CORRUPTED),
@@ -995,7 +995,8 @@ satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt)
 	char recovery_target_timestamp[20];
 	time2iso(backup_timestamp, lengthof(backup_timestamp), backup->start_time);
 
-	if (rt->xid_specified){
+	if (rt->xid_specified)
+	{
 		if(backup->recovery_xid <= rt->recovery_target_xid)
 		{
 		ereport(DEBUG,
@@ -1004,11 +1005,13 @@ satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt)
 			 errdetail("The recovery target xid is %d, the recovery xid of the backup is %d",
 				rt->recovery_target_xid, backup->recovery_xid)));
 			return true;
-		} else {
-			return false;
 		}
+		else
+			return false;
 	}
-	if (rt->time_specified){
+
+	if (rt->time_specified)
+	{
 		if(backup->recovery_time <= rt->recovery_target_time)
 		{
 			time2iso(recovery_timestamp_of_backup, lengthof(recovery_timestamp_of_backup),
@@ -1022,9 +1025,9 @@ satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt)
 						"the recovery time of the backup is \"%s\"",
 					recovery_target_timestamp, recovery_timestamp_of_backup)));
 			return true;
-		} else {
-			return false;
 		}
+		else
+			return false;
 	}
 
 	return true;
@@ -1168,8 +1171,10 @@ checkIfCreateRecoveryConf(const char *target_time,
 	rt->recovery_target_xid  = 0;
 	rt->recovery_target_inclusive = false;
 
-	if(target_time){
+	if(target_time)
+	{
 		rt->time_specified = true;
+
 		if(parse_time(target_time, &dummy_time))
 			rt->recovery_target_time = dummy_time;
 		else
@@ -1177,8 +1182,11 @@ checkIfCreateRecoveryConf(const char *target_time,
 				(errcode(ERROR_ARGS),
 				 errmsg("could not create recovery.conf with %s", target_time)));
 	}
-	if(target_xid){
+
+	if(target_xid)
+	{
 		rt->xid_specified = true;
+
 		if(parse_uint32(target_xid, &dummy_xid))
 			rt->recovery_target_xid = dummy_xid;
 		else
@@ -1186,7 +1194,9 @@ checkIfCreateRecoveryConf(const char *target_time,
 				(errcode(ERROR_ARGS),
 				 errmsg("could not create recovery.conf with %s", target_xid)));
 	}
-	if(target_inclusive){
+
+	if(target_inclusive)
+	{
 		if(parse_bool(target_inclusive, &dummy_bool))
 			rt->recovery_target_inclusive = dummy_bool;
 		else
@@ -1272,14 +1282,9 @@ findNewestTimeLine(TimeLineID startTLI)
 	for (probeTLI = startTLI + 1;; probeTLI++)
 	{
 		if (existsTimeLineHistory(probeTLI))
-		{
 			newestTLI = probeTLI;       /* probeTLI exists */
-		}
-		else
-		{
-			/* doesn't exist, assume we're done */
-			break;
-		}
+		else	
+			break;		/* doesn't exist, assume we're done */
 	}
 
 	return newestTLI;
@@ -1308,15 +1313,10 @@ existsTimeLineHistory(TimeLineID probeTLI)
 		fclose(fd);
 		return true;
 	}
-	else
-	{
-		if (errno != ENOENT)
-		{
-			ereport(ERROR,
-				(errcode(ERROR_SYSTEM),
-				 errmsg("could not open file \"%s\": %s", path, strerror(errno))));
-		}
-	}
+	else if (errno != ENOENT)
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open file \"%s\": %s", path, strerror(errno))));
 
 	return false;
 }

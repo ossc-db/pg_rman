@@ -232,6 +232,7 @@ assign_option(pgut_option *opt, const char *optarg, pgut_optsrc src)
 				else
 				{
 					bool	value;
+
 					if (parse_bool(optarg, &value))
 					{
 						*(YesNo *) opt->var = (value ? YES : NO);
@@ -700,31 +701,29 @@ pgut_readopt(const char *path, pgut_option options[], int elevel)
 
 				if (key_equals(key, opt->lname))
 				{
-					if (opt->allowed == SOURCE_DEFAULT ||
-						opt->allowed > SOURCE_FILE)
+					if (opt->allowed == SOURCE_DEFAULT || opt->allowed > SOURCE_FILE)
+					{
 						if (elevel >= ERROR)
-						{
 							ereport(ERROR,
 								(errcode(elevel),
 								 errmsg("option %s cannot specified in file", opt->lname)));
-						} else {
+						else
 							elog(elevel, "option %s cannot specified in file", opt->lname);
-						}
+					}
 					else if (opt->source <= SOURCE_FILE)
 						assign_option(opt, value, SOURCE_FILE);
+
 					break;
 				}
 			}
 			if (!options[i].type)
 			{
 				if (elevel >= ERROR)
-				{
 					ereport(ERROR,
 						(errcode(elevel),
 						 errmsg("invalid option \"%s\"", key)));
-				} else {
+				else
 					elog(elevel, "invalid option \"%s\"", key);
-				}
 			}
 		}
 	}
@@ -1132,10 +1131,12 @@ pgut_wait(int num, PGconn *connections[], struct timeval *timeout)
 
 			if (connections[i] == NULL)
 				continue;
+
 			sock = PQsocket(connections[i]);
 			if (sock >= 0)
 			{
 				FD_SET(sock, &mask);
+
 				if (maxsock < sock)
 					maxsock = sock;
 			}
@@ -1324,9 +1325,11 @@ errmsg(const char *fmt, ...)
 		ok = appendStringInfoVA_c(&edata->msg, fmt, args);
 		va_end(args);
 	} while (!ok);
+
 	len = strlen(fmt);
 	if ( len > 2 && strcmp(fmt + len -2, ": ") == 0)
 		appendStringInfoString(&edata->msg, strerror(edata->save_errno));
+
 	trimStringBuffer(&edata->msg);
 
 	return 0;	/* return value does not matter. */
@@ -1345,6 +1348,7 @@ errdetail(const char *fmt, ...)
 		ok = appendStringInfoVA_c(&edata->detail, fmt, args);
 		va_end(args);
 	} while (!ok);
+
 	trimStringBuffer(&edata->detail);
 
 	return 0;	/* return value does not matter. */
@@ -1363,6 +1367,7 @@ errhint(const char *fmt, ...)
 		ok = appendStringInfoVA_c(&edata->hint, fmt, args);
 		va_end(args);
 	} while (!ok);
+
 	trimStringBuffer(&edata->hint);
 
 	return 0;	/* return value does not matter. */
@@ -1393,9 +1398,11 @@ elog(int elevel, const char *fmt, ...)
 		ok = appendStringInfoVA_c(&edata->msg, fmt, args);
 		va_end(args);
 	} while (!ok);
+
 	len = strlen(fmt);
 	if ( len > 2 && strcmp(fmt + len -2, ": ") == 0)
 		appendStringInfoString(&edata->msg, strerror(edata->save_errno));
+
 	trimStringBuffer(&edata->msg);
 
 	pgut_errfinish(true);
@@ -1520,9 +1527,7 @@ on_interrupt(void)
 	/* Send QueryCancel if we are processing a database query */
 	if (!in_cleanup && cancel_conn != NULL &&
 		PQcancel(cancel_conn, errbuf, sizeof(errbuf)))
-	{
 		elog(WARNING, "cancel request was sent");
-	}
 
 	errno = save_errno;			/* just in case the write changed it */
 }
@@ -1598,11 +1603,8 @@ exit_or_abort(int exitcode)
 		call_atexit_callbacks(true);
 		abort();
 	}
-	else
-	{
-		/* normal exit */
-		exit(exitcode);
-	}
+	else	
+		exit(exitcode);		/* normal exit */
 }
 
 void
@@ -1882,8 +1884,7 @@ init_cancel_handler(void)
 static BOOL WINAPI
 consoleHandler(DWORD dwCtrlType)
 {
-	if (dwCtrlType == CTRL_C_EVENT ||
-		dwCtrlType == CTRL_BREAK_EVENT)
+	if (dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_BREAK_EVENT)
 	{
 		EnterCriticalSection(&cancelConnLock);
 		on_interrupt();
