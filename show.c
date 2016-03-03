@@ -45,11 +45,10 @@ do_show(pgBackupRange *range, bool show_detail, bool show_all)
 		parray *backup_list;
 
 		backup_list = catalog_get_backup_list(range);
-		if (backup_list == NULL){
+		if (backup_list == NULL)
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
 				 errmsg("could not get list of backup already taken")));
-		}
 
 		if (!show_detail)
 			show_backup_list(stdout, backup_list, show_all);
@@ -236,21 +235,25 @@ show_detail_backup_list(FILE *out, parray *backup_list, bool show_all)
 		if (backup->end_time != (time_t) 0)
 			snprintf(duration, lengthof(duration), "%lum",
 				(backup->end_time - backup->start_time) / 60);
+
 	    pretty_size(backup->read_data_bytes, read_data_bytes_str,
 				lengthof(read_data_bytes_str));
+
 		if (HAVE_ARCLOG(backup))
 			pretty_size(backup->read_arclog_bytes, read_arclog_bytes_str,
 					lengthof(read_arclog_bytes_str));
+
 		if (backup->with_serverlog)
 			pretty_size(backup->read_srvlog_bytes, read_srvlog_bytes_str,
 					lengthof(read_srvlog_bytes_str));
+
 		pretty_size(backup->write_bytes, write_bytes_str,
 				lengthof(write_bytes_str));
-        if (backup->compress_data) {
+
+        if (backup->compress_data)
             is_compressed = "true";
-        } else {
+        else
             is_compressed = "false";
-        }
 
 		parent_tli = get_parent_tli(backup->tli);
 

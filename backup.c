@@ -86,9 +86,11 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	/* repack the options */
 	bool	smooth_checkpoint = bkupopt.smooth_checkpoint;
 
-	if (!HAVE_DATABASE(&current)) {
+	if (!HAVE_DATABASE(&current))
+	{
 		/* check if arclog backup. if arclog backup and no suitable full backup, */
-		if (HAVE_ARCLOG(&current)) {
+		if (HAVE_ARCLOG(&current))
+		{
 			pgBackup   *prev_backup;
 
 			/* find last completed database backup */
@@ -101,14 +103,14 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 						(errmsg("turn to take a full backup"),
 						 errdetail("There is no validated full backup with current timeline.")));
 					current.backup_mode = BACKUP_MODE_FULL;
-				} else {
+				}
+				else
 					ereport(ERROR,
 						(errcode(ERROR_SYSTEM),
 						errmsg("cannot take an incremental backup"),
 						errdetail("There is no validated full backup with current timeline."),
 						errhint("Please take a full backup and validate it before doing an archive backup. "
 							"Or use with --full-backup-on-error command line option.")));
-				}
 			}
 			else
 				return NULL;
@@ -129,14 +131,15 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	/* If backup_label does not exist in $PGDATA, stop taking backup */
 	snprintf(path, lengthof(path), "%s/backup_label", pgdata);
 	make_native_path(path);
-	if (!fileExists(path)) {
+	if (!fileExists(path))
 		has_backup_label = false;
-	}
+
 	snprintf(path, lengthof(path), "%s/recovery.conf", pgdata);
 	make_native_path(path);
-	if (fileExists(path)) {
+
+	if (fileExists(path))
 		has_recovery_conf = true;
-	}
+
 	if (!has_backup_label && !has_recovery_conf)
 	{
 		pg_stop_backup(NULL);
@@ -215,14 +218,14 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 					(errmsg("turn to take a full backup"),
 					 errdetail("There is no validated full backup with current timeline.")));
 				current.backup_mode = BACKUP_MODE_FULL;
-			} else {
+			}
+			else
 				ereport(ERROR,
 					(errcode(ERROR_SYSTEM),
 					 errmsg("cannot take an incremental backup"),
 					 errdetail("There is no validated full backup with current timeline."),
 					 errhint("Please take a full backup and validate it before doing an incremental backup. "
 						"Or use with --full-backup-on-error command line option.")));
-			}
 		}
 		else
 		{
@@ -482,11 +485,10 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 
 		/* backup files */
 		if (current.backup_mode == BACKUP_MODE_FULL)
-		{
 			elog(DEBUG, "taking full backup of database files");
-		} else if (current.backup_mode == BACKUP_MODE_INCREMENTAL) {
+		else if (current.backup_mode == BACKUP_MODE_INCREMENTAL)
 			elog(DEBUG, "taking incremental backup of database files");
-		}
+
 		pgBackupGetPath(&current, path, lengthof(path), DATABASE_DIR);
 		backup_files(pgdata, path, files, prev_files, lsn, current.compress_data, NULL);
 
@@ -877,15 +879,13 @@ do_backup(pgBackupOption bkupopt)
 	snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, result);
 
 	if ( strcmp(value, sysident_str) != 0)
-	{
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not start backup"),
 			 errdetail("system identifier of target database is different"
 				" from the one of initially configured database")));
-	} else {
+	else
 		elog(DEBUG, "the backup target database is the same as initial configured one.");
-	}
 
 	/* setup cleanup callback function */
 	in_backup = true;
@@ -938,15 +938,15 @@ do_backup(pgBackupOption bkupopt)
 				 errmsg("could not create backup directory")));
 		pgBackupWriteIni(&current);
 	}
+
 	elog(DEBUG, "destination directories of backup are initialized");
 
 	/* get list of backups already taken */
 	backup_list = catalog_get_backup_list(NULL);
-	if(!backup_list){
+	if(!backup_list)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not get list of backup already taken")));
-	}
 
 	/* set the error processing function for the backup process */
 	pgut_atexit_push(backup_cleanup, NULL);
@@ -1169,11 +1169,10 @@ confirm_block_size(const char *name, int blcksz)
 			 errmsg("could not get %s: %s", name, PQerrorMessage(connection))));
 	block_size = strtol(PQgetvalue(res, 0, 0), &endp, 10);
 	if (strcmp(name, "block_size") == 0)
-	{
 		elog(DEBUG, "block size is %d", block_size);
-	} else if (strcmp(name, "wal_block_size") == 0) {
+	else if (strcmp(name, "wal_block_size") == 0)
 		elog(DEBUG, "wal block size is %d", block_size);
-	}
+
 	PQclear(res);
 	if ((endp && *endp) || block_size != blcksz)
 		ereport(ERROR,
@@ -1243,7 +1242,8 @@ wait_for_archive(pgBackup *backup, const char *sql)
 	PQclear(res);
 
 	res = execute(TXID_CURRENT_SQL, 0, NULL);
-	if(backup != NULL){
+	if(backup != NULL)
+	{
 		get_xid(res, &backup->recovery_xid);
 		backup->recovery_time = time(NULL);
 	}
@@ -1440,7 +1440,7 @@ backup_files(const char *from_root,
 		pgFile *file = (pgFile *) parray_get(files, i);
 
 		/* If current time is rewinded, abort this backup. */
-		if(tv.tv_sec < file->mtime){
+		if(tv.tv_sec < file->mtime)
 			ereport(FATAL,
 				(errcode(ERROR_SYSTEM),
 				 errmsg("cannot take a backup"),
@@ -1450,7 +1450,6 @@ backup_files(const char *from_root,
 						"If this is a database file, please retry with the full backup mode.\n"
 						"If this is a server log or archived WAL file, change the timestamp.",
 									file->path)));
-		}
 
 		/* check for interrupt */
 		if (interrupted)
@@ -1502,9 +1501,10 @@ backup_files(const char *from_root,
 			char dirpath[MAXPGPATH];
 
 			join_path_components(dirpath, to_root, JoinPathEnd(file->path, from_root));
-			if (!check){
+
+			if (!check)
 				dir_create_dir(dirpath, DIR_PERMISSION);
-			}
+
 			if (verbose)
 				printf(_("directory\n"));
 		}
@@ -1671,16 +1671,16 @@ delete_old_files(const char *root,
 
 	/* delete files through the given conditions */
 	if (keep_files != KEEP_INFINITE && keep_days != KEEP_INFINITE)
-	{
 		elog(INFO, "start deleting old %s files from %s (keep files = %s, keep days = %s)",
 			target_file, target_path, files_str, days_str);
-	} else if (keep_files != KEEP_INFINITE) {
+	else if (keep_files != KEEP_INFINITE)
 		elog(INFO, "start deleting old %s files from %s (keep files = %s)",
 			target_file, target_path, files_str);
-	} else if (keep_days != KEEP_INFINITE) {
+	else if (keep_days != KEEP_INFINITE)
 		elog(INFO, "start deleting old %s files from %s (keep days = %s)",
 			target_file, target_path, days_str);
-	} else {
+	else
+	{
 		elog(DEBUG, "do not delete old %s files", target_file);
 		return;
 	}
