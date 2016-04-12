@@ -16,6 +16,7 @@
 
 #include "catalog/pg_control.h"
 #include "common/fe_memutils.h"
+#include "pg_rman_config.h"
 
 static void backup_online_files(bool re_recovery);
 static void restore_online_files(void);
@@ -178,7 +179,7 @@ do_restore(const char *target_time,
 			base_backup->status != BACKUP_STATUS_OK)
 			continue;
 
-#ifndef HAVE_LIBZ
+#ifndef RMAN_HAVE_LIBZ
 		/* Make sure we won't need decompression we haven't got */
 		if (base_backup->compress_data &&
 			(HAVE_DATABASE(base_backup) || HAVE_ARCLOG(base_backup)))

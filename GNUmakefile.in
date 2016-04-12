@@ -1,0 +1,77 @@
+#
+# pg_rman: Makefile
+#
+#  Portions Copyright (c) 2008-2016, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+#
+PROGRAM = pg_rman
+SRCS = \
+	backup.c \
+	catalog.c \
+	data.c \
+	delete.c \
+	dir.c \
+	init.c \
+	parray.c \
+	pg_rman.c \
+	restore.c \
+	show.c \
+	util.c \
+	validate.c \
+	xlog.c \
+	controlfile.c \
+	pgsql_src/pg_ctl.c \
+	pgut/pgut.c \
+	pgut/pgut-port.c
+OBJS = $(SRCS:.c=.o)
+# pg_crc.c and are copied from PostgreSQL source tree.
+
+# XXX for debug, add -g and disable optimization
+PG_CPPFLAGS = -I$(libpq_srcdir) -lm
+PG_LIBS = $(libpq_pgport)
+
+REGRESS = init option show delete purge backup backup_management restore restore_checksum backup_from_standby arc_srv_log_management
+
+PG_CONFIG = pg_config
+PGXS := $(shell $(PG_CONFIG) --pgxs)
+include $(PGXS)
+
+# remove dependency to libxml2 and libxslt
+LIBS := $(filter-out -lxml2, $(LIBS))
+LIBS := $(filter-out -lxslt, $(LIBS))
+
+$(OBJS): pg_rman.h pg_rman_config.h
+
+GNUmakefile: GNUmakefile.in config.status
+	./config.status $@
+
+distclean maintainer-clean:
+# Garbage from autoconf:
+	@rm -rf autom4te.cache config.cache config.log config.status GNUmakefile pg_rman_config.h.in pg_rman_config.h stamp-h
+
+# Remake pg_rman_config.h from pg_rman_config.h.in if the latter changed.
+# config.status will not change the timestamp on pg_rman_config.h if it
+# doesn't change, so as to avoid recompiling the entire tree
+# unnecessarily. Therefore we make config.status update a timestamp file
+# stamp-h every time it runs, so that we don't trigger this rule every time.
+# (We do trigger the null rule for stamp-h to pg_rman_config.h every time;
+# so it's important for that rule to be empty!)
+#
+# Of course you need to turn on dependency tracking to get any
+# dependencies on pg_rman_config.h.
+pg_rman_config.h: stamp-h ;
+
+stamp-h: pg_rman_config.h.in config.status
+	./config.status pg_rman_config.h
+
+# Use pg_rman's own configuration for zlib, if it turns out to be different
+# from PostgreSQL's.  (Note that @LIBS@ refers to the value that pg_rman's
+# configure output, which is currently arranged to check for zlib only)
+PGLIBZ := $(findstring -lz, $(LIBS))
+RMANLIBZ := $(findstring -lz, @LIBS@ )
+ifneq ($(PGLIBZ), $(RMANLIBZ))
+ifdef PGLIBZ
+LIBS := $(filter-out $(PGLIBZ), $(LIBS))
+else
+LIBS := $(LIBS) $(RMANLIBZ)
+endif
+endif
