@@ -25,3 +25,12 @@
 /regression.diffs
 /regression.out
 /results
+
+# Local excludes in root directory
+/GNUmakefile
+/config.cache
+/config.log
+/config.status
+/pg_rman_config.h.in
+/pg_rman_config.h
+/stamp-h

@@ -20,8 +20,9 @@
 #include "storage/bufpage.h"
 #include "storage/checksum.h"
 #include "storage/checksum_impl.h"
+#include "pg_rman_config.h"
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 #include <zlib.h>
 
 #define zlibOutSize 4096
@@ -234,7 +235,7 @@ backup_data_file(const char *from_root,
 	size_t				read_len;
 	int					errno_tmp;
 	pg_crc32c			crc;
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 	z_stream			z;
 	char				outbuf[zlibOutSize];
 #endif
@@ -277,7 +278,7 @@ backup_data_file(const char *from_root,
 			 errmsg("could not open backup file \"%s\": %s", to_path, strerror(errno_tmp))));
 	}
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 	if (compress)
 	{
 		z.zalloc = Z_NULL;
@@ -335,7 +336,7 @@ backup_data_file(const char *from_root,
 		upper_offset = header.hole_offset + header.hole_length;
 		upper_length = BLCKSZ - upper_offset;
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 		if (compress)
 		{
 			doDeflate(&z, sizeof(header), sizeof(outbuf), &header, outbuf, in,
@@ -402,7 +403,7 @@ backup_data_file(const char *from_root,
 			header.hole_offset = 0;
 			header.hole_length = 0;
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 			if (compress)
 				doDeflate(&z, sizeof(header), sizeof(outbuf), &header, outbuf,
 					in, out, &crc, &file->write_size, Z_NO_FLUSH);
@@ -426,7 +427,7 @@ backup_data_file(const char *from_root,
 		}
 
 		/* write odd size page image */
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 		if (compress)
 			doDeflate(&z, read_len, sizeof(outbuf), page.data, outbuf, in, out,
 				&crc, &file->write_size, Z_NO_FLUSH);
@@ -452,7 +453,7 @@ backup_data_file(const char *from_root,
 		file->read_size += read_len;
 	}
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 	if (compress)
 	{
 		if (file->read_size > 0)
@@ -532,7 +533,7 @@ restore_data_file(const char *from_root,
 	FILE			   *out;
 	BackupPageHeader	header;
 	BlockNumber			blknum;
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 	z_stream			z;
 	int					status;
 	char				inbuf[zlibInSize];
@@ -580,7 +581,7 @@ restore_data_file(const char *from_root,
 				to_path, strerror(errno_tmp))));
 	}
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 	if (compress)
 	{
 		z.zalloc = Z_NULL;
@@ -606,7 +607,7 @@ restore_data_file(const char *from_root,
 		int			upper_length;
 
 		/* read BackupPageHeader */
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 		if (compress)
 		{
 			status = doInflate(&z, sizeof(inbuf), sizeof(header), inbuf,
@@ -660,7 +661,7 @@ restore_data_file(const char *from_root,
 		/* read lower/upper into page.data and restore hole */
 		memset(page.data + header.hole_offset, 0, header.hole_length);
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 		if (compress)
 		{
 			if (verbose)
@@ -718,7 +719,7 @@ restore_data_file(const char *from_root,
 					blknum, file->path, strerror(errno))));
 	}
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 	if (compress && inflateEnd(&z) != Z_OK)
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
@@ -753,7 +754,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 	char		buf[8192];
 	struct stat	st;
 	pg_crc32c	crc;
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 	z_stream	z;
 	int			status;
 	char		outbuf[zlibOutSize];
@@ -809,7 +810,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 			 errmsg("could not execute stat \"%s\": %s", file->path, strerror(errno))));
 	}
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 	z.zalloc = Z_NULL;
 	z.zfree = Z_NULL;
 	z.opaque = Z_NULL;
@@ -847,7 +848,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 	/* copy content and calc CRC */
 	for (;;)
 	{
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 		if (mode == COMPRESSION)
 		{
 			if ((read_len = fread(buf, 1, sizeof(buf), in)) != sizeof(buf))
@@ -916,7 +917,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 	/* copy odd part. */
 	if (read_len > 0)
 	{
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 		if (mode == COMPRESSION)
 		{
 			doDeflate(&z, read_len, sizeof(outbuf), buf, outbuf, in, out, &crc,
@@ -945,7 +946,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		file->read_size += read_len;
 	}
 
-#ifdef HAVE_LIBZ
+#ifdef RMAN_HAVE_LIBZ
 	if (mode == COMPRESSION)
 	{
 		if (file->read_size > 0)

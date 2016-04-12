@@ -21,6 +21,7 @@
 #include "libpq/pqsignal.h"
 #include "catalog/pg_control.h"
 #include "pgut/pgut-port.h"
+#include "pg_rman_config.h"
 
 #define TIMEOUT_ARCHIVE		10		/* wait 10 sec until WAL archive complete */
 #define XLogSegOffsetBits	((uint32) log2(XLogSegSize))
@@ -841,7 +842,7 @@ do_backup(pgBackupOption bkupopt)
 			(errcode(ERROR_ARGS),
 			 errmsg("required parameter not specified: SRVLOG_PATH (-S, --srvlog-path)")));
 
-#ifndef HAVE_LIBZ
+#ifndef RMAN_HAVE_LIBZ
 	if (current.compress_data)
 	{
 		elog(WARNING, "compression is not available in this installation");

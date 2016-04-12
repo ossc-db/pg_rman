@@ -1,42 +1,36 @@
-#
-# pg_rman: Makefile
-#
-#  Portions Copyright (c) 2008-2016, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
-#
-PROGRAM = pg_rman
-SRCS = \
-	backup.c \
-	catalog.c \
-	data.c \
-	delete.c \
-	dir.c \
-	init.c \
-	parray.c \
-	pg_rman.c \
-	restore.c \
-	show.c \
-	util.c \
-	validate.c \
-	xlog.c \
-	controlfile.c \
-	pgsql_src/pg_ctl.c \
-	pgut/pgut.c \
-	pgut/pgut-port.c
-OBJS = $(SRCS:.c=.o)
-# pg_crc.c and are copied from PostgreSQL source tree.
+# The PostgreSQL make files exploit features of GNU make that other
+# makes do not have. Because it is a common mistake for users to try
+# to build Postgres with a different make, we have this make file
+# that, as a service, will look for a GNU make and invoke it, or show
+# an error message if none could be found.
 
-# XXX for debug, add -g and disable optimization
-PG_CPPFLAGS = -I$(libpq_srcdir) -lm
-PG_LIBS = $(libpq_pgport)
+# If the user were using GNU make now, this file would not get used
+# because GNU make uses a make file named "GNUmakefile" in preference
+# to "Makefile" if it exists. PostgreSQL (and pg_rman) is shipped with a
+# "GNUmakefile". If the user hasn't run the configure script yet, the
+# GNUmakefile won't exist yet, so we catch that case as well.
 
-REGRESS = init option show delete purge backup backup_management restore restore_checksum backup_from_standby arc_srv_log_management
 
-PG_CONFIG = pg_config
-PGXS := $(shell $(PG_CONFIG) --pgxs)
-include $(PGXS)
-
-# remove dependency to libxml2 and libxslt
-LIBS := $(filter-out -lxml2, $(LIBS))
-LIBS := $(filter-out -lxslt, $(LIBS))
-
-$(OBJS): pg_rman.h
+all install installcheck uninstall clean distclean:
+	@if [ ! -f GNUmakefile ] ; then \
+	   echo "You need to run the 'configure' program first. See the file"; \
+	   echo "'README.md' for installation instructions." ; \
+	   false ; \
+	 fi
+	@IFS=':' ; \
+	 for dir in $$PATH; do \
+	   for prog in gmake gnumake make; do \
+	     if [ -f $$dir/$$prog ] && ( $$dir/$$prog -f /dev/null --version 2>/dev/null | grep GNU >/dev/null 2>&1 ) ; then \
+	       GMAKE=$$dir/$$prog; \
+	       break 2; \
+	     fi; \
+	   done; \
+	 done; \
+	\
+	 if [ x"$${GMAKE+set}" = xset ]; then \
+	   echo "Using GNU make found at $${GMAKE}"; \
+	   $${GMAKE} $@ ; \
+	 else \
+	   echo "You must use GNU make to build pg_rman" ; \
+	   false; \
+	 fi

@@ -75,8 +75,9 @@ run the below commands.
 
 
 ````
+ $ ./configure
  $ make
- # make install
+ $ make install
 ````
 
 There are some libraries to be installed before.
@@ -84,6 +85,8 @@ There are some libraries to be installed before.
 * pam-devel(libpam-dev)
 * readline-devel(libedit-dev)
 * zlib-devel
+
+If, `zlib` is not present in your environment, pass `--without-zlib` option to `configure`
 
 
 How to run regression tests
@@ -93,8 +96,3 @@ Start PostgreSQL server and run the below command.
 ````
  $ make installcheck
 ````
-
-
-
-
-
