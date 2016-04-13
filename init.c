@@ -77,12 +77,9 @@ do_init(void)
 
 	/* get system identifier of the current database.*/
 	buffer = read_control_file();
-
-	if(buffer != NULL)
-	{
-		sysid = (uint64) ((ControlFileData *) buffer)->system_identifier;
-		free(buffer);
-	}
+	Assert(buffer != NULL);
+	sysid = (uint64) ((ControlFileData *) buffer)->system_identifier;
+	free(buffer);
 
 	/* register system identifier of target database. */
 	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);

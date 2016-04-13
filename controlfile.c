@@ -33,20 +33,13 @@ read_control_file()
 	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
 
 	if ((fd = open(ControlFilePath, O_RDONLY | PG_BINARY, 0)) == -1)
-	{
-		elog(WARNING, _("could not open pg_controldata file \"%s\": %s"),
+		elog(ERROR, _("could not open pg_controldata file \"%s\": %s"),
 		ControlFilePath, strerror(errno));
-		return NULL;
-	}
 
 	buffer = (char *) malloc(PG_CONTROL_SIZE);
-
 	if (read(fd, buffer, PG_CONTROL_SIZE) != PG_CONTROL_SIZE)
-	{
-		elog(WARNING, _("could not read pg_controldata file \"%s\": %s"),
+		elog(ERROR, _("could not read pg_controldata file \"%s\": %s"),
 		ControlFilePath, strerror(errno));
-		return NULL;
-	}
 
 	close(fd);
 
