@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #include "catalog/pg_control.h"
+#include "common/controldata_utils.h"
 #include "common/fe_memutils.h"
 
 static void backup_online_files(bool re_recovery);
@@ -1217,15 +1218,12 @@ static TimeLineID
 get_current_timeline(void)
 {
 	TimeLineID	result;
-	char		*buffer;
+	ControlFileData *controlFile;
 
-	buffer = read_control_file();
+	controlFile = get_controlfile(pgdata, "pg_rman");
+	result = controlFile->checkPointCopy.ThisTimeLineID;
+	pg_free(controlFile);
 
-	if(buffer != NULL)
-		result = (TimeLineID) ((ControlFileData *) buffer)->checkPointCopy.ThisTimeLineID;
-	else
-		return 0;
-	pg_free(buffer);
 	return result;
 }
 
@@ -1236,15 +1234,12 @@ static int
 get_data_checksum_version(void)
 {
 	int			result;
-	char		*buffer;
+	ControlFileData *controlFile;
 
-	buffer = read_control_file();
+	controlFile = get_controlfile(pgdata, "pg_rman");
+	result = controlFile->checkPointCopy.ThisTimeLineID;
+	pg_free(controlFile);
 
-	if(buffer != NULL)
-		result = (int) ((ControlFileData *) buffer)->data_checksum_version;
-	else
-		return -1;
-	pg_free(buffer);
 	return result;
 }
 

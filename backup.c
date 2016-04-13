@@ -20,6 +20,7 @@
 
 #include "libpq/pqsignal.h"
 #include "catalog/pg_control.h"
+#include "common/controldata_utils.h"
 #include "pgut/pgut-port.h"
 
 #define TIMEOUT_ARCHIVE		10		/* wait 10 sec until WAL archive complete */
@@ -807,7 +808,7 @@ do_backup(pgBackupOption bkupopt)
 	char   key[1024];
 	char   value[1024];
 	uint64 result;
-	char   *buffer;
+	ControlFileData *controlFile;
 	char   sysident_str[32];
 
 	/* repack the necesary options */
@@ -872,10 +873,9 @@ do_backup(pgBackupOption bkupopt)
 	fclose(fp);
 
 	/* get system identifier of the current database.*/
-	buffer = read_control_file();
-	if(buffer != NULL)
-		result = (uint64) ((ControlFileData *) buffer)->system_identifier;
-	pg_free(buffer);
+	controlFile = get_controlfile(pgdata, "pg_rman");
+	result = controlFile->system_identifier;
+	pg_free(controlFile);
 	elog(DEBUG, "the system identifier of current target database : %ld", result);
 	snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, result);
 

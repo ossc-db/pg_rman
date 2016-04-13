@@ -10,6 +10,7 @@
 #include "pg_rman.h"
 
 #include "catalog/pg_control.h"
+#include "common/controldata_utils.h"
 
 #include <unistd.h>
 #include <dirent.h>
@@ -39,7 +40,7 @@ do_init(void)
 	struct dirent **dp;
 	int results;
 	uint64      sysid;
-	char        *buffer;
+	ControlFileData *controlFile;
 
 	if (access(backup_path, F_OK) == 0)
 	{
@@ -76,11 +77,9 @@ do_init(void)
 	}
 
 	/* get system identifier of the current database.*/
-	buffer = read_control_file();
-
-	if(buffer != NULL)
-		sysid = (uint64) ((ControlFileData *) buffer)->system_identifier;
-	pg_free(buffer);
+	controlFile = get_controlfile(pgdata, "pg_rman");
+	sysid = controlFile->system_identifier;
+	pg_free(controlFile);
 
 	/* register system identifier of target database. */
 	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);

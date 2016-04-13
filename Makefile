@@ -18,7 +18,6 @@ SRCS = \
 	util.c \
 	validate.c \
 	xlog.c \
-	controlfile.c \
 	pgsql_src/pg_ctl.c \
 	pgut/pgut.c \
 	pgut/pgut-port.c

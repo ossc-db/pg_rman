@@ -327,9 +327,6 @@ extern void remove_not_digit(char *buf, size_t len, const char *str);
 /* in pgsql_src/pg_ctl.c */
 extern bool is_pg_running(void);
 
-/* In pg_ctl.c */
-extern char *read_control_file(void);
-
 /*
  * Set of macros for CRC calculations.
  */
