@@ -10,7 +10,7 @@ before_install:
   - sudo apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::="--force-confnew" install postgresql-$PGVERSION postgresql-server-dev-$PGVERSION postgresql-contrib-$PGVERSION
   - sudo apt-cache policy libpq5
   - sudo apt-cache policy libpq-dev
-  - if [ $PGVERSION = 9.1 ] ; then sudo apt-get -y --force-yes install libpq5=9.1.20-1.pgdg12.4+1 libpq-dev=9.1.20-1.pgdg12.4+1 ; fi
+  - if [ $PGVERSION = 9.1 ] ; then sudo apt-get -y --force-yes install libpq5=9.1.21-1.pgdg12.4+1 libpq-dev=9.1.21-1.pgdg12.4+1 ; fi
   - if [ $PGVERSION = 9.0 ] ; then sudo apt-get -y --force-yes install libpq5=9.0.23-1.pgdg12.4+1 libpq-dev=9.0.23-1.pgdg12.4+1 ; fi
   - if [ $PGVERSION = 8.4 ] ; then sudo apt-get -y --force-yes install libpq5=8.4.22-1.pgdg12.4+1 libpq-dev=8.4.22-1.pgdg12.4+1 ; fi
   - sudo service postgresql stop
