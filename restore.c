@@ -1220,12 +1220,10 @@ get_current_timeline(void)
 	char		*buffer;
 
 	buffer = read_control_file();
-
-	if(buffer != NULL)
-		result = (TimeLineID) ((ControlFileData *) buffer)->checkPointCopy.ThisTimeLineID;
-	else
-		return 0;
+	Assert(buffer != NULL);
+	result = (TimeLineID) ((ControlFileData *) buffer)->checkPointCopy.ThisTimeLineID;
 	pg_free(buffer);
+
 	return result;
 }
 
@@ -1239,12 +1237,10 @@ get_data_checksum_version(void)
 	char		*buffer;
 
 	buffer = read_control_file();
-
-	if(buffer != NULL)
-		result = (int) ((ControlFileData *) buffer)->data_checksum_version;
-	else
-		return -1;
+	Assert(buffer != NULL);
+	result = (int) ((ControlFileData *) buffer)->data_checksum_version;
 	pg_free(buffer);
+
 	return result;
 }
 

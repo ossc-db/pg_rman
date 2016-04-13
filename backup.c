@@ -873,8 +873,8 @@ do_backup(pgBackupOption bkupopt)
 
 	/* get system identifier of the current database.*/
 	buffer = read_control_file();
-	if(buffer != NULL)
-		result = (uint64) ((ControlFileData *) buffer)->system_identifier;
+	Assert(buffer != NULL);
+	result = (uint64) ((ControlFileData *) buffer)->system_identifier;
 	pg_free(buffer);
 	elog(DEBUG, "the system identifier of current target database : %ld", result);
 	snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, result);
