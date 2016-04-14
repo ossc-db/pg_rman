@@ -845,7 +845,9 @@ do_backup(pgBackupOption bkupopt)
 #ifndef HAVE_LIBZ
 	if (current.compress_data)
 	{
-		elog(WARNING, "compression is not available in this installation");
+		ereport(WARNING,
+			(errmsg("this pg_rman build does not support compression"),
+			 errhint("Please build PostgreSQL with zlib to use compression.")));
 		current.compress_data = false;
 	}
 #endif
