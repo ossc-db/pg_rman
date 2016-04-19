@@ -175,6 +175,10 @@ catalog_get_backup_list(const pgBackupRange *range)
 		if (strcmp(date_ent->d_name, RESTORE_WORK_DIR) == 0)
 			continue;
 
+		/* skip timeline_history directory */
+		if (strcmp(date_ent->d_name, TIMELINE_HISTORY_DIR) == 0)
+			continue;
+
 		/* If the date is out of range, skip it. */
 		if (pgBackupRangeIsValid(range) &&
 				(strcmp(begin_date, date_ent->d_name) > 0 ||
