@@ -27,7 +27,6 @@ do_delete(pgBackupRange *range, bool force)
 	bool	found_boundary_to_keep;
 	char 	backup_timestamp[20];
 	char 	given_timestamp[20];
-	char	*backup_mode;
 
 	/* DATE are always required */
 	if (!pgBackupRangeIsValid(range))
@@ -69,41 +68,37 @@ do_delete(pgBackupRange *range, bool force)
 		 */
 		if (backup->start_time > range->begin)
 			continue;
-		else
+
+		if (!force && !found_boundary_to_keep &&
+			backup->status == BACKUP_STATUS_OK)
 		{
-			if (!force && !found_boundary_to_keep)
+			/* Check whether this is the first validate full backup before the specified DATE */
+			if (backup->backup_mode >= BACKUP_MODE_FULL)
 			{
-				/* Check whether this is the first validate full backup before the specified DATE */
-				if (backup->backup_mode >= BACKUP_MODE_FULL &&
-					backup->status == BACKUP_STATUS_OK)
-				{
-					ereport(WARNING,
-						(errmsg("cannot delete backup with start time \"%s\"", backup_timestamp),
-						 errdetail("This is the latest full backup necessary for successful recovery.")));
-					found_boundary_to_keep = true;
-				}
-				else
-				{
-					backup_mode = (backup->backup_mode == BACKUP_MODE_INCREMENTAL) ? "incremental" : "archive";
-					ereport(WARNING,
-						(errmsg("cannot delete backup with start time \"%s\"", backup_timestamp),
-						errdetail("This is the %s backup necessary"
-								" for successful recovery.", backup_mode)));
-				}
-
-				/* keep this backup */
-				continue;
+				ereport(WARNING,
+					(errmsg("cannot delete backup with start time \"%s\"", backup_timestamp),
+					 errdetail("This is the latest full backup necessary for successful recovery.")));
+				found_boundary_to_keep = true;
 			}
-
-			/* check for interrupt */
-			if (interrupted)
-				ereport(FATAL,
-					(errcode(ERROR_INTERRUPTED),
-					 errmsg("interrupted during delete backup")));
-
-			/* Do actual deletion */
-			pgBackupDeleteFiles(backup);
+			else
+				ereport(WARNING,
+					(errmsg("cannot delete backup with start time \"%s\"", backup_timestamp),
+					errdetail("This is the %s backup necessary for successful"
+							  " recovery.",
+							  backup->backup_mode == BACKUP_MODE_ARCHIVE
+										? "archive" : "incremental")));
+			/* keep this backup */
+			continue;
 		}
+
+		/* check for interrupt */
+		if (interrupted)
+			ereport(FATAL,
+				(errcode(ERROR_INTERRUPTED),
+				 errmsg("interrupted during delete backup")));
+
+		/* Do actual deletion */
+		pgBackupDeleteFiles(backup);
 	}
 
 	/* release catalog lock */
