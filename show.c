@@ -182,8 +182,13 @@ show_backup_list(FILE *out, parray *backup_list, bool show_all)
 
 		backup = parray_get(backup_list, i);
 
-		/* skip deleted backup */
-		if (backup->status == BACKUP_STATUS_DELETED && !show_all)
+		/*
+		 * Skip deleted backup, unless --show-all has been specified.
+		 *
+		 * Just ignore invalid backups.
+		 */
+		if ((backup->status == BACKUP_STATUS_DELETED && !show_all) ||
+			backup->status == BACKUP_STATUS_INVALID)
 			continue;
 
 		time2iso(timestamp, lengthof(timestamp), backup->start_time);
