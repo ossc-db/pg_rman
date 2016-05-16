@@ -34,7 +34,7 @@ static parray	*cleanup_list;		/* list of command to execute at error processing 
  */
 static void backup_cleanup(bool fatal, void *userdata);
 static void delete_old_files(const char *root, parray *files, int keep_files,
-							 int keep_days, int server_version, bool is_arclog);
+							 int keep_days, bool is_arclog);
 static void backup_files(const char *from_root, const char *to_root,
 	parray *files, parray *prev_files, const XLogRecPtr *lsn, bool compress, const char *prefix);
 static parray *do_backup_database(parray *backup_list, pgBackupOption bkupopt);
@@ -800,7 +800,6 @@ do_backup(pgBackupOption bkupopt)
 	parray *files_database;
 	parray *files_arclog;
 	parray *files_srvlog;
-	int    server_version;
 	int    ret;
 	char   path[MAXPGPATH];
 	FILE   *fp;
@@ -851,9 +850,6 @@ do_backup(pgBackupOption bkupopt)
 		current.compress_data = false;
 	}
 #endif
-
-	/* confirm data block size and xlog block size are compatible */
-	server_version = get_server_version();
 
 	/* get system identifier of backup configuration */
 	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);
@@ -990,10 +986,10 @@ do_backup(pgBackupOption bkupopt)
 	 */
 	if (HAVE_ARCLOG(&current))
 		delete_old_files(arclog_path, files_arclog, keep_arclog_files,
-			keep_arclog_days, server_version, true);
+			keep_arclog_days, true);
 	if (current.with_serverlog)
 		delete_old_files(srvlog_path, files_srvlog, keep_srvlog_files,
-			keep_srvlog_days, server_version, false);
+			keep_srvlog_days, false);
 
 	/* Delete old backup files after all backup operation. */
 	pgBackupDelete(keep_data_generations, keep_data_days);
@@ -1192,7 +1188,6 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 	PGresult	   *res;
 	const char	   *params[2];
 	int				server_version;
-
 	params[0] = label;
 
 	elog(DEBUG, "executing pg_start_backup()");
@@ -1640,7 +1635,6 @@ delete_old_files(const char *root,
 				 parray *files,
 				 int keep_files,
 				 int keep_days,
-				 int server_version,
 				 bool is_arclog)
 {
 	int		i;
@@ -1708,7 +1702,7 @@ delete_old_files(const char *root,
 
 		elog(DEBUG, "checking \"%s\"", file->path);
 		/* Delete completed WALs only. */
-		if (is_arclog && !xlog_is_complete_wal(file, server_version))
+		if (is_arclog && !xlog_is_complete_wal(file))
 		{
 			elog(DEBUG, "this is not complete WAL: \"%s\"", file->path);
 			continue;
