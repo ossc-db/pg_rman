@@ -42,10 +42,11 @@ typedef union XLogPage
  * based on ValidXLOGHeader() in src/backend/access/transam/xlog.c.
  */
 bool
-xlog_is_complete_wal(const pgFile *file, int server_version)
+xlog_is_complete_wal(const pgFile *file)
 {
 	FILE		   *fp;
 	XLogPage		page;
+	int				server_version = get_server_version();
 
 	fp = fopen(file->path, "r");
 	if (!fp)
