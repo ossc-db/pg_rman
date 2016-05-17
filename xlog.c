@@ -38,7 +38,6 @@ xlog_is_complete_wal(const pgFile *file)
 {
 	FILE		   *fp;
 	XLogPage		page;
-	int				server_version = get_server_version();
 
 	fp = fopen(file->path, "r");
 	if (!fp)
@@ -50,7 +49,7 @@ xlog_is_complete_wal(const pgFile *file)
 	}
 	fclose(fp);
 
-	/* check header */
+	/* check header (assumes PG version >= 8.4) */
 	if (page.header.xlp_magic != XLOG_PAGE_MAGIC)
 		return false;
 	if ((page.header.xlp_info & ~XLP_ALL_FLAGS) != 0)
@@ -59,7 +58,7 @@ xlog_is_complete_wal(const pgFile *file)
 		return false;
 	if (page.lheader.xlp_seg_size != XLogSegSize)
 		return false;
-	if (server_version >= 80300 && page.lheader.xlp_xlog_blcksz != XLOG_BLCKSZ)
+	if (page.lheader.xlp_xlog_blcksz != XLOG_BLCKSZ)
 		return false;
 
 	/*
