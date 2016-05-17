@@ -66,6 +66,7 @@ static void snapshot_cleanup(bool fatal, void *userdata);
 static void add_files(parray *files, const char *root, bool add_root, bool is_pgdata);
 static int strCompare(const void *str1, const void *str2);
 static void create_file_list(parray *files, const char *root, const char *prefix, bool is_append);
+static void check_server_version(void);
 
 /*
  * Take a backup of database.
@@ -86,6 +87,8 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 
 	/* repack the options */
 	bool	smooth_checkpoint = bkupopt.smooth_checkpoint;
+
+	check_server_version();
 
 	if (!HAVE_DATABASE(&current))
 	{
@@ -1112,23 +1115,17 @@ make_backup_label(parray *backup_list, bool is_compress)
 /*
  * get server version and confirm block sizes.
  */
-int
-get_server_version(void)
+static void
+check_server_version(void)
 {
-	static int	server_version = 0;
-	bool		my_conn;
+	int		server_version;
 
-	/* return cached server version */
-	if (server_version > 0)
-		return server_version;
-
-	my_conn = (connection == NULL);
-
-	if (my_conn)
+	if (connection == NULL)
 		reconnect();
 
 	/* confirm server version */
 	elog(DEBUG, "checking PostgreSQL server version");
+
 	server_version = PQserverVersion(connection);
 	if (server_version < 80400)
 		ereport(ERROR,
@@ -1137,6 +1134,7 @@ get_server_version(void)
 				server_version / 10000,
 				(server_version / 100) % 100,
 				server_version % 100)));
+
 	elog(DEBUG, "server version is %d.%d.%d",
 				server_version / 10000,
 				(server_version / 100) % 100,
@@ -1144,13 +1142,9 @@ get_server_version(void)
 
 	/* confirm block_size (BLCKSZ) and wal_block_size (XLOG_BLCKSZ) */
 	confirm_block_size("block_size", BLCKSZ);
-	if (server_version >= 80400)
-		confirm_block_size("wal_block_size", XLOG_BLCKSZ);
+	confirm_block_size("wal_block_size", XLOG_BLCKSZ);
 
-	if (my_conn)
-		disconnect();
-
-	return server_version;
+	disconnect();
 }
 
 static void
@@ -1187,25 +1181,17 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 {
 	PGresult	   *res;
 	const char	   *params[2];
-	int				server_version;
 	params[0] = label;
 
 	elog(DEBUG, "executing pg_start_backup()");
 	reconnect();
-	server_version = get_server_version();
-	if (server_version >= 80400)
-	{
-		/* 2nd argument is 'fast'*/
-		params[1] = smooth ? "false" : "true";
-		res = execute("SELECT * from pg_xlogfile_name_offset(pg_start_backup($1, $2))", 2, params);
-	}
-	else
-	{
-		/* v8.3 always uses smooth checkpoint */
-		if (!smooth && server_version >= 80300)
-			command("CHECKPOINT", 0, NULL);
-		res = execute("SELECT * from pg_xlogfile_name_offset(pg_start_backup($1))", 1, params);
-	}
+
+	/* Assumes PG version >= 8.4 */
+
+	/* 2nd argument is 'fast' (IOW, !smooth) */
+	params[1] = smooth ? "false" : "true";
+	res = execute("SELECT * from pg_xlogfile_name_offset(pg_start_backup($1, $2))", 2, params);
+
 	if (backup != NULL)
 		get_lsn(res, &backup->tli, &backup->start_lsn);
 		
