@@ -82,8 +82,6 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	char		label[1024];
 	XLogRecPtr *lsn = NULL;
 	char		prev_file_txt[MAXPGPATH];	/* path of the previous backup list file */
-	bool		has_backup_label  = true;	/* flag if backup_label is there  */
-	bool		has_recovery_conf = false;	/* flag if recovery.conf is there */
 
 	/* repack the options */
 	bool	smooth_checkpoint = bkupopt.smooth_checkpoint;
@@ -132,43 +130,27 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	strncat(label, " with pg_rman", lengthof(label));
 	pg_start_backup(label, smooth_checkpoint, &current);
 
-	/* If backup_label does not exist in $PGDATA, stop taking backup */
-	snprintf(path, lengthof(path), "%s/backup_label", pgdata);
-	make_native_path(path);
-	if (!fileExists(path))
-		has_backup_label = false;
+	/* Expect to see backup_label in $PGDATA, unless backup from standby. */
+	if (!current.is_from_standby)
+	{
+		snprintf(path, lengthof(path), "%s/backup_label", pgdata);
+		make_native_path(path);
+		if (!fileExists(path))
+		{
+			pg_stop_backup(NULL);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("backup_label does not exist in $PGDATA")));
+		}
+	}
 
-	snprintf(path, lengthof(path), "%s/recovery.conf", pgdata);
-	make_native_path(path);
-
-	if (fileExists(path))
-		has_recovery_conf = true;
-
-	if (!has_backup_label && !has_recovery_conf)
+	/* Execute restartpoint on standby once replay reaches the backup LSN */
+	if (current.is_from_standby && !execute_restartpoint(bkupopt, &current))
 	{
 		pg_stop_backup(NULL);
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
-			 errmsg("backup_label does not exist in $PGDATA")));
-	}
-	else if (has_recovery_conf)
-	{
-
-		if (!bkupopt.standby_host || !bkupopt.standby_port)
-		{
-			pg_stop_backup(NULL);
-			ereport(ERROR,
-				(errcode(ERROR_SYSTEM),
-				 errmsg("cannot specify standby host or port")));
-		}
-		if (!execute_restartpoint(bkupopt, &current))
-		{
-			pg_stop_backup(NULL);
-			ereport(ERROR,
-				(errcode(ERROR_SYSTEM),
-				 errmsg("could not execute restartpoint")));
-		}
-		current.is_from_standby = true;
+			 errmsg("could not execute restartpoint")));
 	}
 
 	/*
@@ -556,7 +538,11 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 	while (1)
 	{
 		uint32 xlogid, xrecoff;
-		/* waiting for standby's location to be LSN by pg_start_backup */
+
+		/*
+		 * Wait for standby's location to be the LSN returned by
+		 * pg_start_backup()
+		 */
 		res = execute("SELECT * FROM pg_last_xlog_replay_location()", 0, NULL);
 		sscanf(PQgetvalue(res, 0, 0), "%X/%X", &xlogid, &xrecoff);
 		PQclear(res);
@@ -569,6 +555,7 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 		/* ex: 1, 2, 4, 8, 16, 32, 60, 60, 60...	*/
 		sleep_time = (sleep_time < 32) ? sleep_time * 2 : 60;
 	}
+
 	command("CHECKPOINT", 0, NULL);
 	disconnect();
 	pgut_set_host(tmp_host);
@@ -844,6 +831,24 @@ do_backup(pgBackupOption bkupopt)
 			(errcode(ERROR_ARGS),
 			 errmsg("required parameter not specified: SRVLOG_PATH (-S, --srvlog-path)")));
 
+	/*
+	 * If we are taking backup from standby (ie, $PGDATA has recovery.conf),
+	 * check required parameters (ie, standby connection info).
+	 */
+	snprintf(path, lengthof(path), "%s/recovery.conf", pgdata);
+	make_native_path(path);
+	if (fileExists(path))
+	{
+		if (!bkupopt.standby_host || !bkupopt.standby_port)
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("please specify both standby host and port")));
+
+		current.is_from_standby = true;
+	}
+	else
+		current.is_from_standby = false;
+
 #ifndef HAVE_LIBZ
 	if (current.compress_data)
 	{
@@ -929,7 +934,6 @@ do_backup(pgBackupOption bkupopt)
 	current.wal_block_size = XLOG_BLCKSZ;
 	current.recovery_xid = 0;
 	current.recovery_time = (time_t) 0;
-	current.is_from_standby = false;
 
 	/* create backup directory and backup.ini */
 	if (!check)
