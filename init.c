@@ -52,6 +52,11 @@ do_init(void)
 				 errmsg("backup catalog already exist and it's not empty")));
 	}
 
+	if (pgdata == NULL)
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("required parameter not specified: PGDATA (-D, --pgdata)")));
+
 	/* create backup catalog root directory */
 	dir_create_dir(backup_path, DIR_PERMISSION);
 
