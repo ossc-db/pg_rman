@@ -894,9 +894,6 @@ do_backup(pgBackupOption bkupopt)
 	else
 		elog(DEBUG, "the backup target database is the same as initial configured one.");
 
-	/* setup cleanup callback function */
-	in_backup = true;
-
 	/* show configuration actually used */
 	if (verbose)
 	{
@@ -957,6 +954,12 @@ do_backup(pgBackupOption bkupopt)
 	/* set the error processing function for the backup process */
 	pgut_atexit_push(backup_cleanup, NULL);
 
+	/*
+	 * Signal for backup_cleanup() that there may actually be some cleanup
+	 * for it to do from this point on.
+	 */
+	in_backup = true;
+
 	/* backup data */
 	files_database = do_backup_database(backup_list, bkupopt);
 
@@ -965,6 +968,7 @@ do_backup(pgBackupOption bkupopt)
 
 	/* backup serverlog */
 	files_srvlog = do_backup_srvlog(backup_list);
+
 	pgut_atexit_pop(backup_cleanup, NULL);
 	
 	/* update backup status to DONE */
