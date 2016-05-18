@@ -40,11 +40,9 @@ static void backup_files(const char *from_root, const char *to_root,
 static parray *do_backup_database(parray *backup_list, pgBackupOption bkupopt);
 static parray *do_backup_arclog(parray *backup_list);
 static parray *do_backup_srvlog(parray *backup_list);
-static void remove_stopinfo_from_backup_label(char *arclog_path, char *dest_path, pgFile *current_arc_file, bool is_compress);
-static void make_backup_label(parray *backup_list, bool is_compress);
 static void confirm_block_size(const char *name, int blcksz);
 static void pg_start_backup(const char *label, bool smooth, pgBackup *backup);
-static void pg_stop_backup(pgBackup *backup);
+static parray *pg_stop_backup(pgBackup *backup);
 static void pg_switch_xlog(pgBackup *backup);
 static void get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn);
 static void get_xid(PGresult *res, uint32 *xid);
@@ -67,6 +65,7 @@ static void add_files(parray *files, const char *root, bool add_root, bool is_pg
 static int strCompare(const void *str1, const void *str2);
 static void create_file_list(parray *files, const char *root, const char *prefix, bool is_append);
 static void check_server_version(void);
+static pgFile *write_file_to_backup(pgBackup *backup, const char *buf, const char *file_name);
 
 /*
  * Take a backup of database.
@@ -130,24 +129,11 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	strncat(label, " with pg_rman", lengthof(label));
 	pg_start_backup(label, smooth_checkpoint, &current);
 
-	/* Expect to see backup_label in $PGDATA, unless backup from standby. */
-	if (!current.is_from_standby)
-	{
-		snprintf(path, lengthof(path), "%s/backup_label", pgdata);
-		make_native_path(path);
-		if (!fileExists(path))
-		{
-			pg_stop_backup(NULL);
-			ereport(ERROR,
-				(errcode(ERROR_SYSTEM),
-				 errmsg("backup_label does not exist in $PGDATA")));
-		}
-	}
-
 	/* Execute restartpoint on standby once replay reaches the backup LSN */
 	if (current.is_from_standby && !execute_restartpoint(bkupopt, &current))
 	{
-		pg_stop_backup(NULL);
+		/* Disconnecting automatically aborts a non-exclusive backup */
+		disconnect();
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not execute restartpoint")));
@@ -243,11 +229,13 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		parray		*tblspc_list;	/* list of name of TABLESPACE backup from snapshot */
 		parray		*tblspcmp_list;	/* list of mounted directory of TABLESPACE in snapshot volume */
 		PGresult	*tblspc_res;	/* contain spcname and oid in TABLESPACE */
+		parray		*stop_backup_files;	/* list of files that pg_stop_backup() wrote */
 
 		/* if backup is from standby, snapshot backup is unsupported	*/
 		if (current.is_from_standby)
 		{
-			pg_stop_backup(NULL);
+			/* Disconnecting automatically aborts a non-exclusive backup */
+			disconnect();
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
 				 errmsg("cannot take a backup"),
@@ -296,10 +284,9 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		 * TABLESPACE name and oid is obtained by inquiring of the database.
 		 */
 		
-		reconnect();
+		Assert(connection != NULL);
 		tblspc_res = execute("SELECT spcname, oid FROM pg_tablespace WHERE "
 			"spcname NOT IN ('pg_default', 'pg_global') ORDER BY spcname ASC", 0, NULL);
-		disconnect();
 		for (i = 0; i < PQntuples(tblspc_res); i++)
 		{
 			char *name = PQgetvalue(tblspc_res, i, 0);
@@ -335,8 +322,12 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		pgBackupGetPath(&current, path, lengthof(path), DATABASE_DIR);
 		backup_files(pgdata, path, files, prev_files, lsn, current.compress_data, NULL);
 
-		/* notify end of backup */
-		pg_stop_backup(&current);
+		/*
+		 * Notify end of backup and write backup_label and tablespace_map
+		 * files to backup destination directory.
+		 */
+		stop_backup_files = pg_stop_backup(&current);
+		files = parray_concat(stop_backup_files, files);
 
 		/* create file list of non-snapshot objects */
 		create_file_list(files, pgdata, NULL, false);
@@ -466,6 +457,8 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	 */
 	else
 	{
+		parray		*stop_backup_files;	/* list of files that pg_stop_backup() wrote */
+
 		/* list files with the logical path. omit $PGDATA */
 		add_files(files, pgdata, false, true);
 
@@ -478,13 +471,12 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		pgBackupGetPath(&current, path, lengthof(path), DATABASE_DIR);
 		backup_files(pgdata, path, files, prev_files, lsn, current.compress_data, NULL);
 
-		/* notify end of backup */
-		pg_stop_backup(&current);
-
-		/* if backup is from standby, making backup_label from	*/
-		/* backup.history file.					*/
-		if (current.is_from_standby)
-			make_backup_label(files, current.compress_data);
+		/*
+		 * Notify end of backup and write backup_label and tablespace_map
+		 * files to backup destination directory.
+		 */
+		stop_backup_files = pg_stop_backup(&current);
+		files = parray_concat(stop_backup_files, files);
 
 		/* create file list */
 		create_file_list(files, pgdata, NULL, false);
@@ -519,19 +511,14 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 	PGresult	*res;
 	XLogRecPtr	replayed_lsn;
 	int	sleep_time = 1;
-	const char *tmp_host;
-	const char *tmp_port;
 
-	tmp_host = pgut_get_host();
-	tmp_port = pgut_get_port();
 	pgut_set_host(bkupopt.standby_host);
 	pgut_set_port(bkupopt.standby_port);
-	sby_conn = reconnect();
+	sby_conn = save_connection();
 
 	if (!sby_conn)
 	{
-		pgut_set_host(tmp_host);
-		pgut_set_port(tmp_port);
+		restore_saved_connection();
 		return false;
 	}
 
@@ -557,9 +544,12 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 	}
 
 	command("CHECKPOINT", 0, NULL);
-	disconnect();
-	pgut_set_host(tmp_host);
-	pgut_set_port(tmp_port);
+
+	/*
+	 * Done sending commands to standby, restore our connection to primary.
+	 */
+	restore_saved_connection();
+
 	return true;
 }
 
@@ -1034,92 +1024,6 @@ do_backup(pgBackupOption bkupopt)
 	return 0;
 }
 
-void
-remove_stopinfo_from_backup_label(char *arclog_path, char *dest_path, pgFile *current_arc_file, bool is_compress)
-{
-	FILE	*read;
-	FILE	*write;
-	char	tmp_bkup_label[MAXPGPATH];
-	char	buf[MAXPGPATH * 2];
-	parray	*bkup_label_file = NULL;
-	pgFile	*src_label_file;
-
-	if ((read  = fopen(current_arc_file->path, "r")) == NULL)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not open backup history file for standby backup")));
-	join_path_components(tmp_bkup_label, arclog_path, PG_BACKUP_LABEL_FILE);
-	if ((write = fopen(tmp_bkup_label, "w")) == NULL)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not open temporary backup label file for standby backup")));
-	while (fgets(buf, lengthof(buf), read) != NULL)
-	{
-		if (strstr(buf, "STOP") - buf == 0)
-			continue;
-		fputs(buf, write);
-	}
-	fclose(write);
-	fclose(read);
-	bkup_label_file = parray_new();
-	dir_list_file(bkup_label_file, tmp_bkup_label, NULL, true, true);
-	src_label_file = (pgFile *) parray_get(bkup_label_file, parray_num(bkup_label_file) - 1);
-	copy_file(arclog_path, dest_path, src_label_file, is_compress);
-
-	unlink(src_label_file->path);
-}
-
-/*
- *  creating backup_label from backup.history for standby backup.
- */
-void
-make_backup_label(parray *backup_list, bool is_compress)
-{
-	char dest_path[MAXPGPATH];
-	char dst_bkup_label_file[MAXPGPATH];
-	char original_bkup_label_file[MAXPGPATH];
-	parray *bkuped_arc_files = NULL;
-	int i;
-	CompressionMode cm = NO_COMPRESSION;
-	if (is_compress) cm = COMPRESSION;
-
-	pgBackupGetPath(&current, dest_path, lengthof(dest_path), DATABASE_DIR);
-	bkuped_arc_files = parray_new();
-	dir_list_file(bkuped_arc_files, arclog_path, NULL, true, false);
-
-	for (i = parray_num(bkuped_arc_files) - 1; i >= 0; i--)
-	{
-		char *current_arc_fname;
-		pgFile *current_arc_file;
-
-		current_arc_file = (pgFile *) parray_get(bkuped_arc_files, i);
-		current_arc_fname = last_dir_separator(current_arc_file->path) + 1;
-
-		if(strlen(current_arc_fname) <= 24) continue;
-
-		remove_stopinfo_from_backup_label(arclog_path, dest_path, current_arc_file, cm);
-
-		join_path_components(dst_bkup_label_file, dest_path, PG_BACKUP_LABEL_FILE);
-		join_path_components(original_bkup_label_file, pgdata, PG_BACKUP_LABEL_FILE);
-
-		dir_list_file(backup_list, dst_bkup_label_file, NULL, false, true);
-		for (i = 0; i < parray_num(backup_list); i++)
-		{
-			pgFile *file = (pgFile *)parray_get(backup_list, i);
-			if (strcmp(file->path, dst_bkup_label_file) == 0)
-			{
-				struct stat st;
-				stat(dst_bkup_label_file, &st);
-				file->write_size = st.st_size;
-				file->crc        = pgFileGetCRC(file);
-				strcpy(file->path, original_bkup_label_file);
-			}
-		}
-		parray_qsort(backup_list, pgFileComparePath);
-		break;
-	}
-}
-
 /*
  * get server version and confirm block sizes.
  */
@@ -1188,17 +1092,26 @@ static void
 pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 {
 	PGresult	   *res;
-	const char	   *params[2];
+	const char	   *params[3];
 	params[0] = label;
 
 	elog(DEBUG, "executing pg_start_backup()");
+
+	/*
+	 * Establish new connection to send backup control commands.  The same
+	 * connection is used until the current backup finishes which is required
+	 * with the new non-exclusive backup API as of PG version 9.6.
+	 */
 	reconnect();
 
 	/* Assumes PG version >= 8.4 */
 
 	/* 2nd argument is 'fast' (IOW, !smooth) */
 	params[1] = smooth ? "false" : "true";
-	res = execute("SELECT * from pg_xlogfile_name_offset(pg_start_backup($1, $2))", 2, params);
+
+	/* 3rd argument is 'exclusive' (assumes PG version >= 9.6) */
+	params[2] = "false";
+	res = execute("SELECT * from pg_xlogfile_name_offset(pg_start_backup($1, $2, $3))", 3, params);
 
 	if (backup != NULL)
 		get_lsn(res, &backup->tli, &backup->start_lsn);
@@ -1207,18 +1120,19 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 			PQgetvalue(res, 0, 0), PQgetvalue(res, 0, 1));
 
 	PQclear(res);
-	disconnect();
 }
 
 static void
-wait_for_archive(pgBackup *backup, const char *sql)
+wait_for_archive(pgBackup *backup, const char *sql, int nParams,
+				 const char **params)
 {
 	PGresult	   *res;
 	char			ready_path[MAXPGPATH];
 	int				try_count;
 
-	reconnect();
-	res = execute(sql, 0, NULL);
+	Assert(connection != NULL);
+
+	res = execute(sql, nParams, params);
 	if (backup != NULL)
 	{
 		get_lsn(res, &backup->tli, &backup->stop_lsn);
@@ -1239,6 +1153,8 @@ wait_for_archive(pgBackup *backup, const char *sql)
 		get_xid(res, &backup->recovery_xid);
 		backup->recovery_time = time(NULL);
 	}
+
+	/* OK, done with our connection to primary. */
 	disconnect();
 
 	/* wait until switched WAL is archived */
@@ -1262,14 +1178,120 @@ wait_for_archive(pgBackup *backup, const char *sql)
 }
 
 /*
- * Notify end of backup to PostgreSQL server.
+ * Notify the end of backup to PostgreSQL server.
+ *
+ * As of PG version 9.6, pg_stop_backup() returns 2 more fields in addition
+ * to the backup end LSN: backup_label text and tablespace_map text which
+ * need to be written to files in the backup root directory.
+ *
+ * Returns an array of pgFile structs of files written so that caller can add
+ * it to the backup file list.
  */
-static void
+static parray *
 pg_stop_backup(pgBackup *backup)
 {
+	parray		   *result = parray_new();
+	pgFile		   *file;
+	PGresult	   *res;
+	char		   *backup_lsn;
+	char		   *backup_label_text = NULL;
+	char		   *tablespace_map_text = NULL;
+	const char	   *params[1];
+
 	elog(DEBUG, "executing pg_stop_backup()");
+
+	/*
+	 * Non-exclusive backup requires to use same connection as the one
+	 * used to issue pg_start_backup().  Remember we did not disconnect
+	 * in pg_start_backup() nor did we lose our connection when issuing
+	 * commands to standby.
+	 */
+	Assert(connection != NULL);
+
+	params[0] = "false";
+	res = execute("SELECT * FROM pg_stop_backup($1)", 1, params);
+
+	if (res == NULL || PQntuples(res) != 1 || PQnfields(res) != 3)
+		ereport(ERROR,
+			(errcode(ERROR_PG_COMMAND),
+			 errmsg("result of pg_stop_backup($1) is invalid: %s",
+				PQerrorMessage(connection))));
+
+	backup_lsn = PQgetvalue(res, 0, 0);
+	backup_label_text = PQgetvalue(res, 0, 1);
+	tablespace_map_text = PQgetvalue(res, 0, 2);
+
+	file = write_file_to_backup(backup, backup_label_text, PG_BACKUP_LABEL_FILE);
+	parray_append(result, (void *) file);
+
+	if (tablespace_map_text && tablespace_map_text[0])
+	{
+		file = write_file_to_backup(backup, tablespace_map_text, PG_TBLSPC_MAP_FILE);
+		parray_append(result, (void *) file);
+	}
+
+	params[0] = backup_lsn;
 	wait_for_archive(backup,
-		"SELECT * FROM pg_xlogfile_name_offset(pg_stop_backup())");
+		"SELECT * FROM pg_xlogfile_name_offset($1)",
+		1, params);
+
+	return result;
+}
+
+/*
+ * Writes a file with given name and content to "database" directory of
+ * a given backup.
+ *
+ * Returns a pointer to pgFile struct corresponding to the written file.
+ */
+static pgFile *
+write_file_to_backup(pgBackup *backup, const char *buf, const char *file_name)
+{
+	FILE		   *fp;
+	char			dbpath[MAXPGPATH],
+					path[MAXPGPATH];
+	struct stat		st;
+	pgFile		   *file;
+	pg_crc32c		crc;
+
+	pgBackupGetPath(backup, dbpath, lengthof(dbpath), DATABASE_DIR);
+	snprintf(path, sizeof(path), "%s/%s", dbpath, file_name);
+
+	fp = fopen(path, "wt");
+	if (fp == NULL)
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open \"%s\" to write: %s",
+					path, strerror(errno))));
+
+	if (fwrite(buf, 1, strlen(buf), fp) != strlen(buf))
+	{
+		fclose(fp);
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not write to file \"%s\": %s",
+					path, strerror(errno))));
+	}
+
+	file = (pgFile *) pgut_malloc(offsetof(pgFile, path) + strlen(file_name) + 1);
+
+	stat(path, &st);
+	file->mtime = st.st_mtime;
+	file->size = st.st_size;
+	file->read_size = 0;
+	file->write_size = strlen(buf);
+	file->mode = st.st_mode;
+
+	PGRMAN_INIT_CRC32(crc);
+	PGRMAN_COMP_CRC32(crc, buf, strlen(buf));
+	PGRMAN_FIN_CRC32(crc);
+	file->crc = crc;
+
+	file->is_datafile = false;
+	file->linked = NULL;
+	strcpy(file->path, file_name);		/* enough buffer size guaranteed */
+
+	return file;
 }
 
 /*
@@ -1279,7 +1301,8 @@ static void
 pg_switch_xlog(pgBackup *backup)
 {
 	wait_for_archive(backup,
-		"SELECT * FROM pg_xlogfile_name_offset(pg_switch_xlog())");
+		"SELECT * FROM pg_xlogfile_name_offset(pg_switch_xlog())",
+		0, NULL);
 }
 
 /*
@@ -1376,19 +1399,11 @@ dirExists(const char *path)
 static void
 backup_cleanup(bool fatal, void *userdata)
 {
-	char path[MAXPGPATH];
-
 	if (!in_backup)
 		return;
 
-	/* If backup_label exist in $PGDATA, notify stop of backup to PostgreSQL */
-	snprintf(path, lengthof(path), "%s/backup_label", pgdata);
-	make_native_path(path);
-	if (fileExists(path) || current.is_from_standby)
-	{
-		elog(DEBUG, "backup_label exists, stop backup");
-		pg_stop_backup(NULL);	/* don't care stop_lsn on error case */
-	}
+	/* Disconnecting automatically aborts a non-exclusive backup */
+	disconnect();
 
 	/*
 	 * Update status of backup.ini to ERROR.
