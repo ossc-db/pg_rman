@@ -43,6 +43,7 @@ YesNo	prompt_password = DEFAULT;
 
 /* Database connections */
 PGconn	   *connection = NULL;
+PGconn	   *saved_connection = NULL;
 static PGcancel *volatile cancel_conn = NULL;
 
 /* Interrupted by SIGINT (Ctrl+C) ? */
@@ -976,6 +977,30 @@ disconnect(void)
 		PQfinish(connection);
 		connection = NULL;
 	}
+}
+
+/*
+ * Like reconnect(), but instead of discarding the old connection, save it
+ * to be restored later.
+ */
+PGconn *
+save_connection(void)
+{
+	Assert(connection != NULL);
+
+	saved_connection = connection;
+	return connection = pgut_connect();
+}
+
+/*
+ * Restore saved connection.
+ */
+void
+restore_saved_connection(void)
+{
+	Assert(saved_connection != NULL);
+
+	connection = saved_connection;
 }
 
 /*  set/get host and port for connecting standby server */

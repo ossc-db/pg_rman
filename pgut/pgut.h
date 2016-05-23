@@ -118,6 +118,8 @@ extern int pgut_wait(int num, PGconn *connections[], struct timeval *timeout);
 
 extern PGconn *reconnect(void);
 extern void disconnect(void);
+extern PGconn *save_connection(void);
+extern void restore_saved_connection(void);
 
 extern const char *pgut_get_host(void);
 extern const char *pgut_get_port(void);

@@ -40,6 +40,7 @@
 #define SRVLOG_FILE_LIST		"file_srvlog.txt"
 #define SNAPSHOT_SCRIPT_FILE	"snapshot_script"
 #define PG_BACKUP_LABEL_FILE	"backup_label"
+#define PG_TBLSPC_MAP_FILE		"tablespace_map"
 #define PG_BLACK_LIST			"black_list"
 
 /* Snapshot script command */
