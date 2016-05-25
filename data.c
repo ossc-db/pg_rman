@@ -48,7 +48,8 @@ doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
 	{
 		if (interrupted)
 		{
-			fclose(in);
+			if (in)
+				fclose(in);
 			fclose(out);
 			ereport(FATAL,
 				(errcode(ERROR_INTERRUPTED),
@@ -59,7 +60,8 @@ doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
 
 		if (status == Z_STREAM_ERROR)
 		{
-			fclose(in);
+			if (in)
+				fclose(in);
 			fclose(out);
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
@@ -69,7 +71,8 @@ doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
 		if (fwrite(outbuf, 1, out_size - zp->avail_out, out) !=
 				out_size - zp->avail_out)
 		{
-			fclose(in);
+			if (in)
+				fclose(in);
 			fclose(out);
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
@@ -1001,4 +1004,119 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		remove(to_path);
 
 	return true;
+}
+
+/*
+ * Writes a file with given name and content to "database" directory of
+ * a given backup.
+ *
+ * Returns a pointer to pgFile struct corresponding to the written file.
+ */
+pgFile *
+write_stop_backup_file(pgBackup *backup, const char *buf, int len, const char *file_name)
+{
+	FILE		   *fp;
+	char			dbpath[MAXPGPATH],
+					path[MAXPGPATH];
+	char			writebuf[1024];
+	struct stat		st;
+	pgFile		   *file;
+	pg_crc32c		crc;
+#ifdef HAVE_LIBZ
+	z_stream		z;
+	char			outbuf[zlibOutSize];
+#endif
+	size_t			write_size = 0;
+	int				write_len,
+					written_len = 0;
+
+	pgBackupGetPath(backup, dbpath, lengthof(dbpath), DATABASE_DIR);
+	snprintf(path, sizeof(path), "%s/%s", dbpath, file_name);
+
+	fp = fopen(path, "wt");
+	if (fp == NULL)
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open \"%s\" to write: %s",
+					path, strerror(errno))));
+
+	PGRMAN_INIT_CRC32(crc);
+
+	while (written_len < len)
+	{
+		/* Write portion of input*/
+		write_len = Min(1024, len - written_len);
+		memcpy(writebuf, buf + written_len, write_len);
+		written_len += write_len;
+
+#ifdef HAVE_LIBZ
+		if (backup->compress_data)
+		{
+			z.zalloc = Z_NULL;
+			z.zfree = Z_NULL;
+			z.opaque = Z_NULL;
+
+			if (deflateInit(&z, Z_DEFAULT_COMPRESSION) != Z_OK)
+			{
+				fclose(fp);
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not initialize compression library: %s", z.msg)));
+			}
+
+			z.avail_in = 0;
+			z.next_out = (void *) outbuf;
+			z.avail_out = zlibOutSize;
+		}
+
+		if (backup->compress_data)
+			doDeflate(&z, write_len, sizeof(outbuf), (void *) writebuf, outbuf, NULL,
+					  fp, &crc, &write_size, Z_FINISH);
+		else
+#endif
+		{
+			if (fwrite(writebuf, 1, write_len, fp) != write_len)
+			{
+				fclose(fp);
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not write to file \"%s\": %s",
+							path, strerror(errno))));
+			}
+
+			PGRMAN_COMP_CRC32(crc, writebuf, write_len);
+			write_size += write_len;
+		}
+	}
+
+#ifdef HAVE_LIBZ
+	if (backup->compress_data)
+	{
+		if (deflateEnd(&z) != Z_OK)
+		{
+			fclose(fp);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not close compression stream: %s", z.msg)));
+		}
+	}
+#endif
+
+	fclose(fp);
+	PGRMAN_FIN_CRC32(crc);
+
+	file = (pgFile *) pgut_malloc(offsetof(pgFile, path) + strlen(file_name) + 1);
+
+	stat(path, &st);
+	file->mtime = st.st_mtime;
+	file->size = st.st_size;
+	file->read_size = 0;
+	file->write_size = write_size;
+	file->mode = st.st_mode;
+	file->crc = crc;
+	file->is_datafile = false;
+	file->linked = NULL;
+	strcpy(file->path, file_name);		/* enough buffer size guaranteed */
+
+	return file;
 }

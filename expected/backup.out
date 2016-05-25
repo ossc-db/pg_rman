@@ -42,7 +42,6 @@ INFO: copying database files
 ERROR: cannot take an incremental backup
 DETAIL: There is no validated full backup with current timeline.
 HINT: Please take a full backup and validate it before doing an incremental backup. Or use with --full-backup-on-error command line option.
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 10
 incremental backup in the same situation but with --full-backup-on-error option
 INFO: copying database files

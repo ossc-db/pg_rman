@@ -65,7 +65,6 @@ static void add_files(parray *files, const char *root, bool add_root, bool is_pg
 static int strCompare(const void *str1, const void *str2);
 static void create_file_list(parray *files, const char *root, const char *prefix, bool is_append);
 static void check_server_version(void);
-static pgFile *write_file_to_backup(pgBackup *backup, const char *buf, const char *file_name);
 
 /*
  * Take a backup of database.
@@ -1154,9 +1153,6 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
 		backup->recovery_time = time(NULL);
 	}
 
-	/* OK, done with our connection to primary. */
-	disconnect();
-
 	/* wait until switched WAL is archived */
 	try_count = 0;
 	while (fileExists(ready_path))
@@ -1194,8 +1190,10 @@ pg_stop_backup(pgBackup *backup)
 	pgFile		   *file;
 	PGresult	   *res;
 	char		   *backup_lsn;
-	char		   *backup_label_text = NULL;
-	char		   *tablespace_map_text = NULL;
+	char		   *backuplabel = NULL;
+	int				backuplabel_len;
+	char		   *tblspcmap = NULL;
+	int				tblspcmap_len;
 	const char	   *params[1];
 
 	elog(DEBUG, "executing pg_stop_backup()");
@@ -1218,15 +1216,20 @@ pg_stop_backup(pgBackup *backup)
 				PQerrorMessage(connection))));
 
 	backup_lsn = PQgetvalue(res, 0, 0);
-	backup_label_text = PQgetvalue(res, 0, 1);
-	tablespace_map_text = PQgetvalue(res, 0, 2);
+	backuplabel = PQgetvalue(res, 0, 1);
+	backuplabel_len = PQgetlength(res, 0, 1);
+	tblspcmap = PQgetvalue(res, 0, 2);
+	tblspcmap_len = PQgetlength(res, 0, 2);
 
-	file = write_file_to_backup(backup, backup_label_text, PG_BACKUP_LABEL_FILE);
+	Assert(backuplabel_len > 0);
+	file = write_stop_backup_file(backup, backuplabel, backuplabel_len,
+								  PG_BACKUP_LABEL_FILE);
 	parray_append(result, (void *) file);
 
-	if (tablespace_map_text && tablespace_map_text[0])
+	if (tblspcmap_len > 0)
 	{
-		file = write_file_to_backup(backup, tablespace_map_text, PG_TBLSPC_MAP_FILE);
+		file = write_stop_backup_file(backup, tblspcmap, tblspcmap_len,
+									  PG_TBLSPC_MAP_FILE);
 		parray_append(result, (void *) file);
 	}
 
@@ -1235,63 +1238,10 @@ pg_stop_backup(pgBackup *backup)
 		"SELECT * FROM pg_xlogfile_name_offset($1)",
 		1, params);
 
+	/* Done with the connection. */
+	disconnect();
+
 	return result;
-}
-
-/*
- * Writes a file with given name and content to "database" directory of
- * a given backup.
- *
- * Returns a pointer to pgFile struct corresponding to the written file.
- */
-static pgFile *
-write_file_to_backup(pgBackup *backup, const char *buf, const char *file_name)
-{
-	FILE		   *fp;
-	char			dbpath[MAXPGPATH],
-					path[MAXPGPATH];
-	struct stat		st;
-	pgFile		   *file;
-	pg_crc32c		crc;
-
-	pgBackupGetPath(backup, dbpath, lengthof(dbpath), DATABASE_DIR);
-	snprintf(path, sizeof(path), "%s/%s", dbpath, file_name);
-
-	fp = fopen(path, "wt");
-	if (fp == NULL)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not open \"%s\" to write: %s",
-					path, strerror(errno))));
-
-	if (fwrite(buf, 1, strlen(buf), fp) != strlen(buf))
-	{
-		fclose(fp);
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not write to file \"%s\": %s",
-					path, strerror(errno))));
-	}
-
-	file = (pgFile *) pgut_malloc(offsetof(pgFile, path) + strlen(file_name) + 1);
-
-	stat(path, &st);
-	file->mtime = st.st_mtime;
-	file->size = st.st_size;
-	file->read_size = 0;
-	file->write_size = strlen(buf);
-	file->mode = st.st_mode;
-
-	PGRMAN_INIT_CRC32(crc);
-	PGRMAN_COMP_CRC32(crc, buf, strlen(buf));
-	PGRMAN_FIN_CRC32(crc);
-	file->crc = crc;
-
-	file->is_datafile = false;
-	file->linked = NULL;
-	strcpy(file->path, file_name);		/* enough buffer size guaranteed */
-
-	return file;
 }
 
 /*
@@ -1300,9 +1250,13 @@ write_file_to_backup(pgBackup *backup, const char *buf, const char *file_name)
 static void
 pg_switch_xlog(pgBackup *backup)
 {
+	reconnect();
+
 	wait_for_archive(backup,
 		"SELECT * FROM pg_xlogfile_name_offset(pg_switch_xlog())",
 		0, NULL);
+
+	disconnect();
 }
 
 /*

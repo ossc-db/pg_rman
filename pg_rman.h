@@ -317,6 +317,7 @@ extern void restore_data_file(const char *from_root, const char *to_root,
 							  pgFile *file, bool compress, bool data_checksum_enabled);
 extern bool copy_file(const char *from_root, const char *to_root,
 					  pgFile *file, CompressionMode compress);
+extern pgFile *write_stop_backup_file(pgBackup *backup, const char *buf, int len, const char *file_name);
 
 /* in util.c */
 extern void time2iso(char *buf, size_t len, time_t time);
