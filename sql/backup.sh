@@ -248,6 +248,7 @@ echo '###### switch backup mode from incremental to full ######'
 init_catalog
 echo 'incremental backup without validated full backup'
 pg_rman backup -B ${BACKUP_PATH} -b incremental -s -Z -p ${TEST_PGPORT} -d postgres;echo $?
+sleep 1
 echo 'incremental backup in the same situation but with --full-backup-on-error option'
 pg_rman backup -B ${BACKUP_PATH} -b incremental -F -s -Z -p ${TEST_PGPORT} -d postgres;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
