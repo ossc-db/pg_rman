@@ -54,4 +54,9 @@ compiler:
 script: make installcheck
 
 after_script:
-  - cat /home/travis/pg_rman/regression.diffs
+  - cat /home/travis/build/ossc-db/pg_rman/pg_rman/regression.diffs
+
+notifications:
+  email:
+    on_success: change
+    on_failure: always
