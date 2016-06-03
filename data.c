@@ -1042,6 +1042,27 @@ write_stop_backup_file(pgBackup *backup, const char *buf, int len, const char *f
 
 	PGRMAN_INIT_CRC32(crc);
 
+#ifdef HAVE_LIBZ
+	if (backup->compress_data)
+	{
+		z.zalloc = Z_NULL;
+		z.zfree = Z_NULL;
+		z.opaque = Z_NULL;
+
+		if (deflateInit(&z, Z_DEFAULT_COMPRESSION) != Z_OK)
+		{
+			fclose(fp);
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not initialize compression library: %s", z.msg)));
+		}
+
+		z.avail_in = 0;
+		z.next_out = (void *) outbuf;
+		z.avail_out = zlibOutSize;
+	}
+#endif
+
 	while (written_len < len)
 	{
 		/* Write portion of input*/
@@ -1050,25 +1071,6 @@ write_stop_backup_file(pgBackup *backup, const char *buf, int len, const char *f
 		written_len += write_len;
 
 #ifdef HAVE_LIBZ
-		if (backup->compress_data)
-		{
-			z.zalloc = Z_NULL;
-			z.zfree = Z_NULL;
-			z.opaque = Z_NULL;
-
-			if (deflateInit(&z, Z_DEFAULT_COMPRESSION) != Z_OK)
-			{
-				fclose(fp);
-				ereport(ERROR,
-					(errcode(ERROR_SYSTEM),
-					 errmsg("could not initialize compression library: %s", z.msg)));
-			}
-
-			z.avail_in = 0;
-			z.next_out = (void *) outbuf;
-			z.avail_out = zlibOutSize;
-		}
-
 		if (backup->compress_data)
 			doDeflate(&z, write_len, sizeof(outbuf), (void *) writebuf, outbuf, NULL,
 					  fp, &crc, &write_size, Z_FINISH);
