@@ -23,7 +23,7 @@ Please choose branch with PostgreSQL version you use.
 
 How to use
 ----------
-Pg_rman can take an online backup with one command.
+pg_rman can take an online backup with one command.
 
 ````
 $ pg_rman backup --backup-mode=full --with-serverlog
