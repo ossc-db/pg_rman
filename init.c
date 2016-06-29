@@ -82,8 +82,9 @@ do_init(void)
 
 	/* get system identifier of the current database.*/
 	buffer = read_control_file();
-	Assert(buffer != NULL);
-	sysid = (uint64) ((ControlFileData *) buffer)->system_identifier;
+
+	if(buffer != NULL)
+		sysid = (uint64) ((ControlFileData *) buffer)->system_identifier;
 	pg_free(buffer);
 
 	/* register system identifier of target database. */
