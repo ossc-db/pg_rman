@@ -1217,10 +1217,12 @@ get_current_timeline(void)
 	char		*buffer;
 
 	buffer = read_control_file();
-	Assert(buffer != NULL);
-	result = (TimeLineID) ((ControlFileData *) buffer)->checkPointCopy.ThisTimeLineID;
-	free(buffer);
 
+	if(buffer != NULL)
+		result = (TimeLineID) ((ControlFileData *) buffer)->checkPointCopy.ThisTimeLineID;
+	else
+		return 0;
+	free(buffer);
 	return result;
 }
 
