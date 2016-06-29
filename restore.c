@@ -1217,12 +1217,20 @@ checkIfCreateRecoveryConf(const char *target_time,
 static TimeLineID
 get_current_timeline(void)
 {
-	TimeLineID	result;
+	TimeLineID	result = 0;
+	char		ControlFilePath[MAXPGPATH];
 	ControlFileData *controlFile;
 
-	controlFile = get_controlfile(pgdata, "pg_rman");
-	result = controlFile->checkPointCopy.ThisTimeLineID;
-	pg_free(controlFile);
+	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
+	if (fileExists(ControlFilePath))
+	{
+		controlFile = get_controlfile(pgdata, "pg_rman");
+		result = controlFile->checkPointCopy.ThisTimeLineID;
+		pg_free(controlFile);
+	}
+	else
+		elog(WARNING, _("pg_controldata file \"%s\" does not exist"),
+						ControlFilePath);
 
 	return result;
 }
@@ -1233,12 +1241,20 @@ get_current_timeline(void)
 static int
 get_data_checksum_version(void)
 {
-	int			result;
+	int			result = -1;
+	char		ControlFilePath[MAXPGPATH];
 	ControlFileData *controlFile;
 
-	controlFile = get_controlfile(pgdata, "pg_rman");
-	result = controlFile->checkPointCopy.ThisTimeLineID;
-	pg_free(controlFile);
+	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
+	if (fileExists(ControlFilePath))
+	{
+		controlFile = get_controlfile(pgdata, "pg_rman");
+		result = controlFile->checkPointCopy.ThisTimeLineID;
+		pg_free(controlFile);
+	}
+	else
+		elog(WARNING, _("pg_controldata file \"%s\" does not exist"),
+						ControlFilePath);
 
 	return result;
 }
