@@ -407,7 +407,7 @@ dir_list_file_internal(parray *files, const char *root, const char *exclude[],
 		{
 			if (errno == ENOENT)
 			{
-				/* maybe the direcotry was removed */
+				/* maybe the directory was removed */
 				return;
 			}
 			ereport(ERROR,
