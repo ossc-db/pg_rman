@@ -357,7 +357,7 @@ dir_list_file_internal(parray *files, const char *root, const char *exclude[],
 
 	/*
 	 * If the entry was a directory, add it to the list and add call this
-	 * function recursivelly.
+	 * function recursively.
 	 * If the directory name is in the exclude list, do not list the contents.
 	 */
 	while (S_ISDIR(file->mode))
@@ -408,7 +408,7 @@ dir_list_file_internal(parray *files, const char *root, const char *exclude[],
 		{
 			if (errno == ENOENT)
 			{
-				/* maybe the direcotry was removed */
+				/* maybe the directory was removed */
 				return;
 			}
 			ereport(ERROR,
