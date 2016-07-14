@@ -122,7 +122,7 @@ IsDir(const char *dirpath, const DIR *dir, const struct dirent *ent)
 }
 
 /*
- * Create list fo backups started between begin and end from backup catalog.
+ * Create list of backups started between begin and end from backup catalog.
  * If range was NULL, all of backup are listed.
  * The list is sorted in order of descending start time.
  */
