@@ -866,7 +866,7 @@ show_progress:
  * Try to read a timeline's history file.
  *
  * If successful, return the list of component pgTimeLine (the ancestor
- * timelines followed by target timeline). If we can't find the history file,
+ * timelines followed by target timeline).	If we can't find the history file,
  * assume that the timeline has no parents, and return a list of just the
  * specified timeline ID.
  * based on readTimeLineHistory() in xlog.c
