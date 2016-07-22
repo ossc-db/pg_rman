@@ -562,7 +562,7 @@ restore_data_file(const char *from_root,
 	}
 
 	/*
-	 * Open backup file for write. 	We use "r+" at first to overwrite only
+	 * Open backup file for write. We use "r+" at first to overwrite only
 	 * modified pages for incremental restore. If the file is not exists,
 	 * re-open it with "w" to create an empty file.
 	 */
@@ -1065,7 +1065,7 @@ write_stop_backup_file(pgBackup *backup, const char *buf, int len, const char *f
 
 	while (written_len < len)
 	{
-		/* Write portion of input*/
+		/* Write portion of input */
 		write_len = Min(1024, len - written_len);
 		memcpy(writebuf, buf + written_len, write_len);
 		written_len += write_len;

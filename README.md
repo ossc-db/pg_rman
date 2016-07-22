@@ -70,7 +70,7 @@ http://ossc-db.github.io/pg_rman/index.html
 
 How to build and install from source code
 -----------------------------------------
-Change directory into top directory of pg_rman sorce codes and
+Change directory into top directory of pg_rman source codes and
 run the below commands.
 
 
