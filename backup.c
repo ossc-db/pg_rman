@@ -230,7 +230,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		PGresult	*tblspc_res;	/* contain spcname and oid in TABLESPACE */
 		parray		*stop_backup_files;	/* list of files that pg_stop_backup() wrote */
 
-		/* if backup is from standby, snapshot backup is unsupported	*/
+		/* if backup is from standby, snapshot backup is unsupported */
 		if (current.is_from_standby)
 		{
 			/* Disconnecting automatically aborts a non-exclusive backup */
@@ -537,8 +537,8 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 		if (!(replayed_lsn < backup->start_lsn))
 			break;
 		sleep(sleep_time);
-		/* next sleep_time is increasing by 2 times.	*/
-		/* ex: 1, 2, 4, 8, 16, 32, 60, 60, 60...	*/
+		/* next sleep_time is increasing by 2 times. */
+		/* ex: 1, 2, 4, 8, 16, 32, 60, 60, 60... */
 		sleep_time = (sleep_time < 32) ? sleep_time * 2 : 60;
 	}
 
