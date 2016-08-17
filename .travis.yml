@@ -7,6 +7,7 @@ before_install:
   - sudo apt-get -y install bc libpam-dev libedit-dev
   - git clone https://github.com/postgres/postgres.git postgres-dev
   - cd postgres-dev
+  - if [ $PGVERSION = 9.6 ] ; then git checkout -b REL9_6_STABLE origin/REL9_6_STABLE; fi
   - export POSTGRES_HOME=/home/travis/build/ossc-db/pg_rman/pgsql/$PGVERSION
   - echo 'export POSTGRES_HOME=/home/travis/build/ossc-db/pg_rman/pgsql/$PGVERSION' >> ~/.bashrc
   - ./configure --prefix=$POSTGRES_HOME
@@ -24,7 +25,7 @@ before_install:
   - sudo echo "host    all         all         127.0.0.1/32          trust" >> $PGDATA/pg_hba.conf
   - sudo echo "host    all         all         ::1/128               trust" >> $PGDATA/pg_hba.conf
   - sudo echo "logging_collector = on" >> $PGDATA/postgresql.conf
-  - sudo echo "wal_level = hot_standby" >> $PGDATA/postgresql.conf
+  - sudo echo "wal_level = replica" >> $PGDATA/postgresql.conf
   - sudo echo "archive_mode = on" >> $PGDATA/postgresql.conf
   - sudo echo "archive_command = 'cp %p /home/travis/build/ossc-db/pg_rman/pg_data/archivelog/%f'" >> $PGDATA/postgresql.conf
   - pg_ctl -V
@@ -39,6 +40,7 @@ before_script:
 
 env:
   matrix:
+    - PGVERSION=10
     - PGVERSION=9.6
 
 language: cpp
