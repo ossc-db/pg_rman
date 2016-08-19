@@ -43,7 +43,7 @@ function init_backup()
     cat << EOF >> $PGDATA_PATH/postgresql.conf
 port = ${TEST_PGPORT}
 logging_collector = on
-wal_level = hot_standby
+wal_level = replica
 log_directory = '${SRVLOG_PATH}'
 archive_mode = on
 archive_command = 'cp %p ${ARCLOG_PATH}/%f'

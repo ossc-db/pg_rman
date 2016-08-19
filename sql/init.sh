@@ -17,7 +17,7 @@ rm -fr ${SRVLOG_PATH} && mkdir -p ${SRVLOG_PATH}
 initdb --no-locale > /dev/null 2>&1
 cp ${PGDATA}/postgresql.conf ${PGDATA}/postgresql.conf_org
 cat << EOF >> ${PGDATA}/postgresql.conf
-wal_level = hot_standby
+wal_level = replica
 archive_mode = on
 archive_command = 'cp "%p" "${ARCLOG_PATH}/%f"'
 EOF
@@ -32,7 +32,7 @@ echo '###### success with archive_command and log_directory ######'
 rm -rf ${BACKUP_PATH}
 cp ${PGDATA_PATH}/postgresql.conf_org ${PGDATA_PATH}/postgresql.conf
 cat << EOF >> ${PGDATA}/postgresql.conf
-wal_level = hot_standby
+wal_level = replica
 archive_mode = on
 archive_command = 'cp "%p" "${ARCLOG_PATH}/%f"'
 log_directory = '${SRVLOG_PATH}'
@@ -45,7 +45,7 @@ echo '###### success without archive_command ######'
 rm -rf ${BACKUP_PATH}
 cp ${PGDATA_PATH}/postgresql.conf_org ${PGDATA_PATH}/postgresql.conf
 cat << EOF >> ${PGDATA}/postgresql.conf
-wal_level = hot_standby
+wal_level = replica
 archive_mode = on
 log_directory = '${SRVLOG_PATH}'
 EOF
