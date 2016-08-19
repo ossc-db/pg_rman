@@ -7,7 +7,6 @@ before_install:
   - sudo apt-get -y install bc libpam-dev libedit-dev
   - git clone https://github.com/postgres/postgres.git postgres-dev
   - cd postgres-dev
-  - if [ $PGVERSION = 9.6 ] ; then git checkout -b REL9_6_STABLE origin/REL9_6_STABLE; fi
   - export POSTGRES_HOME=/home/travis/build/ossc-db/pg_rman/pgsql/$PGVERSION
   - echo 'export POSTGRES_HOME=/home/travis/build/ossc-db/pg_rman/pgsql/$PGVERSION' >> ~/.bashrc
   - ./configure --prefix=$POSTGRES_HOME
@@ -41,7 +40,6 @@ before_script:
 env:
   matrix:
     - PGVERSION=10
-    - PGVERSION=9.6
 
 language: cpp
 compiler:
