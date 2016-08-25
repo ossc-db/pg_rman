@@ -1,13 +1,11 @@
 \! bash sql/backup.sh
 ###### BACKUP COMMAND TEST-0001 ######
 ###### full backup mode ######
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 0
 1
 7
 ###### BACKUP COMMAND TEST-0002 ######
 ###### incremental backup mode ######
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 0
 2
 14
@@ -18,20 +16,17 @@ NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 25
 ###### BACKUP COMMAND TEST-0004 ######
 ###### full backup with server log ######
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 0
 1
 3
 ###### BACKUP COMMAND TEST-0005 ######
 ###### full backup with compression ######
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 0
 1
 1
 3
 ###### BACKUP COMMAND TEST-0006 ######
 ###### full backup with smooth checkpoint ######
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 0
 1
 3
@@ -47,7 +42,6 @@ incremental backup in the same situation but with --full-backup-on-error option
 INFO: copying database files
 NOTICE: turn to take a full backup
 DETAIL: There is no validated full backup with current timeline.
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 INFO: copying archived WAL files
 INFO: copying server log files
 INFO: backup complete
@@ -66,7 +60,6 @@ archive backup in the same situation but with --full-backup-on-error option
 NOTICE: turn to take a full backup
 DETAIL: There is no validated full backup with current timeline.
 INFO: copying database files
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
 INFO: copying archived WAL files
 INFO: copying server log files
 INFO: backup complete
