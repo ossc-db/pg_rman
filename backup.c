@@ -987,8 +987,9 @@ do_backup(pgBackupOption bkupopt)
 	}
 
 	ereport(INFO,
-		(errmsg("backup complete"),
-		 errhint("Please execute 'pg_rman validate' to verify the files are correctly copied.")));
+			(errmsg("backup complete")));
+	ereport(INFO,
+			(errmsg("Please execute 'pg_rman validate' to verify the files are correctly copied.")));
 
 	/*
 	 * Delete old files (archived WAL and serverlog) after update of status.
