@@ -45,7 +45,7 @@ DETAIL: There is no validated full backup with current timeline.
 INFO: copying archived WAL files
 INFO: copying server log files
 INFO: backup complete
-HINT: Please execute 'pg_rman validate' to verify the files are correctly copied.
+INFO: Please execute 'pg_rman validate' to verify the files are correctly copied.
 0
 1
 1
@@ -63,7 +63,7 @@ INFO: copying database files
 INFO: copying archived WAL files
 INFO: copying server log files
 INFO: backup complete
-HINT: Please execute 'pg_rman validate' to verify the files are correctly copied.
+INFO: Please execute 'pg_rman validate' to verify the files are correctly copied.
 0
 1
 1
