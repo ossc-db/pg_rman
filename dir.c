@@ -518,6 +518,8 @@ dir_print_file_list(FILE *out, const parray *files, const char *root, const char
 			type = 'd';
 		else if (S_ISLNK(file->mode))
 			type = 'l';
+		else if (S_ISSOCK(file->mode))
+			type = 's';
 		else
 			type = '?';
 
@@ -574,7 +576,7 @@ dir_read_file_list(const char *root, const char *file_txt)
 				(errcode(ERROR_CORRUPTED),
 				 errmsg("invalid format found in \"%s\"", file_txt)));
 
-		if (type != 'f' && type != 'F' && type != 'd' && type != 'l')
+		if (type != 'f' && type != 'F' && type != 'd' && type != 'l' && type != 's')
 			ereport(ERROR,
 				(errcode(ERROR_CORRUPTED),
 				 errmsg("invalid type '%c' found in \"%s\"", type, file_txt)));
@@ -589,7 +591,8 @@ dir_read_file_list(const char *root, const char *file_txt)
 		file->mtime = mktime(&tm);
 		file->mode = mode |
 			((type == 'f' || type == 'F') ? S_IFREG :
-			 type == 'd' ? S_IFDIR : type == 'l' ? S_IFLNK : 0);
+			 type == 'd' ? S_IFDIR : type == 'l' ? S_IFLNK :
+			 type == 's' ? S_IFSOCK : 0);
 		file->size = 0;
 		file->read_size = 0;
 		file->write_size = write_size;
