@@ -1647,7 +1647,7 @@ delete_old_files(const char *root,
 	char	*target_file;
 	char	*target_path;
 	time_t	tim;
-	time_t	days_threshold;
+	time_t	days_threshold = 0;
 	struct	tm *ltm;
 	char 	files_str[100];
 	char 	days_str[100];
