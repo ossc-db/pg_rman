@@ -125,7 +125,7 @@ pgBackupDelete(int keep_generations, int keep_days)
 	bool    check_days;
 	bool    last_checked_is_valid_full_backup;
 	time_t  tim;
-	time_t  keep_after;
+	time_t  keep_after = 0;
 	struct tm *ltm;
 	char    backup_timestamp[20];
 	char    keep_after_timestamp[20];
