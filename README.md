@@ -2,19 +2,19 @@ pg_rman
 =======
 pg_rman is an online backup and restore tool for PostgreSQL.
 
-The goal of the pg_rman project is providing a method for
-online backup and PITR as easy as pg_dump. Also, it maintains
-a backup catalog per database cluster. Users can maintain old
-backups including archive logs with one command.
+The goal of the pg_rman project is to provide a method for online backup
+and PITR that is as easy as pg_dump. Also, it maintains a backup catalog
+per database cluster. Users can maintain old backups including archive
+logs with one command.
 
 Branches
 --------
-There are several branches on pg_rman in order to work with
-different PostgreSQL server versions without introducing
-server version check code blocks.
-Please choose branch with PostgreSQL version you use.
+There are several branches within pg_rman repository in order to work with
+different PostgreSQL server versions without introducing server version
+check code blocks.  Please choose a branch to match the PostgreSQL version
+you will be building pg_rman against.
 
-* master : branch for latest PostgreSQL develop version [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=master)](https://travis-ci.org/ossc-db/pg_rman)
+* master : branch for latest PostgreSQL development version [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=master)](https://travis-ci.org/ossc-db/pg_rman)
 * REL9_6_STABLE : branch for PostgreSQL 9.6 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL9_6_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
 * REL9_5_STABLE : branch for PostgreSQL 9.5 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL9_5_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
 * REL9_4_STABLE : branch for PostgreSQL 9.4 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL9_4_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
@@ -28,9 +28,13 @@ pg_rman can take an online backup with one command.
 
 ````
 $ pg_rman backup --backup-mode=full --with-serverlog
-INFO: database backup start
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+INFO: copying database files
+INFO: copying archived WAL files
+INFO: copying server log files
+INFO: backup complete
+INFO: Please execute 'pg_rman validate' to verify the files are correctly copied.
 ````
+
 
 The backup taken before are listed by show command:
 
@@ -94,8 +98,3 @@ Start PostgreSQL server and run the below command.
 ````
  $ make installcheck
 ````
-
-
-
-
-
