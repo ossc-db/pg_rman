@@ -1224,8 +1224,19 @@ get_current_timeline(void)
 	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
 	if (fileExists(ControlFilePath))
 	{
-		controlFile = get_controlfile(pgdata, "pg_rman");
-		result = controlFile->checkPointCopy.ThisTimeLineID;
+		bool	crc_ok;
+
+		controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+		if (!crc_ok)
+		{
+			ereport(WARNING,
+					(errmsg("control file appears to be corrupt"),
+					 errdetail("Calculated CRC checksum does not match value stored in file")));
+			result = 0;
+		}
+		else
+			result = controlFile->checkPointCopy.ThisTimeLineID;
+
 		pg_free(controlFile);
 	}
 	else
@@ -1248,8 +1259,19 @@ get_data_checksum_version(void)
 	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
 	if (fileExists(ControlFilePath))
 	{
-		controlFile = get_controlfile(pgdata, "pg_rman");
-		result = controlFile->checkPointCopy.ThisTimeLineID;
+		bool	crc_ok;
+
+		controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+		if (!crc_ok)
+		{
+			ereport(ERROR,
+					(errmsg("control file appears to be corrupt"),
+					 errdetail("Calculated CRC checksum does not match value stored in file")));
+			result = -1;
+		}
+		else
+			result = controlFile->checkPointCopy.ThisTimeLineID;
+
 		pg_free(controlFile);
 	}
 	else

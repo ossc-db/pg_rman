@@ -41,6 +41,7 @@ do_init(void)
 	int results;
 	uint64      sysid;
 	ControlFileData *controlFile;
+	bool crc_ok;
 
 	if (access(backup_path, F_OK) == 0)
 	{
@@ -82,7 +83,11 @@ do_init(void)
 	}
 
 	/* get system identifier of the current database.*/
-	controlFile = get_controlfile(pgdata, "pg_rman");
+	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+	if (!crc_ok)
+		ereport(ERROR,
+				(errmsg("control file appears to be corrupt"),
+				 errdetail("Calculated CRC checksum does not match value stored in file")));
 	sysid = controlFile->system_identifier;
 	pg_free(controlFile);
 

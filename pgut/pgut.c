@@ -33,7 +33,7 @@ const char	   *dbname = NULL;
 const char	   *host = NULL;
 const char	   *port = NULL;
 const char	   *username = NULL;
-char		   *password = NULL;
+char			password[100];
 bool			debug = false;
 bool			quiet = false;
 
@@ -892,19 +892,13 @@ parse_pair(const char buffer[], char key[], char value[])
 static void
 prompt_for_password(const char *username)
 {
-	if (password)
-	{
-		free(password);
-		password = NULL;
-	}
-
 	if (username == NULL)
-		password = simple_prompt("Password: ", 100, false);
+		simple_prompt("Password: ", password, sizeof(password), false);
 	else
 	{
 		char	message[256];
 		snprintf(message, lengthof(message), "Password for user %s: ", username);
-		password = simple_prompt(message, 100, false);
+		simple_prompt(message, password, sizeof(password), false);
 	}
 }
 #endif

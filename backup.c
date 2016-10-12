@@ -796,6 +796,7 @@ do_backup(pgBackupOption bkupopt)
 	int	keep_srvlog_days  = bkupopt.keep_srvlog_days;
 	int	keep_data_generations = bkupopt.keep_data_generations;
 	int	keep_data_days        = bkupopt.keep_data_days;
+	bool crc_ok;
 
 	/* PGDATA and BACKUP_MODE are always required */
 	if (pgdata == NULL)
@@ -868,7 +869,12 @@ do_backup(pgBackupOption bkupopt)
 	fclose(fp);
 
 	/* get system identifier of the current database.*/
-	controlFile = get_controlfile(pgdata, "pg_rman");
+	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+	if (!crc_ok)
+		ereport(ERROR,
+				(errmsg("control file appears to be corrupt"),
+				 errdetail("Calculated CRC checksum does not match value stored in file")));
+
 	result = controlFile->system_identifier;
 	pg_free(controlFile);
 	elog(DEBUG, "the system identifier of current target database : %ld", result);
