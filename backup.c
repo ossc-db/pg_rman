@@ -871,9 +871,9 @@ do_backup(pgBackupOption bkupopt)
 	/* get system identifier of the current database.*/
 	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
 	if (!crc_ok)
-		ereport(ERROR,
+		ereport(WARNING,
 				(errmsg("control file appears to be corrupt"),
-				 errdetail("Calculated CRC checksum does not match value stored in file")));
+				 errdetail("Calculated CRC checksum does not match value stored in file.")));
 
 	result = controlFile->system_identifier;
 	pg_free(controlFile);

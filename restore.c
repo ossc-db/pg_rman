@@ -1231,7 +1231,7 @@ get_current_timeline(void)
 		{
 			ereport(WARNING,
 					(errmsg("control file appears to be corrupt"),
-					 errdetail("Calculated CRC checksum does not match value stored in file")));
+					 errdetail("Calculated CRC checksum does not match value stored in file.")));
 			result = 0;
 		}
 		else
@@ -1264,9 +1264,9 @@ get_data_checksum_version(void)
 		controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
 		if (!crc_ok)
 		{
-			ereport(ERROR,
+			ereport(WARNING,
 					(errmsg("control file appears to be corrupt"),
-					 errdetail("Calculated CRC checksum does not match value stored in file")));
+					 errdetail("Calculated CRC checksum does not match value stored in file.")));
 			result = -1;
 		}
 		else
