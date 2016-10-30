@@ -1149,7 +1149,7 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
 	/* get filename from the result of pg_xlogfile_name_offset() */
 	elog(DEBUG, "waiting for %s is archived", PQgetvalue(res, 0, 0));
 	snprintf(ready_path, lengthof(ready_path),
-		"%s/pg_xlog/archive_status/%s.ready", pgdata, PQgetvalue(res, 0, 0));
+		"%s/pg_wal/archive_status/%s.ready", pgdata, PQgetvalue(res, 0, 0));
 
 	PQclear(res);
 

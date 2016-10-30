@@ -324,7 +324,7 @@ base_backup_found:
 		}
 	}
 
-	/* copy online WAL backup to $PGDATA/pg_xlog */
+	/* copy online WAL backup to $PGDATA/pg_wal */
 	restore_online_files();
 
 	if (check)
@@ -752,7 +752,7 @@ static void
 backup_online_files(bool re_recovery)
 {
 	char work_path[MAXPGPATH];
-	char pg_xlog_path[MAXPGPATH];
+	char pg_wal_path[MAXPGPATH];
 	bool files_exist;
 	parray *files;
 
@@ -761,7 +761,7 @@ backup_online_files(bool re_recovery)
 	
 	elog(INFO, _("copying online WAL files and server log files"));
 
-	/* get list of files in $BACKUP_PATH/backup/pg_xlog */
+	/* get list of files in $BACKUP_PATH/backup/pg_wal */
 	files = parray_new();
 	snprintf(work_path, lengthof(work_path), "%s/%s/%s", backup_path,
 		RESTORE_WORK_DIR, PG_XLOG_DIR);
@@ -782,11 +782,11 @@ backup_online_files(bool re_recovery)
 	}
 
 	/* backup online WAL */
-	snprintf(pg_xlog_path, lengthof(pg_xlog_path), "%s/pg_xlog", pgdata);
+	snprintf(pg_wal_path, lengthof(pg_wal_path), "%s/pg_wal", pgdata);
 	snprintf(work_path, lengthof(work_path), "%s/%s/%s", backup_path,
 		RESTORE_WORK_DIR, PG_XLOG_DIR);
 	dir_create_dir(work_path, DIR_PERMISSION);
-	dir_copy_files(pg_xlog_path, work_path);
+	dir_copy_files(pg_wal_path, work_path);
 
 	/* backup serverlog */
 	snprintf(work_path, lengthof(work_path), "%s/%s/%s", backup_path,
@@ -803,7 +803,7 @@ restore_online_files(void)
 	char	root_backup[MAXPGPATH];
 	parray *files_backup;
 
-	/* get list of files in $BACKUP_PATH/backup/pg_xlog */
+	/* get list of files in $BACKUP_PATH/backup/pg_wal */
 	files_backup = parray_new();
 	snprintf(root_backup, lengthof(root_backup), "%s/%s/%s", backup_path,
 		RESTORE_WORK_DIR, PG_XLOG_DIR);
