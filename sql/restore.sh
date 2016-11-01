@@ -164,6 +164,7 @@ pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b archive -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0004-before.out
+sleep 1
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
@@ -222,7 +223,7 @@ pgbench -p ${TEST_PGPORT} pgbench > /dev/null 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0007-before.out
 TARGET_XID=`psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -tAq -c "INSERT INTO tbl0007 VALUES ('inserted') RETURNING (xmin);"`
 pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
-pg_ctl stop -m immediate > /dev/null 2>&1
+pg_ctl stop -m fast > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --recovery-target-xid="${TARGET_XID}" --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0007-after.out
@@ -245,7 +246,7 @@ pgbench -p ${TEST_PGPORT} pgbench > /dev/null 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0008-before.out
 TARGET_XID=`psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -tAq -c "INSERT INTO tbl0008 VALUES ('inserted') RETURNING (xmin);"`
 pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
-pg_ctl stop -m immediate > /dev/null 2>&1
+pg_ctl stop -m fast > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --recovery-target-xid="${TARGET_XID}" --recovery-target-inclusive=false --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0008-after.out
@@ -295,7 +296,7 @@ pg_rman backup -B ${BACKUP_PATH} -b incremental -Z -p ${TEST_PGPORT} -d postgres
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pgbench -p ${TEST_PGPORT} -d db0010 >> ${TEST_BASE}/TEST-0010-db0010-init.out 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0010 -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0010-before.out
-pg_ctl stop -m immediate > /dev/null 2>&1
+pg_ctl stop -m fast > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0010 -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0010-after.out

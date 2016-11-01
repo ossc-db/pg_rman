@@ -100,6 +100,7 @@ pg_rman backup -B ${BACKUP_PATH} -b incremental -Z -p ${TEST_PGPORT} -d postgres
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pgbench -p ${TEST_PGPORT} >> ${TEST_BASE}/pgbench.log 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b archive -Z -p ${TEST_PGPORT} -d postgres --quiet
+sleep 1
 pg_rman validate -B ${BACKUP_PATH} --quiet
 FOURTH_BACKUP_DATE=`date +"%Y-%m-%d %H:%M:%S"`
 pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet
