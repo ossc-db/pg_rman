@@ -921,6 +921,12 @@ pgut_connect(void)
 	/* Start the connection. Loop until we have a password if requested by backend. */
 	for (;;)
 	{
+        if (getenv("PGAPPNAME") == NULL)
+		{
+			char    buf[1024];
+			snprintf(buf, lengthof(buf), "%s=%s", "PGAPPNAME", PROGRAM_NAME);
+			putenv(pgut_strdup(buf));   /* putenv requires malloc'ed buffer */
+		}
 		conn = PQsetdbLogin(host, port, NULL, NULL, dbname, username, password);
 
 		if (PQstatus(conn) == CONNECTION_OK)
