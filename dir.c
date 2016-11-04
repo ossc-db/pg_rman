@@ -21,7 +21,7 @@
 /* directory exclusion list for backup mode listing */
 const char *pgdata_exclude[] =
 {
-	"pg_xlog",
+	"pg_wal",
 	"pg_stat_tmp",
 	"pgsql_tmp",
 	NULL,			/* arclog_path will be set later */

@@ -28,7 +28,7 @@
 #define ARCLOG_DIR				"arclog"
 #define SRVLOG_DIR				"srvlog"
 #define RESTORE_WORK_DIR		"backup"
-#define PG_XLOG_DIR				"pg_xlog"
+#define PG_XLOG_DIR				"pg_wal"
 #define PG_TBLSPC_DIR			"pg_tblspc"
 #define TIMELINE_HISTORY_DIR	"timeline_history"
 #define BACKUP_INI_FILE			"backup.ini"
