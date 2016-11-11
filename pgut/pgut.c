@@ -926,7 +926,27 @@ pgut_connect(void)
 	/* Start the connection. Loop until we have a password if requested by backend. */
 	for (;;)
 	{
-		conn = PQsetdbLogin(host, port, NULL, NULL, dbname, username, password);
+		int argcount = 7; /* host, port, dbname, use, password, 
+				     fallback_application_name */
+		const char *keywords[argcount];
+		const char *values[argcount];
+
+		keywords[0] = "host";
+		values[0] = host;
+		keywords[1] = "port";
+		values[1] = port;
+		keywords[2] = "dbname";
+		values[2] = dbname;
+		keywords[3] = "user";
+		values[3] = username;
+		keywords[4] = "password";
+		values[4] = password;
+		keywords[5] = "fallback_application_name";
+		values[5] = PROGRAM_NAME;
+		keywords[6] = NULL;
+		values[6] = NULL;
+
+		conn = PQconnectdbParams(keywords, values, true);
 
 		if (PQstatus(conn) == CONNECTION_OK)
 			return conn;
