@@ -937,10 +937,10 @@ pgut_connect(void)
 #if PG_VERSION_NUM < 90000
 	conn = PQsetdbLogin(host, port, NULL, NULL, dbname, username, password);
 #else
-		int argcount = 7; /* host, port, dbname, use, password, 
-				     fallback_application_name */
-		const char *keywords[argcount];
-		const char *values[argcount];
+#define PARAMS_ARRAY_SIZE	7
+
+		const char *keywords[PARAMS_ARRAY_SIZE];
+		const char *values[PARAMS_ARRAY_SIZE];
 
 		keywords[0] = "host";
 		values[0] = host;
