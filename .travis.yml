@@ -34,7 +34,8 @@ before_install:
 before_script:
   - cd /home/travis/build/ossc-db/pg_rman
   - git clone https://github.com/ossc-db/pg_rman.git pg_rman
-  - cd pg_rman && git describe --alway
+  - cd pg_rman && git describe --always
+  - git checkout -b REL9_6_STABLE origin/REL9_6_STABLE
   - make
   - make install
 
