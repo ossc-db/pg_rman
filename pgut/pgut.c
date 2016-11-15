@@ -921,10 +921,10 @@ pgut_connect(void)
 	/* Start the connection. Loop until we have a password if requested by backend. */
 	for (;;)
 	{
-		int argcount = 7; /* host, port, dbname, use, password, 
-				     fallback_application_name */
-		const char *keywords[argcount];
-		const char *values[argcount];
+#define PARAMS_ARRAY_SIZE	7
+
+		const char *keywords[PARAMS_ARRAY_SIZE];
+		const char *values[PARAMS_ARRAY_SIZE];
 
 		keywords[0] = "host";
 		values[0] = host;
