@@ -95,7 +95,7 @@ do_init(void)
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not create system identifier file: %s", strerror(errno))));
 	else
-		fprintf(fp, "SYSTEM_IDENTIFIER='%lu'\n", sysid);
+		fprintf(fp, "SYSTEM_IDENTIFIER='" UINT64_FORMAT "'\n", sysid);
 
 	fclose(fp);
 
