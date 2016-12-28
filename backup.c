@@ -871,7 +871,7 @@ do_backup(pgBackupOption bkupopt)
 	controlFile = get_controlfile(pgdata, "pg_rman");
 	result = controlFile->system_identifier;
 	pg_free(controlFile);
-	elog(DEBUG, "the system identifier of current target database : %ld", result);
+	elog(DEBUG, "the system identifier of current target database : " UINT64_FORMAT, result);
 	snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, result);
 
 	if ( strcmp(value, sysident_str) != 0)
