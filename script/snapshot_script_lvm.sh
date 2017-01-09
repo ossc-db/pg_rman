@@ -1,6 +1,6 @@
 #!/bin/sh
 #############################################################################
-#  Copyright (c) 2009-2016, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+#  Copyright (c) 2009-2017, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 #############################################################################
 
 CMD_SUDO="/usr/bin/sudo"
