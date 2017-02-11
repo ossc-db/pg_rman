@@ -43,7 +43,7 @@ static parray *do_backup_srvlog(parray *backup_list);
 static void confirm_block_size(const char *name, int blcksz);
 static void pg_start_backup(const char *label, bool smooth, pgBackup *backup);
 static parray *pg_stop_backup(pgBackup *backup);
-static void pg_switch_xlog(pgBackup *backup);
+static void pg_switch_wal(pgBackup *backup);
 static void get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn);
 static void get_xid(PGresult *res, uint32 *xid);
 static bool execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup);
@@ -529,7 +529,7 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 		 * Wait for standby's location to be the LSN returned by
 		 * pg_start_backup()
 		 */
-		res = execute("SELECT * FROM pg_last_xlog_replay_location()", 0, NULL);
+		res = execute("SELECT * FROM pg_last_wal_replay_location()", 0, NULL);
 		sscanf(PQgetvalue(res, 0, 0), "%X/%X", &xlogid, &xrecoff);
 		PQclear(res);
 
@@ -583,7 +583,7 @@ do_backup_arclog(parray *backup_list)
 
 	/* switch xlog if database is not backed up */
 	if (((uint32) current.stop_lsn)  == 0)
-		pg_switch_xlog(&current);
+		pg_switch_wal(&current);
 
 	/*
 	 * To take incremental backup, the file list of the last completed database
@@ -604,7 +604,7 @@ do_backup_arclog(parray *backup_list)
 	files = parray_new();
 	dir_list_file(files, arclog_path, NULL, true, false);
 
-	/* remove WALs archived after pg_stop_backup()/pg_switch_xlog() */
+	/* remove WALs archived after pg_stop_backup()/pg_switch_wal() */
 	xlog_fname(last_wal, lengthof(last_wal), current.tli, &current.stop_lsn);
 	for (i = 0; i < parray_num(files); i++)
 	{
@@ -1117,7 +1117,7 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 
 	/* 3rd argument is 'exclusive' (assumes PG version >= 9.6) */
 	params[2] = "false";
-	res = execute("SELECT * from pg_xlogfile_name_offset(pg_start_backup($1, $2, $3))", 3, params);
+	res = execute("SELECT * from pg_walfile_name_offset(pg_start_backup($1, $2, $3))", 3, params);
 
 	if (backup != NULL)
 		get_lsn(res, &backup->tli, &backup->start_lsn);
@@ -1146,7 +1146,7 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
 				PQgetvalue(res, 0, 0), PQgetvalue(res, 0, 1));
 	}
 
-	/* get filename from the result of pg_xlogfile_name_offset() */
+	/* get filename from the result of pg_walfile_name_offset() */
 	elog(DEBUG, "waiting for %s is archived", PQgetvalue(res, 0, 0));
 	snprintf(ready_path, lengthof(ready_path),
 		"%s/pg_wal/archive_status/%s.ready", pgdata, PQgetvalue(res, 0, 0));
@@ -1246,7 +1246,7 @@ pg_stop_backup(pgBackup *backup)
 
 	params[0] = backup_lsn;
 	wait_for_archive(backup,
-		"SELECT * FROM pg_xlogfile_name_offset($1)",
+		"SELECT * FROM pg_walfile_name_offset($1)",
 		1, params);
 
 	/* Done with the connection. */
@@ -1259,19 +1259,19 @@ pg_stop_backup(pgBackup *backup)
  * Force switch to a new transaction log file and update backup->tli.
  */
 static void
-pg_switch_xlog(pgBackup *backup)
+pg_switch_wal(pgBackup *backup)
 {
 	reconnect();
 
 	wait_for_archive(backup,
-		"SELECT * FROM pg_xlogfile_name_offset(pg_switch_xlog())",
+		"SELECT * FROM pg_walfile_name_offset(pg_switch_wal())",
 		0, NULL);
 
 	disconnect();
 }
 
 /*
- * Get TimeLineID and LSN from result of pg_xlogfile_name_offset().
+ * Get TimeLineID and LSN from result of pg_walfile_name_offset().
  */
 static void
 get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
@@ -1282,7 +1282,7 @@ get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
 	if (res == NULL || PQntuples(res) != 1 || PQnfields(res) != 2)
 		ereport(ERROR,
 			(errcode(ERROR_PG_COMMAND),
-			 errmsg("result of pg_xlogfile_name_offset() is invalid: %s",
+			 errmsg("result of pg_walfile_name_offset() is invalid: %s",
 				PQerrorMessage(connection))));
 
 	/* get TimeLineID, LSN from result of pg_stop_backup() */
@@ -1292,7 +1292,7 @@ get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
 	{
 		ereport(ERROR,
 			(errcode(ERROR_PG_COMMAND),
-			 errmsg("result of pg_xlogfile_name_offset() is invalid: %s",
+			 errmsg("result of pg_walfile_name_offset() is invalid: %s",
 				PQerrorMessage(connection))));
 	}
 
