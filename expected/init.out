@@ -4,7 +4,12 @@
 0
 results/init/backup/
 results/init/backup/backup/
+<<<<<<< HEAD
 results/init/backup/backup/pg_xlog/
+=======
+results/init/backup/backup_catalog_version
+results/init/backup/backup/pg_wal/
+>>>>>>> a080be5... Add catalog_version to track history of catalog format changes
 results/init/backup/backup/srvlog/
 results/init/backup/data_checksum_version
 results/init/backup/pg_rman.ini
@@ -15,7 +20,12 @@ results/init/backup/timeline_history/
 0
 results/init/backup/
 results/init/backup/backup/
+<<<<<<< HEAD
 results/init/backup/backup/pg_xlog/
+=======
+results/init/backup/backup_catalog_version
+results/init/backup/backup/pg_wal/
+>>>>>>> a080be5... Add catalog_version to track history of catalog format changes
 results/init/backup/backup/srvlog/
 results/init/backup/data_checksum_version
 results/init/backup/pg_rman.ini
@@ -29,7 +39,12 @@ HINT: Please set ARCLOG_PATH in pg_rman.ini or environmental variable.
 0
 results/init/backup/
 results/init/backup/backup/
+<<<<<<< HEAD
 results/init/backup/backup/pg_xlog/
+=======
+results/init/backup/backup_catalog_version
+results/init/backup/backup/pg_wal/
+>>>>>>> a080be5... Add catalog_version to track history of catalog format changes
 results/init/backup/backup/srvlog/
 results/init/backup/data_checksum_version
 results/init/backup/pg_rman.ini
