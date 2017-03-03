@@ -18,21 +18,21 @@
 /*
  * Reads control file into a pg_malloc()'d buffer and returns a pointer to it.
  * To be used by more special-purpose routines such as get_current_timeline()
- * and get_data_checksum_version()
+ * and get_fullbackup_data_checksum_version()
  *
  * NOTE: The special-purpose routines need to pg_free()/free() the block of
  * memory allocated here once they are done using the control file info
  *
  */
 char *
-read_control_file()
+read_control_file(char *base)
 {
 	char 		*buffer;
 	int			fd;
 	char		ControlFilePath[MAXPGPATH];
 	pg_crc32	crc;
 
-	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
+	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", base);
 
 	if ((fd = open(ControlFilePath, O_RDONLY | PG_BINARY, 0)) == -1)
 	{
