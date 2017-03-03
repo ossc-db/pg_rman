@@ -42,6 +42,7 @@ static bool existsTimeLineHistory(TimeLineID probeTLI);
 static void print_backup_id(const pgBackup *backup);
 static void search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timelines);
 static int data_checksum_version;
+static int get_fullbackup_data_checksum_version(pgBackup *backup);
 
 int
 do_restore(const char *target_time,
@@ -129,35 +130,49 @@ do_restore(const char *target_time,
 	cur_tli = get_current_timeline();
 	elog(DEBUG, "the current timeline ID of database cluster is %d", cur_tli);
 
+	backup_tli = get_fullbackup_timeline(backups, rt);
+	elog(DEBUG, "the timeline ID of latest full backup is %d", backup_tli);
+
 	/*
 	 * Get the data_checksum_version from DATA_CHECKSUM_VERSION_FILE written
 	 * during pg_rman init.  Since data checksum setting of a database cluster
 	 * cannot be changed, we can rely on the value.
+	 *
+	 * However, if the backup directory was initialized with an older pg_rman,
+	 * we will not find the file.  In that case, the checksum setting will be
+	 * obtained from the backup (see further below).
 	 */
+	data_checksum_version = -1;
 	join_path_components(path, backup_path, DATA_CHECKSUM_VERSION_FILE);
 	fp = pgut_fopen(path, "rt", true);
-
 	if (fp == NULL)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not open data checksum version file \"%s\"", path)));
-
-	while (fgets(buf, lengthof(buf), fp) != NULL)
 	{
-		size_t      i;
-		for (i = strlen(buf); i > 0 && IsSpace(buf[i - 1]); i--)
-		buf[i - 1] = '\0';
-		if (parse_pair(buf, key, value))
+		if (NEED_DATA_CHECKSUM_VERSION_FILE)
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open data checksum version file \"%s\"", path)));
+		else
 		{
-			data_checksum_version = strtoul(value, NULL, 10);
-			elog(DEBUG, "data checksum %s on the initially configured database",
-						data_checksum_version > 0 ? "enabled" : "disabled");
+			/* we will set data_checksum_version below */
 		}
 	}
-	fclose(fp);
+	else
+	{
+		while (fgets(buf, lengthof(buf), fp) != NULL)
+		{
+			size_t      i;
+			for (i = strlen(buf); i > 0 && IsSpace(buf[i - 1]); i--)
+			buf[i - 1] = '\0';
+			if (parse_pair(buf, key, value))
+			{
+				data_checksum_version = strtoul(value, NULL, 10);
+				elog(DEBUG, "data checksum %s on the initially configured database",
+							data_checksum_version > 0 ? "enabled" : "disabled");
+			}
+		}
 
-	backup_tli = get_fullbackup_timeline(backups, rt);
-	elog(DEBUG, "the timeline ID of latest full backup is %d", backup_tli);
+		fclose(fp);
+	}
 
 	/*
 	 * determine target timeline;
@@ -235,6 +250,17 @@ do_restore(const char *target_time,
 		 errdetail("There is no valid full backup which can be used for given recovery condition.")));
 
 base_backup_found:
+
+	/*
+	 * Set data_checksum_version by reading pg_control in the backup.
+	 */
+	if (data_checksum_version < 0)
+	{
+		data_checksum_version = get_fullbackup_data_checksum_version(base_backup);
+		elog(DEBUG, "data checksum %s on the initially configured database",
+							data_checksum_version > 0 ? "enabled" : "disabled");
+	}
+	Assert(data_checksum_version >= 0);
 
 	/* first off, backup online WAL and serverlog */
 	backup_online_files(cur_tli != 0 && cur_tli != backup_tli);
@@ -1369,4 +1395,40 @@ existsTimeLineHistory(TimeLineID probeTLI)
 			 errmsg("could not open file \"%s\": %s", path, strerror(errno))));
 
 	return false;
+}
+
+/*
+ * get datapage checksum version of the full backup
+ */
+static int
+get_fullbackup_data_checksum_version(pgBackup *backup)
+{
+	int		result = -1;
+	char	ControlFilePath[MAXPGPATH];
+	ControlFileData *controlFile;
+	char	path[MAXPGPATH];
+
+	pgBackupGetPath(backup, path, lengthof(path), DATABASE_DIR);
+	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", path);
+	if (fileExists(ControlFilePath))
+	{
+		bool	crc_ok;
+
+		controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+		if (!crc_ok)
+		{
+			ereport(WARNING,
+					(errmsg("control file appears to be corrupt"),
+					 errdetail("Calculated CRC checksum does not match value stored in file.")));
+			result = 0;
+		}
+		else
+			result = controlFile->data_checksum_version;
+
+		pg_free(controlFile);
+	}
+	else
+		elog(WARNING, _("pg_controldata file \"%s\" does not exist"),
+						ControlFilePath);
+	return result;
 }

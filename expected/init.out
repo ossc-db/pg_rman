@@ -4,6 +4,7 @@
 0
 results/init/backup/
 results/init/backup/backup/
+results/init/backup/backup_catalog_version
 results/init/backup/backup/pg_wal/
 results/init/backup/backup/srvlog/
 results/init/backup/data_checksum_version
@@ -15,6 +16,7 @@ results/init/backup/timeline_history/
 0
 results/init/backup/
 results/init/backup/backup/
+results/init/backup/backup_catalog_version
 results/init/backup/backup/pg_wal/
 results/init/backup/backup/srvlog/
 results/init/backup/data_checksum_version
@@ -29,6 +31,7 @@ HINT: Please set ARCLOG_PATH in pg_rman.ini or environmental variable.
 0
 results/init/backup/
 results/init/backup/backup/
+results/init/backup/backup_catalog_version
 results/init/backup/backup/pg_wal/
 results/init/backup/backup/srvlog/
 results/init/backup/data_checksum_version
