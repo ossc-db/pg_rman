@@ -1270,7 +1270,7 @@ get_data_checksum_version(void)
 			result = -1;
 		}
 		else
-			result = controlFile->checkPointCopy.ThisTimeLineID;
+			result = controlFile->data_checksum_version;
 
 		pg_free(controlFile);
 	}
