@@ -33,6 +33,7 @@
 #define BACKUP_INI_FILE			"backup.ini"
 #define PG_RMAN_INI_FILE		"pg_rman.ini"
 #define SYSTEM_IDENTIFIER_FILE	"system_identifier"
+#define DATA_CHECKSUM_VERSION_FILE	"data_checksum_version"
 #define MKDIRS_SH_FILE			"mkdirs.sh"
 #define DATABASE_FILE_LIST		"file_database.txt"
 #define ARCLOG_FILE_LIST		"file_arclog.txt"
