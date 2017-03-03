@@ -39,7 +39,9 @@ do_init(void)
 	struct dirent **dp;
 	int results;
 	uint64      sysid;
-	char        *buffer;
+	char        *buffer = NULL;
+	uint32		checksum_ver;
+	ControlFileData *controlFile;
 
 	if (access(backup_path, F_OK) == 0)
 	{
@@ -82,9 +84,12 @@ do_init(void)
 
 	/* get system identifier of the current database.*/
 	buffer = read_control_file();
-
 	if(buffer != NULL)
-		sysid = (uint64) ((ControlFileData *) buffer)->system_identifier;
+	{
+		controlFile = (ControlFileData *) buffer;
+		sysid = (uint64) controlFile->system_identifier;
+		checksum_ver = controlFile->data_checksum_version;
+	}
 	pg_free(buffer);
 
 	/* register system identifier of target database. */
@@ -96,7 +101,17 @@ do_init(void)
 			 errmsg("could not create system identifier file: %s", strerror(errno))));
 	else
 		fprintf(fp, "SYSTEM_IDENTIFIER='" UINT64_FORMAT "'\n", sysid);
+	fclose(fp);
 
+	/* register data checksum version of target database. */
+	join_path_components(path, backup_path, DATA_CHECKSUM_VERSION_FILE);
+	fp = fopen(path, "wt");
+	if (fp == NULL)
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not create data checksum version file: %s", strerror(errno))));
+	else
+		fprintf(fp, "DATA_CHECKSUM_VERSION='%u'", checksum_ver);
 	fclose(fp);
 
 	/* create pg_rman.ini */
