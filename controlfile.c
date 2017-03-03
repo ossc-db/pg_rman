@@ -15,8 +15,7 @@
 
 /*
  * Reads control file into a pg_malloc()'d buffer and returns a pointer to it.
- * To be used by more special-purpose routines such as get_current_timeline()
- * and get_data_checksum_version()
+ * To be used by more special-purpose routines such as get_current_timeline().
  *
  * NOTE: The special-purpose routines need to pg_free()/free() the block of
  * memory allocated here once they are done using the control file info
