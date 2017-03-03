@@ -27,6 +27,8 @@ static pgBackup *catalog_read_ini(const char *path);
 
 static int lock_fd = -1;
 
+uint32 catalog_version_num = 0;
+
 /*
  * Lock of the catalog with pg_rman.ini file and return 0.
  * If the lock is held by another one, return 1 immediately.
@@ -666,4 +668,38 @@ catalog_init_config(pgBackup *backup)
 	backup->read_arclog_bytes = BYTES_INVALID;
 	backup->read_srvlog_bytes = BYTES_INVALID;
 	backup->write_bytes = BYTES_INVALID;
+}
+
+void
+catalog_init_version(void)
+{
+	char   path[MAXPGPATH];
+	FILE  *fp;
+
+	join_path_components(path, backup_path, CATALOG_VERSION_FILE);
+	fp = pgut_fopen(path, "rt", true);
+
+	/*
+	 * Not throwing an error on fp == NULL is on purpose.  We assume
+	 * catalog versioning is not enabled in that case.
+	 */
+	if (fp != NULL)
+	{
+		char	buf[128],
+				key[64],
+				value[64];
+
+		while (fgets(buf, lengthof(buf), fp) != NULL)
+		{
+			size_t      i;
+			for (i = strlen(buf); i > 0 && IsSpace(buf[i - 1]); i--)
+			buf[i - 1] = '\0';
+			if (parse_pair(buf, key, value))
+			{
+				catalog_version_num = strtoul(value, NULL, 10);
+				elog(DEBUG, "catalog vesion = %u", catalog_version_num);
+			}
+		}
+		fclose(fp);
+	}
 }

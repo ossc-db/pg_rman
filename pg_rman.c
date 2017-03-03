@@ -120,6 +120,15 @@ main(int argc, char *argv[])
 	/* overwrite configuration with command line arguments */
 	i = pgut_getopt(argc, argv, options);
 
+	/* BACKUP_PATH is always required */
+	if (backup_path == NULL)
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("required parameter not specified: BACKUP_PATH (-B, --backup-path)")));
+
+	/* initialize catalog format version (backup_path must be known) */
+	catalog_init_version();
+
 	for (; i < argc; i++)
 	{
 		if (cmd == NULL)
@@ -169,12 +178,6 @@ main(int argc, char *argv[])
 		join_path_components(path, backup_path, PG_RMAN_INI_FILE);
 		pgut_readopt(path, options, ERROR_ARGS);
 	}
-
-	/* BACKUP_PATH is always required */
-	if (backup_path == NULL)
-		ereport(ERROR,
-			(errcode(ERROR_ARGS),
-			 errmsg("required parameter not specified: BACKUP_PATH (-B, --backup-path)")));
 
 	/* path must be absolute */
 	if (backup_path != NULL && !is_absolute_path(backup_path))
