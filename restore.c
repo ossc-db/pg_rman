@@ -1249,7 +1249,7 @@ get_data_checksum_version(void)
 	if (fileExists(ControlFilePath))
 	{
 		controlFile = get_controlfile(pgdata, "pg_rman");
-		result = controlFile->checkPointCopy.ThisTimeLineID;
+		result = controlFile->data_checksum_version;
 		pg_free(controlFile);
 	}
 	else
