@@ -41,7 +41,6 @@ static TimeLineID findNewestTimeLine(TimeLineID startTLI);
 static bool existsTimeLineHistory(TimeLineID probeTLI);
 static void print_backup_id(const pgBackup *backup);
 static void search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timelines);
-static int get_data_checksum_version(void);
 static int data_checksum_version;
 
 int
@@ -68,6 +67,11 @@ do_restore(const char *target_time,
 	uint32 needId = 0;
 	uint32 needSeg = 0;
 	pgRecoveryTarget *rt = NULL;
+	char   path[MAXPGPATH];
+	FILE   *fp;
+	char   buf[128];
+	char   key[64];
+	char   value[64];
 
 	/* PGDATA and ARCLOG_PATH are always required */
 	if (pgdata == NULL)
@@ -124,8 +128,34 @@ do_restore(const char *target_time,
 
 	cur_tli = get_current_timeline();
 	elog(DEBUG, "the current timeline ID of database cluster is %d", cur_tli);
-	data_checksum_version = get_data_checksum_version();
-	elog(DEBUG, "the database checksum version is %d", data_checksum_version);
+
+	/*
+	 * Get the data_checksum_version from DATA_CHECKSUM_VERSION_FILE written
+	 * during pg_rman init.  Since data checksum setting of a database cluster
+	 * cannot be changed, we can rely on the value.
+	 */
+	join_path_components(path, backup_path, DATA_CHECKSUM_VERSION_FILE);
+	fp = pgut_fopen(path, "rt", true);
+
+	if (fp == NULL)
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open data checksum version file \"%s\"", path)));
+
+	while (fgets(buf, lengthof(buf), fp) != NULL)
+	{
+		size_t      i;
+		for (i = strlen(buf); i > 0 && IsSpace(buf[i - 1]); i--)
+		buf[i - 1] = '\0';
+		if (parse_pair(buf, key, value))
+		{
+			data_checksum_version = strtoul(value, NULL, 10);
+			elog(DEBUG, "data checksum %s on the initially configured database",
+						data_checksum_version > 0 ? "enabled" : "disabled");
+		}
+	}
+	fclose(fp);
+
 	backup_tli = get_fullbackup_timeline(backups, rt);
 	elog(DEBUG, "the timeline ID of latest full backup is %d", backup_tli);
 
@@ -1226,30 +1256,6 @@ get_current_timeline(void)
 	{
 		controlFile = get_controlfile(pgdata, "pg_rman");
 		result = controlFile->checkPointCopy.ThisTimeLineID;
-		pg_free(controlFile);
-	}
-	else
-		elog(WARNING, _("pg_controldata file \"%s\" does not exist"),
-						ControlFilePath);
-
-	return result;
-}
-
-/*
- * get datapage checksum version of the current database.
- */
-static int
-get_data_checksum_version(void)
-{
-	int			result = -1;
-	char		ControlFilePath[MAXPGPATH];
-	ControlFileData *controlFile;
-
-	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
-	if (fileExists(ControlFilePath))
-	{
-		controlFile = get_controlfile(pgdata, "pg_rman");
-		result = controlFile->data_checksum_version;
 		pg_free(controlFile);
 	}
 	else
