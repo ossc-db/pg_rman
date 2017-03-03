@@ -876,7 +876,7 @@ do_backup(pgBackupOption bkupopt)
 	fclose(fp);
 
 	/* get system identifier of the current database.*/
-	buffer = read_control_file();
+	buffer = read_control_file(pgdata);
 	if(buffer != NULL)
 		result = (uint64) ((ControlFileData *) buffer)->system_identifier;
 	pg_free(buffer);
