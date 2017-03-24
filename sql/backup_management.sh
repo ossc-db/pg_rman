@@ -107,7 +107,6 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0001-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0001-before.log | sed -e 's@[^-]@@g' | wc -c
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 #FOR DEBUG
 #pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres;echo $?
@@ -117,7 +116,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0001-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0001-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0001-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -130,7 +128,6 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman backup -B ${BACKUP_PATH} -b inc -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0002-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0002-before.log | sed -e 's@[^-]@@g' | wc -c
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
 #pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres;echo $?
@@ -140,7 +137,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0002-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0002-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0002-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -153,7 +149,6 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman backup -B ${BACKUP_PATH} -b arc -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0003-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0003-before.log | sed -e 's@[^-]@@g' | wc -c
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 # FOR DEBUG
 #pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres;echo $?
@@ -163,7 +158,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0003-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0003-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0003-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -177,7 +171,6 @@ pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quie
 rm -f `find ${BACKUP_PATH} -name postgresql.conf`
 pg_rman validate -B ${BACKUP_PATH} --quiet > /dev/null 2>&1;echo $?
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0004-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0004-before.log | sed -e 's@[^-]@@g' | wc -c
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
 #pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 -Z -p ${TEST_PGPORT} -d postgres;echo $?
@@ -187,7 +180,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0004-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0004-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0004-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -198,7 +190,6 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 create_dummy_backup 1 FULL OK
 create_dummy_backup 2 FULL OK
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0005-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0005-before.log | sed -e 's@[^-]@@g' | wc -c
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-days=1 -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 # FOR DEBUG
 #pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-days=1 -Z -p ${TEST_PGPORT} -d postgres;echo $?
@@ -208,7 +199,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0005-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0005-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0005-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -220,7 +210,6 @@ create_dummy_backup 1 INCREMENTAL OK
 create_dummy_backup 2 FULL OK
 create_dummy_backup 3 FULL OK
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0006-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0006-before.log | sed -e 's@[^-]@@g' | wc -c
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-days=1 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
 #pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-days=1 -Z -p ${TEST_PGPORT} -d postgres;echo $?
@@ -230,7 +219,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0006-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0006-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0006-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -242,7 +230,6 @@ create_dummy_backup 1 ARCHIVE OK
 create_dummy_backup 2 FULL OK
 create_dummy_backup 3 FULL OK
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0007-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0007-before.log | sed -e 's@[^-]@@g' | wc -c
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-days=1 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
 #pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-days=1 -Z -p ${TEST_PGPORT} -d postgres;echo $?
@@ -252,7 +239,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0007-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0007-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0007-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -263,7 +249,6 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 create_dummy_backup 1 FULL ERROR
 create_dummy_backup 2 FULL OK
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0008-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0008-before.log | sed -e 's@[^-]@@g' | wc -c
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-days=1 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
 #pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-days=1 -Z -p ${TEST_PGPORT} -d postgres;echo $?
@@ -273,7 +258,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0008-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0008-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0008-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -285,7 +269,6 @@ create_dummy_backup 1 FULL OK
 create_dummy_backup 2 FULL OK
 create_dummy_backup 3 FULL OK
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0009-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0009-before.log | sed -e 's@[^-]@@g' | wc -c
 echo "keep data generation : 1, keep data days : 2"
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=1 --keep-data-days=2 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
@@ -296,7 +279,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0009-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0009-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0009-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -308,7 +290,6 @@ create_dummy_backup 1 FULL OK
 create_dummy_backup 2 FULL OK
 create_dummy_backup 3 FULL OK
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0010-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0010-before.log | sed -e 's@[^-]@@g' | wc -c
 echo "keep data generation : 3, keep data days : 1"
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=3 --keep-data-days=1 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
@@ -319,7 +300,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0010-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0010-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0010-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -332,7 +312,6 @@ create_dummy_backup 2 INCREMENTAL OK
 create_dummy_backup 3 FULL OK
 create_dummy_backup 4 FULL OK
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0011-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0011-before.log | sed -e 's@[^-]@@g' | wc -c
 echo "keep data generation : 2, keep data days : 2"
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=2 --keep-data-days=2 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
@@ -343,7 +322,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0011-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0011-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0011-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -356,7 +334,6 @@ create_dummy_backup 2 ARCHIVE OK
 create_dummy_backup 3 FULL OK
 create_dummy_backup 4 FULL OK
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0012-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0012-before.log | sed -e 's@[^-]@@g' | wc -c
 echo "keep data generation : 2, keep data days : 2"
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=2 --keep-data-days=2 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
@@ -367,7 +344,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0012-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0012-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0012-after.log | sed -e 's@[^-]@@g' | wc -c
 
 init_catalog
 
@@ -380,7 +356,6 @@ create_dummy_backup 2 FULL ERROR
 create_dummy_backup 3 FULL OK
 create_dummy_backup 4 FULL OK
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0013-before.log 2>&1
-grep OK ${TEST_BASE}/TEST-0013-before.log | sed -e 's@[^-]@@g' | wc -c
 echo "keep data generation : 2, keep data days : 2"
 pg_rman backup -B ${BACKUP_PATH} -b full --keep-data-generations=2 --keep-data-days=2 -Z -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
 # FOR DEBUG
@@ -391,7 +366,6 @@ NUM_OF_FULL_BACKUPS_AFTER=`grep OK ${TEST_BASE}/TEST-0013-after.log | grep FULL 
 echo "Number of remaining full backups validated: ${NUM_OF_FULL_BACKUPS_AFTER}"
 NUM_OF_DELETED_BACKUPS=`grep DELETED ${TEST_BASE}/TEST-0013-after.log | wc -l`
 echo "Number of deleted backups : ${NUM_OF_DELETED_BACKUPS}"
-grep OK ${TEST_BASE}/TEST-0013-after.log | sed -e 's@[^-]@@g' | wc -c
 
 # cleanup
 ## clean up the temporal test data
