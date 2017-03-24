@@ -162,32 +162,33 @@ $ pg_rman validate     # validate all unvalidated backups
 <p>The <code>show</code> command outputs backup lists.</p>
 
 <pre><code>$ pg_rman show
- ==========================================================
- StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 11:43:31  INCR        0m    54kB     1  OK
- 2015-03-27 11:43:19  INCR        0m    69kB     1  OK
- 2015-03-27 11:43:04  INCR        0m   151kB     1  OK
- 2015-03-27 11:42:56  INCR        0m    96kB     1  OK
- 2015-03-27 11:34:55  FULL        0m  5312kB     1  OK
+ =====================================================================
+ StartTime            EndTime              Mode    Size   TLI  Status
+ =====================================================================
+ 2015-03-27 11:43:31  2015-03-27 11:43:32  INCR    54kB     1  OK
+ 2015-03-27 11:43:19  2015-03-27 11:43:20  INCR    69kB     1  OK
+ 2015-03-27 11:43:04  2015-03-27 11:43:06  INCR   151kB     1  OK
+ 2015-03-27 11:42:56  2015-03-27 11:42:57  INCR    96kB     1  OK
+ 2015-03-27 11:34:55  2015-03-27 11:34:58  FULL  5312kB     1  OK
 </code></pre>
 
 <p><code>show detail</code> command shows more detail information.</p>
 
 <pre><code>$ pg_rman show detail
- ============================================================================================================
- StartTime           Mode  Duration    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status
- ============================================================================================================
- 2015-03-27 11:43:31  INCR        0m    16kB    33MB    ----    54kB        true       1          0  OK
- 2015-03-27 11:43:19  INCR        0m   148kB    33MB    ----    69kB        true       1          0  OK
- 2015-03-27 11:43:04  INCR        0m   173kB    83MB    ----   151kB        true       1          0  OK
- 2015-03-27 11:42:56  INCR        0m   173kB    50MB    ----    96kB        true       1          0  OK
- 2015-03-27 11:34:55  FULL        0m    28MB    83MB    ----  5312kB        true       1          0  OK
+ ================================================================================================================================
+ StartTime            EndTime              Mode  Duration    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status
+ ================================================================================================================================
+ 2015-03-27 11:43:31  2015-03-27 11:43:32  INCR        0m    16kB    33MB    ----    54kB        true       1          0  OK
+ 2015-03-27 11:43:19  2015-03-27 11:43:20  INCR        0m   148kB    33MB    ----    69kB        true       1          0  OK
+ 2015-03-27 11:43:04  2015-03-27 11:43:06  INCR        0m   173kB    83MB    ----   151kB        true       1          0  OK
+ 2015-03-27 11:42:56  2015-03-27 11:42:57  INCR        0m   173kB    50MB    ----    96kB        true       1          0  OK
+ 2015-03-27 11:34:55  2015-03-27 11:34:58  FULL        0m    28MB    83MB    ----  5312kB        true       1          0  OK
 </code></pre>
 
 <p>The fields are:</p>
 <ul>
-<li>StartTime : start time of backup</li>
+<li>StartTime : timestamp when backup was started</li>
+<li>EndTime : timestamp when backup ended</li>
 <li>Mode : mode of backup.
 <ul>
 <li>FULL : full backup</li>
@@ -250,24 +251,26 @@ STATUS=OK
 
 <p>If <code>--recovery-target-timeline</code> is not specified, the last checkpoint&rsquo;s TimeLineID in control file (<code>$PGDATA/global/pg_control</code>) will be a restore target. If pg_control is not present, TimeLineID in the full backup used by the restore will be a restore target.</p>
 
+<p>When specifying <code>--recovery-target-time</code>, make sure to specify a timestamp greater than (or equal to) the EndTime of the full backup that you want to use as the base.</p>
+
 <h2>Delete backups</h2>
 
 <p>The delete command deletes all backup files before the specified date not required by other incremental backups. Incremental backups depend on earlier validated full backup.</p>
 <p> The following example deletes unneeded backup files to recovery at 12:00 11, September 2009.</p>
 
 <pre><code>$ pg_rman show
-==========================================================
- StartTime           Mode  Duration    Size   TLI  Status
-==========================================================
-2015-07-30 13:31:08  FULL        0m    14MB    15  OK
-2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
-2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
-2015-07-30 13:30:11  FULL        0m    14MB    15  OK
-2015-07-30 13:28:10  INCR        0m   120kB    14  OK
-2015-07-30 13:27:45  INCR        0m    54kB    14  OK
-2015-07-30 13:27:32  INCR        0m    54kB    14  OK
-2015-07-30 13:27:25  INCR        0m    54kB    14  OK
-2015-07-30 13:24:02  FULL        0m    14MB    14  OK
+=====================================================================
+ StartTime           EndTime              Mode    Size   TLI  Status
+=====================================================================
+2015-07-30 13:31:08  2015-07-30 13:31:10  FULL    14MB    15  OK
+2015-07-30 13:30:37  2015-07-30 13:30:38  ARCH    53kB    15  OK
+2015-07-30 13:30:32  2015-07-30 13:30:33  ARCH    26kB    15  OK
+2015-07-30 13:30:11  2015-07-30 13:30:13  FULL    14MB    15  OK
+2015-07-30 13:28:10  2015-07-30 13:28:11  INCR   120kB    14  OK
+2015-07-30 13:27:45  2015-07-30 13:27:46  INCR    54kB    14  OK
+2015-07-30 13:27:32  2015-07-30 13:27:33  INCR    54kB    14  OK
+2015-07-30 13:27:25  2015-07-30 13:27:26  INCR    54kB    14  OK
+2015-07-30 13:24:02  2015-07-30 13:24:04  FULL    14MB    14  OK
 
 $ pg_rman delete 2015-07-30 13:30:30
 WARNING: cannot delete backup with start time "2015-07-30 13:30:11"
@@ -279,13 +282,13 @@ INFO: delete the backup with start time: "2015-07-30 13:27:25"
 INFO: delete the backup with start time: "2015-07-30 13:24:02"
 
 $ pg_rman show
-==========================================================
- StartTime           Mode  Duration    Size   TLI  Status
-==========================================================
-2015-07-30 13:31:08  FULL        0m    14MB    15  OK
-2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
-2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
-2015-07-30 13:30:11  FULL        0m    14MB    15  OK
+=====================================================================
+ StartTime           EndTime              Mode    Size   TLI  Status
+=====================================================================
+2015-07-30 13:31:08  2015-07-30 13:31:10  FULL    14MB    15  OK
+2015-07-30 13:30:37  2015-07-30 13:30:38  ARCH    53kB    15  OK
+2015-07-30 13:30:32  2015-07-30 13:30:33  ARCH    26kB    15  OK
+2015-07-30 13:30:11  2015-07-30 13:30:13  FULL    14MB    15  OK
 </code></pre>
 
 
@@ -293,18 +296,18 @@ $ pg_rman show
 <p>Though <code>delete</code> command removes actual data from file system, there remains some catalog information of deleted backups. In order to remove this, execute <code>purge</code> command.</p>
 
 <pre><code>$ pg_rman show -a
-==========================================================
- StartTime           Mode  Duration    Size   TLI  Status
-==========================================================
-2015-07-30 13:31:08  FULL        0m    14MB    15  OK
-2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
-2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
-2015-07-30 13:30:11  FULL        0m    14MB    15  OK
-2015-07-30 13:28:10  INCR        0m   120kB    14  DELETED
-2015-07-30 13:27:45  INCR        0m    54kB    14  DELETED
-2015-07-30 13:27:32  INCR        0m    54kB    14  DELETED
-2015-07-30 13:27:25  INCR        0m    54kB    14  DELETED
-2015-07-30 13:24:02  FULL        0m    14MB    14  DELETED
+=====================================================================
+ StartTime           EndTime              Mode    Size   TLI  Status
+=====================================================================
+2015-07-30 13:31:08  2015-07-30 13:31:10  FULL    14MB    15  OK
+2015-07-30 13:30:37  2015-07-30 13:30:38  ARCH    53kB    15  OK
+2015-07-30 13:30:32  2015-07-30 13:30:33  ARCH    26kB    15  OK
+2015-07-30 13:30:11  2015-07-30 13:30:13  FULL    14MB    15  OK
+2015-07-30 13:28:10  2015-07-30 13:28:11  INCR   120kB    14  DELETED
+2015-07-30 13:27:45  2015-07-30 13:27:46  INCR    54kB    14  DELETED
+2015-07-30 13:27:32  2015-07-30 13:27:33  INCR    54kB    14  DELETED
+2015-07-30 13:27:25  2015-07-30 13:27:26  INCR    54kB    14  DELETED
+2015-07-30 13:24:02  2015-07-30 13:24:04  FULL    14MB    14  DELETED
 
 $ pg_rman purge
 INFO: DELETED backup "2015-07-30 13:28:10" is purged
@@ -314,13 +317,13 @@ INFO: DELETED backup "2015-07-30 13:27:25" is purged
 INFO: DELETED backup "2015-07-30 13:24:02" is purged
 
 $ pg_rman show -a
-==========================================================
- StartTime           Mode  Duration    Size   TLI  Status
-==========================================================
-2015-07-30 13:31:08  FULL        0m    14MB    15  OK
-2015-07-30 13:30:37  ARCH        0m    53kB    15  OK
-2015-07-30 13:30:32  ARCH        0m    26kB    15  OK
-2015-07-30 13:30:11  FULL        0m    14MB    15  OK
+=====================================================================
+ StartTime           EndTime              Mode    Size   TLI  Status
+=====================================================================
+2015-07-30 13:31:08  2015-07-30 13:31:10  FULL    14MB    15  OK
+2015-07-30 13:30:37  2015-07-30 13:30:38  ARCH    53kB    15  OK
+2015-07-30 13:30:32  2015-07-30 13:30:33  ARCH    26kB    15  OK
+2015-07-30 13:30:11  2015-07-30 13:30:13  FULL    14MB    15  OK
 </code></pre>
 
 <h2 id="Standby-site.Backup">Standby-site Backup</h2>
@@ -428,10 +431,10 @@ INFO: does not include the backup just taken
 <p>Check the result by <code>show</code> command.</p>
 
 <pre><code>$ pg_rman show
-==========================================================
- StartTime           Mode  Duration    Size   TLI  Status
-==========================================================
-2015-07-30 13:36:38  FULL        0m    15MB    15  DONE
+=====================================================================
+ StartTime           EndTime              Mode    Size   TLI  Status
+=====================================================================
+2015-07-30 13:36:38  2015-07-30 13:36:41  FULL    15MB    15  DONE
 </code></pre>
 
 <p>
@@ -445,10 +448,10 @@ INFO: validate: "2015-07-30 13:36:38" backup, archive log files and server log f
 INFO: backup "2015-07-30 13:36:38" is valid
 
 $ pg_rman show
-==========================================================
- StartTime           Mode  Duration    Size   TLI  Status
-==========================================================
-2015-07-30 13:36:38  FULL        0m    15MB    15  OK
+=====================================================================
+ StartTime           EndTime              Mode    Size   TLI  Status
+=====================================================================
+2015-07-30 13:36:38  2015-07-30 13:36:41  FULL    15MB    15  OK
 </code></pre>
 
 <p>
