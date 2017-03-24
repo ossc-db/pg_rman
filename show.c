@@ -168,15 +168,15 @@ show_backup_list(FILE *out, parray *backup_list, bool show_all)
 	int i;
 
 	/* show header */
-	fputs("==========================================================\n", out);
-	fputs(" StartTime           Mode  Duration    Size   TLI  Status \n", out);
-	fputs("==========================================================\n", out);
+	fputs("=====================================================================\n", out);
+	fputs(" StartTime           EndTime              Mode    Size   TLI  Status \n", out);
+	fputs("=====================================================================\n", out);
 
 	for (i = 0; i < parray_num(backup_list); i++)
 	{
 		pgBackup *backup;
-		char timestamp[20];
-		char duration[20] = "----";
+		char start_time[20];
+		char end_time[20];
 		char write_bytes_str[10];
 		static const char *modes[] = { "", "ARCH", "INCR", "FULL"};
 
@@ -191,16 +191,14 @@ show_backup_list(FILE *out, parray *backup_list, bool show_all)
 			backup->status == BACKUP_STATUS_INVALID)
 			continue;
 
-		time2iso(timestamp, lengthof(timestamp), backup->start_time);
-		if (backup->end_time != (time_t) 0)
-			snprintf(duration, lengthof(duration), "%lum",
-				(backup->end_time - backup->start_time) / 60);
+		time2iso(start_time, lengthof(start_time), backup->start_time);
+		time2iso(end_time, lengthof(end_time), backup->end_time);
 
 		pretty_size(backup->write_bytes, write_bytes_str,
 				lengthof(write_bytes_str));
 
-		fprintf(out, "%-19s  %-4s    %6s  %6s %5d  %s\n",
-			timestamp, modes[backup->backup_mode], duration,
+		fprintf(out, "%-19s  %-19s  %-4s  %6s %5d  %s\n",
+			start_time, end_time, modes[backup->backup_mode],
 			write_bytes_str, backup->tli, status2str(backup->status));
 	}
 }
@@ -211,17 +209,17 @@ show_detail_backup_list(FILE *out, parray *backup_list, bool show_all)
 	int		i;
 
 	/* show header */
-	fputs("============================================================================================================\n", out);
-	fputs(" StartTime           Mode  Duration    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status  \n", out);
-	fputs("============================================================================================================\n", out);
+	fputs("======================================================================================================================\n", out);
+	fputs(" StartTime           EndTime              Mode    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status \n", out);
+	fputs("======================================================================================================================\n", out);
 
 	for (i = 0; i < parray_num(backup_list); i++)
 	{
 		static const char *modes[] = { "", "ARCH", "INCR", "FULL"};
 
 		pgBackup *backup;
-		char timestamp[20];
-		char duration[20] = "----";
+		char start_time[20];
+		char end_time[20];
 		char read_data_bytes_str[10] = "----";
 		char read_arclog_bytes_str[10] = "----";
 		char read_srvlog_bytes_str[10] = "----";
@@ -236,10 +234,8 @@ show_detail_backup_list(FILE *out, parray *backup_list, bool show_all)
 			!show_all)
 			continue;
 
-		time2iso(timestamp, lengthof(timestamp), backup->start_time);
-		if (backup->end_time != (time_t) 0)
-			snprintf(duration, lengthof(duration), "%lum",
-				(backup->end_time - backup->start_time) / 60);
+		time2iso(start_time, lengthof(start_time), backup->start_time);
+		time2iso(end_time, lengthof(end_time), backup->end_time);
 
 	    pretty_size(backup->read_data_bytes, read_data_bytes_str,
 				lengthof(read_data_bytes_str));
@@ -262,9 +258,8 @@ show_detail_backup_list(FILE *out, parray *backup_list, bool show_all)
 
 		parent_tli = get_parent_tli(backup->tli);
 
-		fprintf(out, "%-19s  %-4s    %6s  %6s  %6s  %6s  %6s       %5s  %6d  %9d  %s\n",
-			timestamp, modes[backup->backup_mode],
-            duration,
+		fprintf(out, "%-19s  %-19s  %-4s  %6s  %6s  %6s  %6s       %5s  %6d  %9d  %s\n",
+			start_time, end_time, modes[backup->backup_mode],
             read_data_bytes_str,
             read_arclog_bytes_str,
             read_srvlog_bytes_str,
