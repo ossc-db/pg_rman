@@ -3,116 +3,90 @@
 ###### keep generations for full backup ######
 0
 0
-14
 0
 Number of remaining full backups validated: 2
 Number of deleted backups : 1
-14
 ###### BACKUP MANAGEMENT TEST-0002 ######
 ###### keep generations for full and incremental backup ######
 0
 0
 0
-21
 0
 Number of remaining full backups validated: 2
 Number of deleted backups : 1
-21
 ###### BACKUP MANAGEMENT TEST-0003 ######
 ###### keep generations for full and archive backup ######
 0
 0
 0
-25
 0
 Number of remaining full backups validated: 2
 Number of deleted backups : 1
-25
 ###### BACKUP MANAGEMENT TEST-0004 ######
 ###### keep generations for full and error backup ######
 0
 0
 0
 0
-14
 0
 Number of remaining full backups validated: 2
 Number of deleted backups : 1
-14
 ###### BACKUP MANAGEMENT TEST-0005 ######
 ###### keep days for full backup ######
 0
-21
 0
 Number of remaining full backups validated: 3
 Number of deleted backups : 1
-21
 ###### BACKUP MANAGEMENT TEST-0006 ######
 ###### keep days for full and incremental backup ######
 0
-28
 0
 Number of remaining full backups validated: 3
 Number of deleted backups : 1
-28
 ###### BACKUP MANAGEMENT TEST-0007 ######
 ###### keep days for full and archive backup ######
 0
-28
 0
 Number of remaining full backups validated: 3
 Number of deleted backups : 1
-28
 ###### BACKUP MANAGEMENT TEST-0008 ######
 ###### keep days for full and error backup ######
 0
-14
 0
 Number of remaining full backups validated: 2
 Number of deleted backups : 1
-14
 ###### BACKUP MANAGEMENT TEST-0009 ######
 ###### keep generations and days together with full backup ######
 0
-28
 keep data generation : 1, keep data days : 2
 0
 Number of remaining full backups validated: 4
 Number of deleted backups : 1
-28
 ###### BACKUP MANAGEMENT TEST-0010 ######
 ###### keep generations and days together with full backup ######
 0
-28
 keep data generation : 3, keep data days : 1
 0
 Number of remaining full backups validated: 4
 Number of deleted backups : 1
-28
 ###### BACKUP MANAGEMENT TEST-0011 ######
 ###### keep generations and days together with full and incremental backup ######
 0
-35
 keep data generation : 2, keep data days : 2
 0
 Number of remaining full backups validated: 4
 Number of deleted backups : 1
-35
 ###### BACKUP MANAGEMENT TEST-0012 ######
 ###### keep generations and days together with full and archive backup ######
 0
-35
 keep data generation : 2, keep data days : 2
 0
 Number of remaining full backups validated: 4
 Number of deleted backups : 1
-35
 ###### BACKUP MANAGEMENT TEST-0013 ######
 ###### keep generations and days together with full and error backup ######
 0
-28
 keep data generation : 2, keep data days : 2
 0
 Number of remaining full backups validated: 3
 Number of deleted backups : 2
-21

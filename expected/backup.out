@@ -3,34 +3,28 @@
 ###### full backup mode ######
 0
 1
-7
 ###### BACKUP COMMAND TEST-0002 ######
 ###### incremental backup mode ######
 0
 2
-14
 ###### BACKUP COMMAND TEST-0003 ######
 ###### archive backup mode ######
 0
 3
-25
 ###### BACKUP COMMAND TEST-0004 ######
 ###### full backup with server log ######
 0
 1
-3
 ###### BACKUP COMMAND TEST-0005 ######
 ###### full backup with compression ######
 0
 1
 1
-3
 ###### BACKUP COMMAND TEST-0006 ######
 ###### full backup with smooth checkpoint ######
 0
 1
-3
-###### BACKUP COMMAND TEST-0010 ######
+###### BACKUP COMMAND TEST-0007 ######
 ###### switch backup mode from incremental to full ######
 incremental backup without validated full backup
 INFO: copying database files
@@ -49,7 +43,7 @@ INFO: Please execute 'pg_rman validate' to verify the files are correctly copied
 0
 1
 1
-###### BACKUP COMMAND TEST-0011 ######
+###### BACKUP COMMAND TEST-0008 ######
 ###### switch backup mode from archive to full ######
 archive backup without validated full backup
 ERROR: cannot take an incremental backup
@@ -67,7 +61,7 @@ INFO: Please execute 'pg_rman validate' to verify the files are correctly copied
 0
 1
 1
-###### BACKUP COMMAND TEST-0012 ######
+###### BACKUP COMMAND TEST-0009 ######
 ###### failure in backup with different system identifier database ######
 ERROR: could not start backup
 DETAIL: system identifier of target database is different from the one of initially configured database
