@@ -198,8 +198,8 @@ $ pg_rman validate     # 未検証のすべてのバックアップを検証
 
 <p>ここで、表示される列の意味は以下の通りです。</p>
 <ul>
-<li>StartTime : バックアップの開始時刻</li>
-<li>EndTime : timestamp when backup ended</li>
+<li>StartTime : バックアップを開始した時刻</li>
+<li>EndTime : バックアップが終了した時刻</li>
 <li>Mode : バックアップの種類。以下の種類があります。
 <ul>
 <li>FULL : 全体バックアップ</li>
@@ -275,7 +275,7 @@ pg_rmanがリストア中に未アーカイブの WAL をバックアップし�
 <p><code>--recovery-target-timeline</code> を指定しなかった場合は、制御ファイル(<code>$PGDATA/global/pg_control</code>) の最終チェックポイントタイムラインをターゲットとしてリストアします。
 pg_control が存在しない場合は、リストアのベースとなる全体バックアップのタイムラインをターゲットとしてリストアします。</p>
 
-<p>When specifying <code>--recovery-target-time</code>, make sure that you specify a timestamp greater than (or equal to) the EndTime of the full backup that you want to use as the base.</p>
+<p><code>--recovery-target-time</code>を使用する場合、復元のベースとしたいバックアップ（FULL、INCR、ARCH）のEndTime以降の時刻をする必要があります。</p>
 
 <h3>バックアップの削除</h3>
 <p><code>delete</code> コマンドで日時を指定すると、そこまでのリカバリに不要なバックアップを削除できます。以下の例では、2015年3月27日の 14:59:00 時点にリカバリするのに不要なバックアップを削除しています。</p>
