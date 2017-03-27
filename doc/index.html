@@ -175,14 +175,14 @@ $ pg_rman validate     # validate all unvalidated backups
 <p><code>show detail</code> command shows more detail information.</p>
 
 <pre><code>$ pg_rman show detail
- ================================================================================================================================
- StartTime            EndTime              Mode  Duration    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status
- ================================================================================================================================
- 2015-03-27 11:43:31  2015-03-27 11:43:32  INCR        0m    16kB    33MB    ----    54kB        true       1          0  OK
- 2015-03-27 11:43:19  2015-03-27 11:43:20  INCR        0m   148kB    33MB    ----    69kB        true       1          0  OK
- 2015-03-27 11:43:04  2015-03-27 11:43:06  INCR        0m   173kB    83MB    ----   151kB        true       1          0  OK
- 2015-03-27 11:42:56  2015-03-27 11:42:57  INCR        0m   173kB    50MB    ----    96kB        true       1          0  OK
- 2015-03-27 11:34:55  2015-03-27 11:34:58  FULL        0m    28MB    83MB    ----  5312kB        true       1          0  OK
+ ======================================================================================================================
+ StartTime            EndTime              Mode    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status
+ ======================================================================================================================
+ 2015-03-27 11:43:31  2015-03-27 11:43:32  INCR    16kB    33MB    ----    54kB        true       1          0  OK
+ 2015-03-27 11:43:19  2015-03-27 11:43:20  INCR   148kB    33MB    ----    69kB        true       1          0  OK
+ 2015-03-27 11:43:04  2015-03-27 11:43:06  INCR   173kB    83MB    ----   151kB        true       1          0  OK
+ 2015-03-27 11:42:56  2015-03-27 11:42:57  INCR   173kB    50MB    ----    96kB        true       1          0  OK
+ 2015-03-27 11:34:55  2015-03-27 11:34:58  FULL    28MB    83MB    ----  5312kB        true       1          0  OK
 </code></pre>
 
 <p>The fields are:</p>
@@ -196,7 +196,6 @@ $ pg_rman validate     # validate all unvalidated backups
 <li>ARCH : archive WAL backup</li>
 </ul>
 </li>
-<li>Duration : total time of backup</li>
 <li>Data : size of read data files</li>
 <li>ArcLog : size of read archive WAL files</li>
 <li>SrvLog : size of read server log files</li>
