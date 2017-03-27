@@ -40,18 +40,18 @@ To list all the backups taken so far, use the `show` command:
 
 ````
 $ pg_rman show
- ==========================================================
- StartTime           Mode  Duration    Size   TLI  Status
- ==========================================================
- 2015-03-27 14:59:47  FULL        0m  3404kB     3  OK
- 2015-03-27 14:59:19  ARCH        0m    26kB     3  OK
- 2015-03-27 14:59:00  ARCH        0m    26kB     3  OK
- 2015-03-27 14:58:46  FULL        0m  3516kB     3  OK
- 2015-03-27 11:43:31  INCR        0m    54kB     1  OK
- 2015-03-27 11:43:19  INCR        0m    69kB     1  OK
- 2015-03-27 11:43:04  INCR        0m   151kB     1  OK
- 2015-03-27 11:42:56  INCR        0m    96kB     1  OK
- 2015-03-27 11:34:55  FULL        0m  5312kB     1  OK
+ =====================================================================
+ StartTime            EndTime              Mode    Size   TLI  Status
+ =====================================================================
+ 2015-03-27 14:59:47  2015-03-27 14:59:49  FULL  3404kB     3  OK
+ 2015-03-27 14:59:19  2015-03-27 14:59:20  ARCH    26kB     3  OK
+ 2015-03-27 14:59:00  2015-03-27 14:59:01  ARCH    26kB     3  OK
+ 2015-03-27 14:58:46  2015-03-27 14:58:48  FULL  3516kB     3  OK
+ 2015-03-27 11:43:31  2015-03-27 11:43:32  INCR    54kB     1  OK
+ 2015-03-27 11:43:19  2015-03-27 11:43:20  INCR    69kB     1  OK
+ 2015-03-27 11:43:04  2015-03-27 11:43:05  INCR   151kB     1  OK
+ 2015-03-27 11:42:56  2015-03-27 11:42:56  INCR    96kB     1  OK
+ 2015-03-27 11:34:55  2015-03-27 11:34:58  FULL  5312kB     1  OK
 ````
 
 To restore from a backup, use the `restore` command.  Note that pg_rman itself generates the `recovery.conf` file required to perform PostgreSQL PITR.
