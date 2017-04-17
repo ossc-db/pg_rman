@@ -32,6 +32,7 @@ static int doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
 	int flash);
 static int doInflate(z_stream *zp, size_t in_size, size_t out_size,void *inbuf,
 	void *outbuf, FILE *in, FILE *out, pg_crc32 *crc, size_t *read_size);
+static BlockNumber figure_out_segno(char *filepath);
 
 static int
 doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
@@ -532,6 +533,7 @@ restore_data_file(const char *from_root,
 	FILE			   *out;
 	BackupPageHeader	header;
 	BlockNumber			blknum;
+	BlockNumber			segno;
 #ifdef HAVE_LIBZ
 	z_stream			z;
 	int					status;
@@ -597,6 +599,16 @@ restore_data_file(const char *from_root,
 		read_size = 0;
 	}
 #endif
+
+	/*
+	 * If this data file is a non-initial segment of a multi-segment relation,
+	 * we must use the correct blkno for the checksum calculation to proceed
+	 * sanely.  No need to be accurate if the checksum won't matter.
+	 */
+	if (data_checksum_enabled)
+		segno = figure_out_segno(file->path);
+	else
+		segno = 0;
 
 	for (blknum = 0; ; blknum++)
 	{
@@ -708,8 +720,15 @@ restore_data_file(const char *from_root,
 				 errmsg("could not seek block %u of \"%s\": %s",
 					blknum, to_path, strerror(errno))));
 
+		/*
+		 * Remember that PostgreSQL server will be counting blocks across
+		 * multiple segments when passing the block number for checksum
+		 * calculation.  So, consider segno calculated above.
+		 */
 		if(data_checksum_enabled)
-			((PageHeader) page.data)->pd_checksum = pg_checksum_page((char *) page.data, blknum);
+			((PageHeader) page.data)->pd_checksum =
+										pg_checksum_page((char *) page.data,
+											 blknum + RELSEG_SIZE * segno);
 
 		if (fwrite(page.data, 1, sizeof(page), out) != sizeof(page))
 			ereport(ERROR,
@@ -1001,4 +1020,31 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 		remove(to_path);
 
 	return true;
+}
+
+/*
+ * figure_out_segno
+ *		For a segment file of a multi-segment relation, returns the segment
+ *		number of passed-in file (0 if turns out to be the first segment)
+ *
+ * Note: this must be called only when it's known that filepath is of a data
+ * file segment, because the function embeds assumptions about how such files
+ * are named.
+ */
+static BlockNumber
+figure_out_segno(char *filepath)
+{
+	char   *filename;
+	int		segno = 0;
+
+	if ((filename = strrchr(filepath, '/')) != NULL)
+	{
+		int		scanned;
+		unsigned int	relfilenode = 0;
+
+		scanned = sscanf((char *) filename + 1, "%u.%d", &relfilenode, &segno);
+		Assert(scanned > 0);
+	}
+
+	return segno;
 }
