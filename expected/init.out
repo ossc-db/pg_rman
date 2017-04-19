@@ -7,7 +7,6 @@ results/init/backup/backup/
 results/init/backup/backup_catalog_version
 results/init/backup/backup/pg_xlog/
 results/init/backup/backup/srvlog/
-results/init/backup/data_checksum_version
 results/init/backup/pg_rman.ini
 results/init/backup/system_identifier
 results/init/backup/timeline_history/
@@ -19,7 +18,6 @@ results/init/backup/backup/
 results/init/backup/backup_catalog_version
 results/init/backup/backup/pg_xlog/
 results/init/backup/backup/srvlog/
-results/init/backup/data_checksum_version
 results/init/backup/pg_rman.ini
 results/init/backup/system_identifier
 results/init/backup/timeline_history/
@@ -34,7 +32,6 @@ results/init/backup/backup/
 results/init/backup/backup_catalog_version
 results/init/backup/backup/pg_xlog/
 results/init/backup/backup/srvlog/
-results/init/backup/data_checksum_version
 results/init/backup/pg_rman.ini
 results/init/backup/system_identifier
 results/init/backup/timeline_history/
