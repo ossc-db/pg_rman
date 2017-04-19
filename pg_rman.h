@@ -41,36 +41,6 @@
 #define PG_BACKUP_LABEL_FILE	"backup_label"
 #define PG_BLACK_LIST			"black_list"
 
-/*
- * Catalog versioning:
- *
- * CATALOG_VERSION_NUM is updated every time we add/remove files to/from
- * the backup directory.  A valid catalog version number is an integer > 0,
- * as far as the code checking the version number is concerned.  The exact
- * value to set it to when updating the catalog is YYYYMMDDN, where
- * YYYY-MM-DD is the date when the change is made and N is equal to the
- * number of changes made on that day.
- *
- * pg_rman init writes the current CATALOG_VERSION_NUM to the file
- * CATALOG_VERSION_FILE in the top backup directory.  The value contained in
- * the file is read at startup into catalog_version_num.  If the file is not
- * found, catalog_version_num is set to 0, which is to preserve compatibility
- * with backup directories created with older pg_rman binaries. (If someone
- * deletes the file manually, they should not expect some features of pg_rman
- * to work correctly.)
- *
- * The code that checks the existence of a particular file of the backup
- * directory (a file that is part of the backup catalog, not some file
- * contained in a backup) must check whether the version number read from
- * the catalog version file (if one exists) is >= catalog version number
- * that introduced that file; if not, an error is thrown.
- */
-#define CATALOG_VERSION_NUM		201703061
-
-extern uint32	catalog_version_num;
-
-#define CATALOG_VERSION_FILE	"backup_catalog_version"
-
 /* Snapshot script command */
 #define SNAPSHOT_FREEZE			"freeze"
 #define SNAPSHOT_UNFREEZE		"unfreeze"
@@ -303,7 +273,6 @@ extern int catalog_lock(void);
 extern void catalog_unlock(void);
 
 extern void catalog_init_config(pgBackup *backup);
-extern void catalog_init_version(void);
 extern void check_system_identifier(void);
 extern TimeLineID get_current_timeline(void);
 
