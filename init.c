@@ -40,7 +40,6 @@ do_init(void)
 	struct dirent **dp;
 	int results;
 	uint64      sysid;
-	uint32		checksum_ver;
 	ControlFileData *controlFile;
 	bool crc_ok;
 
@@ -101,7 +100,6 @@ do_init(void)
 				(errmsg("control file appears to be corrupt"),
 				 errdetail("Calculated CRC checksum does not match value stored in file.")));
 	sysid = controlFile->system_identifier;
-	checksum_ver = controlFile->data_checksum_version;
 	pg_free(controlFile);
 
 	/* register system identifier of target database. */
@@ -113,17 +111,6 @@ do_init(void)
 			 errmsg("could not create system identifier file: %s", strerror(errno))));
 	else
 		fprintf(fp, "SYSTEM_IDENTIFIER='" UINT64_FORMAT "'\n", sysid);
-	fclose(fp);
-
-	/* register data checksum version of target database. */
-	join_path_components(path, backup_path, DATA_CHECKSUM_VERSION_FILE);
-	fp = fopen(path, "wt");
-	if (fp == NULL)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not create data checksum version file: %s", strerror(errno))));
-	else
-		fprintf(fp, "DATA_CHECKSUM_VERSION='%u'", checksum_ver);
 	fclose(fp);
 
 	/* create pg_rman.ini */

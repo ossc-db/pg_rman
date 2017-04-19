@@ -19,7 +19,6 @@
 #include <math.h>
 
 #include "libpq/pqsignal.h"
-#include "catalog/pg_control.h"
 #include "common/controldata_utils.h"
 #include "pgut/pgut-port.h"
 
@@ -28,6 +27,13 @@
 
 static bool		 in_backup = false;	/* TODO: more robust logic */
 static parray	*cleanup_list;		/* list of command to execute at error processing for snapshot */
+
+/*
+ * data_checksum_enabled as read from the control file of the database
+ * cluster.  Exposed for use in data.c.
+ */
+bool	data_checksum_enabled = false;
+static void init_data_checksum_enabled(void);
 
 /*
  * Backup routines
@@ -85,6 +91,8 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	bool	smooth_checkpoint = bkupopt.smooth_checkpoint;
 
 	check_server_version();
+
+	init_data_checksum_enabled();
 
 	if (!HAVE_DATABASE(&current))
 	{
@@ -781,13 +789,6 @@ do_backup(pgBackupOption bkupopt)
 	parray *files_srvlog;
 	int    ret;
 	char   path[MAXPGPATH];
-	FILE   *fp;
-	char   buf[1024];
-	char   key[1024];
-	char   value[1024];
-	uint64 result;
-	ControlFileData *controlFile;
-	char   sysident_str[32];
 
 	/* repack the necesary options */
 	int	keep_arclog_files = bkupopt.keep_arclog_files;
@@ -796,7 +797,6 @@ do_backup(pgBackupOption bkupopt)
 	int	keep_srvlog_days  = bkupopt.keep_srvlog_days;
 	int	keep_data_generations = bkupopt.keep_data_generations;
 	int	keep_data_days        = bkupopt.keep_data_days;
-	bool crc_ok;
 
 	/* PGDATA and BACKUP_MODE are always required */
 	if (pgdata == NULL)
@@ -849,45 +849,8 @@ do_backup(pgBackupOption bkupopt)
 	}
 #endif
 
-	/* get system identifier of backup configuration */
-	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);
-	fp = pgut_fopen(path, "rt", true);
-
-	if (fp == NULL)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not open system identifier file \"%s\"", path)));
-
-	while (fgets(buf, lengthof(buf), fp) != NULL)
-	{
-		size_t      i;
-		for (i = strlen(buf); i > 0 && IsSpace(buf[i - 1]); i--)
-		buf[i - 1] = '\0';
-		if (parse_pair(buf, key, value))
-			elog(DEBUG, "the initially configured target database : %s = %s", key, value);
-	}
-	fclose(fp);
-
-	/* get system identifier of the current database.*/
-	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
-	if (!crc_ok)
-		ereport(WARNING,
-				(errmsg("control file appears to be corrupt"),
-				 errdetail("Calculated CRC checksum does not match value stored in file.")));
-
-	result = controlFile->system_identifier;
-	pg_free(controlFile);
-	elog(DEBUG, "the system identifier of current target database : " UINT64_FORMAT, result);
-	snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, result);
-
-	if ( strcmp(value, sysident_str) != 0)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not start backup"),
-			 errdetail("system identifier of target database is different"
-				" from the one of initially configured database")));
-	else
-		elog(DEBUG, "the backup target database is the same as initial configured one.");
+	/* Check that we're working with the correct database cluster */
+	check_system_identifier();
 
 	/* show configuration actually used */
 	if (verbose)
@@ -2086,4 +2049,41 @@ create_file_list(parray *files, const char *root, const char *prefix, bool is_ap
 		dir_print_file_list(fp, files, root, prefix);
 		fclose(fp);
 	}
+}
+
+/*
+ * Initialize data_checksum_enabled by reading the value of
+ * data_checksum_version from the PG control file.
+ */
+static void
+init_data_checksum_enabled()
+{
+	char				controlFilePath[MAXPGPATH];
+	ControlFileData    *controlFile;
+
+	/* Read the value of the setting from the control file in PGDATA. */
+	snprintf(controlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
+	if (fileExists(controlFilePath))
+	{
+		bool	crc_ok;
+
+		controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+		if (!crc_ok)
+		{
+			ereport(WARNING,
+					(errmsg("control file appears to be corrupt"),
+					 errdetail("Calculated CRC checksum does not match value stored in file.")));
+			data_checksum_enabled = false;	/* can't really do anything */
+		}
+		else
+			data_checksum_enabled = controlFile->data_checksum_version > 0;
+
+		pg_free(controlFile);
+	}
+	else
+		elog(WARNING, _("pg_controldata file \"%s\" does not exist"),
+						controlFilePath);
+
+	elog(DEBUG, "data checksum %s on the initially configured database",
+						data_checksum_enabled ? "enabled" : "disabled");
 }

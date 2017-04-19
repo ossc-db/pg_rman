@@ -16,6 +16,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "catalog/pg_control.h"
+#include "common/controldata_utils.h"
 #include "libpq/pqsignal.h"
 #include "storage/block.h"
 #include "storage/bufpage.h"
@@ -259,6 +261,7 @@ backup_data_file(const char *from_root,
 	BackupPageHeader	header;
 	DataPage			page;		/* used as read buffer */
 	BlockNumber			blknum;
+	BlockNumber			segno;
 	size_t				read_len;
 	int					errno_tmp;
 	pg_crc32c			crc;
@@ -327,6 +330,16 @@ backup_data_file(const char *from_root,
 	}
 #endif
 
+	/*
+	 * If this data file is a non-initial segment of a multi-segment relation,
+	 * we must use the correct blkno for the checksum calculation to proceed
+	 * sanely.  No need to be accurate if the checksum won't matter.
+	 */
+	if (data_checksum_enabled)
+		segno = figure_out_segno(file->path);
+	else
+		segno = 0;
+
 	/* read each page and write the page excluding hole */
 	for (blknum = 0;
 		 (read_len = fread(&page, 1, sizeof(page), in)) == sizeof(page);
@@ -359,6 +372,20 @@ backup_data_file(const char *from_root,
 		/* if the page has not been modified since last backup, skip it */
 		if (!prev_file_not_found && lsn && !XLogRecPtrIsInvalid(page_lsn) && page_lsn < *lsn)
 			continue;
+
+		/*
+		 * Re-calculate checksum disregarding the hole portion of the page
+		 * and overwrite the value curently present in pd_checksum.
+		 *
+		 * Note: Zero'ing the hole portion is necessary, because that's what
+		 * it will contain once the page is restored into the target
+		 * database.
+		 */
+		memset(page.data + header.hole_offset, 0, header.hole_length);
+		if (data_checksum_enabled)
+			((PageHeader) page.data)->pd_checksum =
+										pg_checksum_page((char *) page.data,
+											 blknum + RELSEG_SIZE * segno);
 
 		upper_offset = header.hole_offset + header.hole_length;
 		upper_length = BLCKSZ - upper_offset;
@@ -553,14 +580,13 @@ void
 restore_data_file(const char *from_root,
 				  const char *to_root,
 				  pgFile *file,
-				  bool compress, bool data_checksum_enabled)
+				  bool compress)
 {
 	char				to_path[MAXPGPATH];
 	FILE			   *in;
 	FILE			   *out;
 	BackupPageHeader	header;
 	BlockNumber			blknum;
-	BlockNumber			segno;
 #ifdef HAVE_LIBZ
 	z_stream			z;
 	int					status;
@@ -626,16 +652,6 @@ restore_data_file(const char *from_root,
 		read_size = 0;
 	}
 #endif
-
-	/*
-	 * If this data file is a non-initial segment of a multi-segment relation,
-	 * we must use the correct blkno for the checksum calculation to proceed
-	 * sanely.  No need to be accurate if the checksum won't matter.
-	 */
-	if (data_checksum_enabled)
-		segno = figure_out_segno(file->path);
-	else
-		segno = 0;
 
 	for (blknum = 0; ; blknum++)
 	{
@@ -748,15 +764,10 @@ restore_data_file(const char *from_root,
 					blknum, to_path, strerror(errno))));
 
 		/*
-		 * Remember that PostgreSQL server will be counting blocks across
-		 * multiple segments when passing the block number for checksum
-		 * calculation.  So, consider segno calculated above.
+		 * Note that a valid checksum was already set by backup_data_file(),
+		 * considering the zero'ing of the hole.  See comments in that
+		 * function.
 		 */
-		if(data_checksum_enabled)
-			((PageHeader) page.data)->pd_checksum =
-										pg_checksum_page((char *) page.data,
-											 blknum + RELSEG_SIZE * segno);
-
 		if (fwrite(page.data, 1, sizeof(page), out) != sizeof(page))
 			ereport(ERROR,
 				(errcode(ERROR_SYSTEM),
