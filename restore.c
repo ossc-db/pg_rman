@@ -14,8 +14,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "catalog/pg_control.h"
-
 static void backup_online_files(bool re_recovery);
 static void restore_online_files(void);
 static void restore_database(pgBackup *backup);
@@ -31,7 +29,6 @@ static pgRecoveryTarget *checkIfCreateRecoveryConf(const char *target_time,
 static parray * readTimeLineHistory(TimeLineID targetTLI);
 static bool satisfy_timeline(const parray *timelines, const pgBackup *backup);
 static bool satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt);
-static TimeLineID get_current_timeline(void);
 static TimeLineID get_fullbackup_timeline(parray *backups, const pgRecoveryTarget *rt);
 static TimeLineID parse_target_timeline(const char *target_tli_string, TimeLineID cur_tli,
 											bool *target_tli_latest);
@@ -1207,23 +1204,6 @@ checkIfCreateRecoveryConf(const char *target_time,
 
 	return rt;
 
-}
-
-/* get TLI of the current database */
-static TimeLineID
-get_current_timeline(void)
-{
-	TimeLineID	result;
-	char		*buffer;
-
-	buffer = read_control_file();
-
-	if(buffer != NULL)
-		result = (TimeLineID) ((ControlFileData *) buffer)->checkPointCopy.ThisTimeLineID;
-	else
-		return 0;
-	free(buffer);
-	return result;
 }
 
 /*

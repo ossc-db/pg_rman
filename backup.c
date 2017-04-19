@@ -791,13 +791,6 @@ do_backup(pgBackupOption bkupopt)
 	parray *files_srvlog;
 	int    ret;
 	char   path[MAXPGPATH];
-	FILE   *fp;
-	char   buf[1024];
-	char   key[1024];
-	char   value[1024];
-	uint64 result;
-	char   *buffer;
-	char   sysident_str[32];
 
 	/* repack the necesary options */
 	int	keep_arclog_files = bkupopt.keep_arclog_files;
@@ -856,43 +849,8 @@ do_backup(pgBackupOption bkupopt)
 	}
 #endif
 
-	/* get system identifier of backup configuration */
-	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);
-	fp = pgut_fopen(path, "rt", true);
-
-	if (fp == NULL)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not open system identifier file \"%s\"", path)));
-
-	while (fgets(buf, lengthof(buf), fp) != NULL)
-	{
-		size_t      i;
-		for (i = strlen(buf); i > 0 && IsSpace(buf[i - 1]); i--)
-		buf[i - 1] = '\0';
-		if (parse_pair(buf, key, value))
-			elog(DEBUG, "the initially configured target database : %s = %s", key, value);
-	}
-	fclose(fp);
-
-	/* get system identifier of the current database.*/
-	buffer = read_control_file();
-	if(buffer != NULL)
-	{
-		result = (uint64) ((ControlFileData *) buffer)->system_identifier;
-		free(buffer);
-	}
-	elog(DEBUG, "the system identifier of current target database : " UINT64_FORMAT, result);
-	snprintf(sysident_str, sizeof(sysident_str), UINT64_FORMAT, result);
-
-	if ( strcmp(value, sysident_str) != 0)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not start backup"),
-			 errdetail("system identifier of target database is different"
-				" from the one of initially configured database")));
-	else
-		elog(DEBUG, "the backup target database is the same as initial configured one.");
+	/* Check that we're working with the correct database cluster */
+	check_system_identifier();
 
 	/* show configuration actually used */
 	if (verbose)
