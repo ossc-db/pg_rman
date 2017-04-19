@@ -34,7 +34,6 @@
 #define BACKUP_INI_FILE			"backup.ini"
 #define PG_RMAN_INI_FILE		"pg_rman.ini"
 #define SYSTEM_IDENTIFIER_FILE	"system_identifier"
-#define DATA_CHECKSUM_VERSION_FILE	"data_checksum_version"
 #define MKDIRS_SH_FILE			"mkdirs.sh"
 #define DATABASE_FILE_LIST		"file_database.txt"
 #define ARCLOG_FILE_LIST		"file_arclog.txt"
@@ -73,16 +72,6 @@
 extern uint32	catalog_version_num;
 
 #define CATALOG_VERSION_FILE	"backup_catalog_version"
-
-/*
- * data_checksum_version file *must* exist if the catalog version that a
- * backup was initialized with is >= 201703061.
- *
- * We don't have similar macro for other files listed above.  The condition
- * would be catalog_version_num >= 0.  That is, *any* backup directory must
- * contain each of those files.
- */
-#define NEED_DATA_CHECKSUM_VERSION_FILE (catalog_version_num >= 201703061)
 
 /* Snapshot script command */
 #define SNAPSHOT_FREEZE			"freeze"
@@ -277,6 +266,9 @@ extern pgBackup current;
 /* exclude directory list for $PGDATA file listing */
 extern const char *pgdata_exclude[];
 
+/* Is data checksum enabled per cluster-settings? */
+extern bool data_checksum_enabled;
+
 /* in backup.c */
 extern int do_backup(pgBackupOption bkupopt);
 extern BackupMode parse_backup_mode(const char *value, int elevel);
@@ -317,6 +309,8 @@ extern void catalog_unlock(void);
 
 extern void catalog_init_config(pgBackup *backup);
 extern void catalog_init_version(void);
+extern void check_system_identifier(void);
+extern TimeLineID get_current_timeline(void);
 
 extern void pgBackupWriteConfigSection(FILE *out, pgBackup *backup);
 extern void pgBackupWriteResultSection(FILE *out, pgBackup *backup);
@@ -356,7 +350,7 @@ extern void xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn)
 extern bool backup_data_file(const char *from_root, const char *to_root,
 							 pgFile *file, const XLogRecPtr *lsn, bool compress, bool prev_file_not_found);
 extern void restore_data_file(const char *from_root, const char *to_root,
-							  pgFile *file, bool compress, bool data_checksum_enabled);
+							  pgFile *file, bool compress);
 extern bool copy_file(const char *from_root, const char *to_root,
 					  pgFile *file, CompressionMode compress);
 extern pgFile *write_stop_backup_file(pgBackup *backup, const char *buf, int len, const char *file_name);
