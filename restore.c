@@ -14,7 +14,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "catalog/pg_control.h"
 #include "common/fe_memutils.h"
 
 static void backup_online_files(bool re_recovery);
@@ -32,7 +31,6 @@ static pgRecoveryTarget *checkIfCreateRecoveryConf(const char *target_time,
 static parray * readTimeLineHistory(TimeLineID targetTLI);
 static bool satisfy_timeline(const parray *timelines, const pgBackup *backup);
 static bool satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt);
-static TimeLineID get_current_timeline(void);
 static TimeLineID get_fullbackup_timeline(parray *backups, const pgRecoveryTarget *rt);
 static TimeLineID parse_target_timeline(const char *target_tli_string, TimeLineID cur_tli,
 											bool *target_tli_latest);
@@ -40,8 +38,6 @@ static TimeLineID findNewestTimeLine(TimeLineID startTLI);
 static bool existsTimeLineHistory(TimeLineID probeTLI);
 static void print_backup_id(const pgBackup *backup);
 static void search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timelines);
-static int data_checksum_version;
-static int get_fullbackup_data_checksum_version(pgBackup *backup);
 
 int
 do_restore(const char *target_time,
@@ -67,11 +63,6 @@ do_restore(const char *target_time,
 	uint32 needId = 0;
 	uint32 needSeg = 0;
 	pgRecoveryTarget *rt = NULL;
-	char   path[MAXPGPATH];
-	FILE   *fp;
-	char   buf[128];
-	char   key[64];
-	char   value[64];
 
 	/* PGDATA and ARCLOG_PATH are always required */
 	if (pgdata == NULL)
@@ -131,47 +122,6 @@ do_restore(const char *target_time,
 
 	backup_tli = get_fullbackup_timeline(backups, rt);
 	elog(DEBUG, "the timeline ID of latest full backup is %d", backup_tli);
-
-	/*
-	 * Get the data_checksum_version from DATA_CHECKSUM_VERSION_FILE written
-	 * during pg_rman init.  Since data checksum setting of a database cluster
-	 * cannot be changed, we can rely on the value.
-	 *
-	 * However, if the backup directory was initialized with an older pg_rman,
-	 * we will not find the file.  In that case, the checksum setting will be
-	 * obtained from the backup (see further below).
-	 */
-	data_checksum_version = -1;
-	join_path_components(path, backup_path, DATA_CHECKSUM_VERSION_FILE);
-	fp = pgut_fopen(path, "rt", true);
-	if (fp == NULL)
-	{
-		if (NEED_DATA_CHECKSUM_VERSION_FILE)
-			ereport(ERROR,
-				(errcode(ERROR_SYSTEM),
-				 errmsg("could not open data checksum version file \"%s\"", path)));
-		else
-		{
-			/* we will set data_checksum_version below */
-		}
-	}
-	else
-	{
-		while (fgets(buf, lengthof(buf), fp) != NULL)
-		{
-			size_t      i;
-			for (i = strlen(buf); i > 0 && IsSpace(buf[i - 1]); i--)
-			buf[i - 1] = '\0';
-			if (parse_pair(buf, key, value))
-			{
-				data_checksum_version = strtoul(value, NULL, 10);
-				elog(DEBUG, "data checksum %s on the initially configured database",
-							data_checksum_version > 0 ? "enabled" : "disabled");
-			}
-		}
-
-		fclose(fp);
-	}
 
 	/*
 	 * determine target timeline;
@@ -249,17 +199,6 @@ do_restore(const char *target_time,
 		 errdetail("There is no valid full backup which can be used for given recovery condition.")));
 
 base_backup_found:
-
-	/*
-	 * Set data_checksum_version by reading pg_control in the backup.
-	 */
-	if (data_checksum_version < 0)
-	{
-		data_checksum_version = get_fullbackup_data_checksum_version(base_backup);
-		elog(DEBUG, "data checksum %s on the initially configured database",
-							data_checksum_version > 0 ? "enabled" : "disabled");
-	}
-	Assert(data_checksum_version >= 0);
 
 	/* first off, backup online WAL and serverlog */
 	backup_online_files(cur_tli != 0 && cur_tli != backup_tli);
@@ -558,7 +497,7 @@ restore_database(pgBackup *backup)
 
 		/* restore file */
 		if (!check)
-			restore_data_file(from_root, pgdata, file, backup->compress_data, (data_checksum_version > 0));
+			restore_data_file(from_root, pgdata, file, backup->compress_data);
 
 		/* print size of restored file */
 		if (verbose && !check)
@@ -1268,23 +1207,6 @@ checkIfCreateRecoveryConf(const char *target_time,
 
 }
 
-/* get TLI of the current database */
-static TimeLineID
-get_current_timeline(void)
-{
-	TimeLineID	result;
-	char		*buffer;
-
-	buffer = read_control_file(pgdata);
-
-	if(buffer != NULL)
-		result = (TimeLineID) ((ControlFileData *) buffer)->checkPointCopy.ThisTimeLineID;
-	else
-		return 0;
-	pg_free(buffer);
-	return result;
-}
-
 /*
  * Parse the string value passed via --recovery-target-timeline.
  * We need this to support 'latest' as a value for the above
@@ -1378,24 +1300,4 @@ existsTimeLineHistory(TimeLineID probeTLI)
 			 errmsg("could not open file \"%s\": %s", path, strerror(errno))));
 
 	return false;
-}
-
-/*
- * get datapage checksum version of the full backup
- */
-static int
-get_fullbackup_data_checksum_version(pgBackup *backup)
-{
-	int		result = -1;
-	char   *buffer;
-	char	bkp_db_path[MAXPGPATH];
-
-	/* Instead of PGDATA, read control file from the backup */
-	pgBackupGetPath(backup, bkp_db_path, lengthof(bkp_db_path), DATABASE_DIR);
-	buffer = read_control_file(bkp_db_path);
-	if (buffer)
-		result = ((ControlFileData *) buffer)->data_checksum_version;
-	pg_free(buffer);
-
-	return result;
 }
