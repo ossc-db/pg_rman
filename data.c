@@ -1,6 +1,7 @@
 /*-------------------------------------------------------------------------
  *
- * data.c: compress / uncompress data pages
+ * data.c: utilities for backing up and restoring database files along with
+ * the support for compression/decompression of individual data file pages
  *
  * Copyright (c) 2009-2017, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
  *
@@ -167,12 +168,25 @@ doInflate(z_stream *zp, size_t in_size, size_t out_size,void *inbuf,
 }
 #endif
 
+/*
+ * One page read from a data file.
+ */
 typedef union DataPage
 {
-	PageHeaderData		page_data;
+	/* Page header for quick access */
+	PageHeaderData		header;
+
+	/*
+	 * The whole page (execpt the portion deemed unnecessary (hole), all of
+	 * it is written to the backup as is.
+	 */
 	char				data[BLCKSZ];
 } DataPage;
 
+/*
+ * Along with each data page, the following information is written to the
+ * backup.
+ */
 typedef struct BackupPageHeader
 {
 	BlockNumber	block;			/* block number */
@@ -180,32 +194,42 @@ typedef struct BackupPageHeader
 	uint16		hole_length;	/* number of bytes in "hole" */
 } BackupPageHeader;
 
+/*
+ * From the page header of the actual PostgreSQL data page, extract
+ * information that is written to the backup as part of BackupPageHeader.
+ *
+ * Returns true if contents of *page are recognized as a valid data page
+ * so that it's written in the pg_rman-specific backup format.  Otherwise,
+ * false is returned so that caller can simply copy the page as is
+ * without performing any additional processing.
+ */
 static bool
 parse_page(const DataPage *page,
 			XLogRecPtr *lsn,
 			uint16 *offset,
 			uint16 *length)
 {
-	const PageHeaderData *page_data = (PageHeaderData *) &page->page_data;
-/*
- * Combine 2-part LSN into a single 64-bit value to match the new
- * XLogRecPtr definition in 9.3+
- */
-	*lsn = PageXLogRecPtrGet(page_data->pd_lsn);
+	const PageHeaderData *header = (PageHeaderData *) &page->header;
 
-	if (PageGetPageSize(page_data) == BLCKSZ &&
-		PageGetPageLayoutVersion(page_data) == PG_PAGE_LAYOUT_VERSION &&
-		(page_data->pd_flags & ~PD_VALID_FLAG_BITS) == 0 &&
-		page_data->pd_lower >= SizeOfPageHeaderData &&
-		page_data->pd_lower <= page_data->pd_upper &&
-		page_data->pd_upper <= page_data->pd_special &&
-		page_data->pd_special <= BLCKSZ &&
-		page_data->pd_special == MAXALIGN(page_data->pd_special) &&
+	/*
+	 * Combine 2-part LSN into a single 64-bit value to match the new
+	 * XLogRecPtr definition in 9.3+
+	 */
+	*lsn = PageXLogRecPtrGet(header->pd_lsn);
+
+	if (PageGetPageSize(header) == BLCKSZ &&
+		PageGetPageLayoutVersion(header) == PG_PAGE_LAYOUT_VERSION &&
+		(header->pd_flags & ~PD_VALID_FLAG_BITS) == 0 &&
+		header->pd_lower >= SizeOfPageHeaderData &&
+		header->pd_lower <= header->pd_upper &&
+		header->pd_upper <= header->pd_special &&
+		header->pd_special <= BLCKSZ &&
+		header->pd_special == MAXALIGN(header->pd_special) &&
 		!XLogRecPtrIsInvalid(*lsn))
 	{
-			*offset = page_data->pd_lower;
-			*length = page_data->pd_upper - page_data->pd_lower;
-			return true;
+		*offset = header->pd_lower;
+		*length = header->pd_upper - header->pd_lower;
+		return true;
 	}
 	
 	*offset = *length = 0;
