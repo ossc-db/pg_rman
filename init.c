@@ -59,17 +59,6 @@ do_init(void)
 	/* create backup catalog root directory */
 	dir_create_dir(backup_path, DIR_PERMISSION);
 
-	/* remember the catalog version number */
-	join_path_components(path, backup_path, CATALOG_VERSION_FILE);
-	fp = fopen(path, "wt");
-	if (fp == NULL)
-		ereport(ERROR,
-			(errcode(ERROR_SYSTEM),
-			 errmsg("could not create catalog version file: %s", strerror(errno))));
-	else
-		fprintf(fp, "CATALOG_VERSION='%u'", CATALOG_VERSION_NUM);
-	fclose(fp);
-
 	/* create directories for backup of online files */
 	join_path_components(path, backup_path, RESTORE_WORK_DIR);
 	dir_create_dir(path, DIR_PERMISSION);
