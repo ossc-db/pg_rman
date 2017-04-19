@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "catalog/pg_control.h"
 #include "libpq/pqsignal.h"
 #include "storage/block.h"
 #include "storage/bufpage.h"

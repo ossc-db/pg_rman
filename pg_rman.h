@@ -304,6 +304,8 @@ extern void catalog_unlock(void);
 
 extern void catalog_init_config(pgBackup *backup);
 extern void catalog_init_version(void);
+extern void check_system_identifier(void);
+extern TimeLineID get_current_timeline(void);
 
 extern void pgBackupWriteConfigSection(FILE *out, pgBackup *backup);
 extern void pgBackupWriteResultSection(FILE *out, pgBackup *backup);

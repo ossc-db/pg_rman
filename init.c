@@ -39,7 +39,7 @@ do_init(void)
 	struct dirent **dp;
 	int results;
 	uint64      sysid;
-	char        *buffer;
+	char        *buffer = NULL;
 
 	if (access(backup_path, F_OK) == 0)
 	{

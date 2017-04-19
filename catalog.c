@@ -19,6 +19,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "catalog/pg_control.h"
 #include "pgut/pgut-port.h"
 
 static pgBackup *catalog_read_ini(const char *path);
@@ -27,7 +28,16 @@ static pgBackup *catalog_read_ini(const char *path);
 
 static int lock_fd = -1;
 
+/*
+ * Catalog version as read from the catalog_version file of the backup
+ * catalog.
+ */
 uint32 catalog_version_num = 0;
+
+/*
+ * system_identifier as read from the control file of the database cluster
+ */
+uint64	system_identifier = 0;
 
 /*
  * Lock of the catalog with pg_rman.ini file and return 0.
@@ -702,4 +712,81 @@ catalog_init_version(void)
 		}
 		fclose(fp);
 	}
+}
+
+void
+check_system_identifier()
+{
+	FILE   *fp;
+	char	path[MAXPGPATH];
+	char	buf[1024];
+	char	key[1024];
+	char	value[1024];
+	char   *buffer;
+	uint64	controlfile_system_identifier;
+	ControlFileData *controlFile;
+
+	/* get system identifier of backup configuration */
+	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);
+	fp = pgut_fopen(path, "rt", true);
+
+	if (fp == NULL)
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not open system identifier file \"%s\"", path)));
+
+	while (fgets(buf, lengthof(buf), fp) != NULL)
+	{
+		size_t      i;
+		for (i = strlen(buf); i > 0 && IsSpace(buf[i - 1]); i--)
+		buf[i - 1] = '\0';
+		if (parse_pair(buf, key, value))
+		{
+			elog(DEBUG, "the initially configured target database : %s = %s", key, value);
+			system_identifier = strtoul(value, NULL, 10);
+		}
+	}
+
+	fclose(fp);
+	Assert(system_identifier > 0);
+
+	buffer = read_control_file();
+	controlFile = (ControlFileData *) buffer;
+	controlfile_system_identifier = controlFile->system_identifier;
+	free(buffer);
+	elog(DEBUG, "the system identifier of current target database : " UINT64_FORMAT,
+				controlfile_system_identifier);
+
+	if (controlfile_system_identifier != system_identifier)
+		ereport(ERROR,
+			(errcode(ERROR_SYSTEM),
+			 errmsg("could not start backup"),
+			 errdetail("system identifier of target database is different"
+				" from the one of initially configured database")));
+	else
+		elog(DEBUG, "the backup target database is the same as initial configured one.");
+}
+
+/* get TLI of the current database */
+TimeLineID
+get_current_timeline(void)
+{
+	TimeLineID	result = 0;
+	char	   *buffer;
+	char		ControlFilePath[MAXPGPATH];
+	ControlFileData *controlFile;
+
+	snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
+	if (fileExists(ControlFilePath))
+	{
+		buffer = read_control_file();
+		controlFile = (ControlFileData *) buffer;
+		result = controlFile->checkPointCopy.ThisTimeLineID;
+		free(buffer);
+	}
+	else
+		elog(WARNING, _("pg_controldata file \"%s\" does not exist"),
+						ControlFilePath);
+
+	return result;
 }
