@@ -40,3 +40,5 @@ LIBS := $(filter-out -lxml2, $(LIBS))
 LIBS := $(filter-out -lxslt, $(LIBS))
 
 $(OBJS): pg_rman.h
+
+LDFLAGS+=-Wl,--build-id
