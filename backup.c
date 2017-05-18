@@ -537,7 +537,7 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 		 * Wait for standby's location to be the LSN returned by
 		 * pg_start_backup()
 		 */
-		res = execute("SELECT * FROM pg_last_wal_replay_location()", 0, NULL);
+		res = execute("SELECT * FROM pg_last_wal_replay_lsn()", 0, NULL);
 		sscanf(PQgetvalue(res, 0, 0), "%X/%X", &xlogid, &xrecoff);
 		PQclear(res);
 
