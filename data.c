@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "access/ginblock.h"
+#include "access/gin_private.h"
 #include "catalog/pg_control.h"
 #include "libpq/pqsignal.h"
 #include "storage/block.h"
