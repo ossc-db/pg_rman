@@ -16,12 +16,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#if PG_VERSION_NUM < 90100
-#include "access/gin.h"
-#else
-#include "access/gin_private.h"
-#endif
-
+#include "access/ginblock.h"
 #include "catalog/pg_control.h"
 #include "libpq/pqsignal.h"
 #include "storage/block.h"
