@@ -7,8 +7,6 @@
  *-------------------------------------------------------------------------
  */
 
-#define FRONTEND
-#include "postgres_fe.h"
 #include "libpq/pqsignal.h"
 
 #include <getopt.h>
