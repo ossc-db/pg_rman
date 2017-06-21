@@ -9,6 +9,7 @@
 #ifndef PG_RMAN_H
 #define PG_RMAN_H
 
+#define FRONTEND	1
 #include "postgres_fe.h"
 
 #include <limits.h>
