@@ -10,8 +10,6 @@
  */
 
 
-#include "postgres_fe.h"
-
 #include <signal.h>
 #include <sys/types.h>
 #include <unistd.h>
