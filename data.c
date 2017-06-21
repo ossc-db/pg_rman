@@ -23,6 +23,7 @@
 #include "storage/bufpage.h"
 #include "storage/checksum.h"
 #include "storage/checksum_impl.h"
+#include "idxpagehdr.h"
 
 #ifdef HAVE_LIBZ
 #include <zlib.h>
@@ -207,14 +208,20 @@ typedef struct BackupPageHeader
  * so that it's written in the pg_rman-specific backup format.  Otherwise,
  * false is returned so that caller can simply copy the page as is
  * without performing any additional processing.
+ *
+ * XXX - If we are are able to determine that a page coming from the 0th
+ * block of a file is a GIN metapage, we return false to ask the caller
+ * to copy the whole file.
  */
 static bool
-parse_page(const DataPage *page,
-			XLogRecPtr *lsn,
-			uint16 *offset,
-			uint16 *length)
+parse_page(int blkno,
+		   const DataPage *page,
+		   XLogRecPtr *lsn,
+		   uint16 *offset,
+		   uint16 *length)
 {
 	const PageHeaderData *header = (PageHeaderData *) &page->header;
+	const Page pagedata = (Page) page->data;
 
 	/*
 	 * Combine 2-part LSN into a single 64-bit value to match the new
@@ -232,6 +239,16 @@ parse_page(const DataPage *page,
 		header->pd_special == MAXALIGN(header->pd_special) &&
 		!XLogRecPtrIsInvalid(*lsn))
 	{
+		/*
+		 * Caller's optimization will break GIN metapage content, so it's
+		 * better to ask the caller to not do it.
+		 */
+		if (IS_GIN_INDEX_METAPAGE(blkno, pagedata))
+		{
+			*offset = *length = 0;
+			return false;
+		}
+
 		*offset = header->pd_lower;
 		*length = header->pd_upper - header->pd_lower;
 		return true;
@@ -355,7 +372,7 @@ backup_data_file(const char *from_root,
 		 * If a invalid data page was found, fallback to simple copy to ensure
 		 * all pages in the file don't have BackupPageHeader.
 		 */
-		if (!parse_page(&page, &page_lsn, &header.hole_offset,
+		if (!parse_page(blknum, &page, &page_lsn, &header.hole_offset,
 						&header.hole_length))
 		{
 			if (verbose)
