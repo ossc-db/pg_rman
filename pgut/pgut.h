@@ -10,6 +10,8 @@
 #ifndef PGUT_H
 #define PGUT_H
 
+#include "pg_rman.h"
+
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
 
