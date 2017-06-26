@@ -236,10 +236,12 @@ parse_page(int blkno,
 		!XLogRecPtrIsInvalid(*lsn))
 	{
 		/*
-		 * Caller's optimization will break GIN metapage content, so it's
-		 * better to ask the caller to not do it.
+		 * Caller's optimization will break metapage content of certain index
+		 * types, so it's better to ask the caller to not do it.
 		 */
-		if (IS_GIN_INDEX_METAPAGE(blkno, pagedata))
+		if (IS_GIN_INDEX_METAPAGE(blkno, pagedata) ||
+			IS_BRIN_INDEX_METAPAGE(blkno, pagedata) ||
+			IS_SPGIST_INDEX_METAPAGE(blkno, pagedata))
 		{
 			*offset = *length = 0;
 			return false;
