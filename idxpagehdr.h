@@ -2,10 +2,12 @@
  *
  * idxpagehdr.h: description of Index-AM specific content inside data pages
  *
- * Currently, only need GIN index related struct, because it's the only
- * index AM implementation that fails to set the values of PageHeaderData
+ * Currently, we need index-content related structs for gin, brin and sp-gist
+ * index types, because they fail to to set the values of PageHeaderData
  * field(s) correctly, which pg_rman's page parsing routine depends on
- * being correct.
+ * being correct, especially pd_lower.  All of these index type designate a
+ * metapage and write a metadata struct next to the page header but fail to
+ * set pd_lower to the byte address next to where the struct ends.
  *
  * Try to keep in sync with the definition in the respective backend header
  * file!!!  Although, incompatible changes to the definitions in this file
@@ -72,9 +74,6 @@ typedef struct GinMetaPageData
 } GinMetaPageData;
 
 #define GIN_CURRENT_VERSION		2
-
-#define GinPageGetMeta(p) \
-	((GinMetaPageData *) PageGetContents(p))
 
 #define IS_GIN_INDEX_METAPAGE(blkno, pagedata) \
 		((blkno) == GIN_METAPAGE_BLKNO && \
