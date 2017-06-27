@@ -1140,7 +1140,7 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
 				 const char **params)
 {
 	PGresult	   *res;
-	char			ready_path[MAXPGPATH];
+	char			done_path[MAXPGPATH];
 	int				try_count;
 
 	Assert(connection != NULL);
@@ -1155,8 +1155,8 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
 
 	/* get filename from the result of pg_walfile_name_offset() */
 	elog(DEBUG, "waiting for %s is archived", PQgetvalue(res, 0, 0));
-	snprintf(ready_path, lengthof(ready_path),
-		"%s/pg_wal/archive_status/%s.ready", pgdata, PQgetvalue(res, 0, 0));
+	snprintf(done_path, lengthof(done_path),
+		"%s/pg_wal/archive_status/%s.done", pgdata, PQgetvalue(res, 0, 0));
 
 	PQclear(res);
 
@@ -1169,7 +1169,7 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
 
 	/* wait until switched WAL is archived */
 	try_count = 0;
-	while (fileExists(ready_path))
+	while (!fileExists(done_path))
 	{
 		sleep(1);
 		if (interrupted)
@@ -1183,7 +1183,8 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
 				 errmsg("switched WAL could not be archived in %d seconds",
 					TIMEOUT_ARCHIVE)));
 	}
-	elog(DEBUG, "WAL file contains backup end point is archived after %d seconds waiting",
+
+	elog(DEBUG, "WAL file containing backup end point is archived after waiting for %d seconds",
 			try_count);
 }
 
