@@ -153,10 +153,10 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	}
 
 	/*
-	 * list directories and symbolic links with the physical path to make
-	 * mkdirs.sh
-	 * Sort in order of path.
-	 * omit $PGDATA.
+	 * Generate mkdirs.sh required to recreate the directory structure of
+	 * PGDATA when restoring.  Omits $PGDATA from being listed in the
+	 * commands.  Note that the resulting mkdirs.sh file is part of the
+	 * backup.
 	 */
 	files = parray_new();
 	dir_list_file(files, pgdata, NULL, false, false);
@@ -179,14 +179,14 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 						strerror(errno))));
 	}
 
-	/* clear directory list */
+	/* Free no longer needed memory. */
 	parray_walk(files, pgFileFree);
 	parray_free(files);
 	files = NULL;
 
 	/*
-	 * To take incremental backup, the file list of the last completed database
-	 * backup is needed.
+	 * To take incremental backup, the file list of the latest validated
+	 * full database backup is needed.
 	 */
 	if (current.backup_mode < BACKUP_MODE_FULL)
 	{
@@ -231,14 +231,51 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 
 	/* initialize backup list from non-snapshot */
 	files = parray_new();
-	join_path_components(path, backup_path, SNAPSHOT_SCRIPT_FILE);
 
 	/*
-	 * Check the existence of the snapshot-script.
-	 * backup use snapshot when snapshot-script exists.
+	 * Check the existence of the snapshot-script and perform backup using the
+	 * snapshot_script if one is provided.
 	 */
-	if (fileExists(path))
+	join_path_components(path, backup_path, SNAPSHOT_SCRIPT_FILE);
+	if (!fileExists(path))
 	{
+		/* Nope.  Perform a simple backup by copying files. */
+
+		/*
+		 * List files contained in PGDATA, omitting all sub-directories beside
+		 * base, global and pg_tblspc.  Omits $PGDATA from the paths.
+		 */
+		add_files(files, pgdata, false, true);
+
+		if (current.backup_mode == BACKUP_MODE_FULL)
+			elog(DEBUG, "taking full backup of database files");
+		else if (current.backup_mode == BACKUP_MODE_INCREMENTAL)
+			elog(DEBUG, "taking incremental backup of database files");
+
+		/* Construct the directory for this backup within BACKUP_PATH. */
+		pgBackupGetPath(&current, path, lengthof(path), DATABASE_DIR);
+
+		/* Save the files listed above. */
+		backup_files(pgdata, path, files, prev_files, lsn, current.compress_data, NULL);
+
+		/* Notify the end of backup. */
+		pg_stop_backup(&current);
+
+		/* if backup is from standby, making backup_label from	*/
+		/* backup.history file.					*/
+		if (current.is_from_standby)
+			make_backup_label(files, current.compress_data);
+
+		/*
+		 * Construct file_database.txt listing all files we just saved under
+		 * DATABASE_DIR.
+		 */
+		create_file_list(files, pgdata, NULL, false);
+	}
+	else
+	{
+		/* Use snapshot_script. */
+
 		parray		*tblspc_list;	/* list of name of TABLESPACE backup from snapshot */
 		parray		*tblspcmp_list;	/* list of mounted directory of TABLESPACE in snapshot volume */
 		PGresult	*tblspc_res;	/* contain spcname and oid in TABLESPACE */
@@ -460,36 +497,8 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		parray_free(cleanup_list);
 		PQclear(tblspc_res);
 	}
-	/* when snapshot-script not exist, DB cluster and TABLESPACE are backup
-	 * at same time.
-	 */
-	else
-	{
-		/* list files with the logical path. omit $PGDATA */
-		add_files(files, pgdata, false, true);
 
-		/* backup files */
-		if (current.backup_mode == BACKUP_MODE_FULL)
-			elog(DEBUG, "taking full backup of database files");
-		else if (current.backup_mode == BACKUP_MODE_INCREMENTAL)
-			elog(DEBUG, "taking incremental backup of database files");
-
-		pgBackupGetPath(&current, path, lengthof(path), DATABASE_DIR);
-		backup_files(pgdata, path, files, prev_files, lsn, current.compress_data, NULL);
-
-		/* notify end of backup */
-		pg_stop_backup(&current);
-
-		/* if backup is from standby, making backup_label from	*/
-		/* backup.history file.					*/
-		if (current.is_from_standby)
-			make_backup_label(files, current.compress_data);
-
-		/* create file list */
-		create_file_list(files, pgdata, NULL, false);
-	}
-	
-	/* print summary of size of backup mode files */
+	/* Update various size fields in current. */
 	for (i = 0; i < parray_num(files); i++)
 	{
 		pgFile *file = (pgFile *) parray_get(files, i);
@@ -511,6 +520,14 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	return files;
 }
 
+/*
+ * Connects to the standby server described by command line options,
+ * waits for the minimum WAL location required by this backup to be replayed,
+ * and finally performs a restartpoint.
+ *
+ * Returns false if could not connect to the statndby server, although that
+ * currently never happens, because pgut_connect() errors out anyway.
+ */
 static bool
 execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 {
@@ -523,6 +540,10 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 
 	tmp_host = pgut_get_host();
 	tmp_port = pgut_get_port();
+	/*
+	 * Change connection to standby server, so that any commands executed from
+	 * this point on are sent to the standby server.
+	 */
 	pgut_set_host(bkupopt.standby_host);
 	pgut_set_port(bkupopt.standby_port);
 	sby_conn = reconnect();
@@ -539,7 +560,7 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 		uint32 xlogid, xrecoff;
 
 		/*
-		 * Wait for standby's location to be the LSN returned by
+		 * Wait for standby server to replay WAL up to the LSN returned by
 		 * pg_start_backup()
 		 */
 		res = execute("SELECT * FROM pg_last_xlog_replay_location()", 0, NULL);
@@ -555,6 +576,7 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 		sleep_time = (sleep_time < 32) ? sleep_time * 2 : 60;
 	}
 
+	/* Perform the restartpoint */
 	command("CHECKPOINT", 0, NULL);
 	disconnect();
 	pgut_set_host(tmp_host);
@@ -1145,6 +1167,9 @@ confirm_block_size(const char *name, int blcksz)
 
 /*
  * Notify start of backup to PostgreSQL server.
+ *
+ * As of now, this always contacts a primary PostgreSQL server, even in the
+ * case of taking a backup from standby.
  */
 static void
 pg_start_backup(const char *label, bool smooth, pgBackup *backup)
@@ -1172,6 +1197,17 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 	disconnect();
 }
 
+/*
+ * Constructs the WAL segment file name using backup->stop_lsn and waits
+ * for it to be successfully archived.  The latter is achieved by waiting
+ * for <wal_segment_filename>.ready to appear under
+ * $PGDATA/pg_wal/archive_status.
+ *
+ * Note that PGDATA could either refer to primary servers' data directory
+ * or standby's.  In the latter case, the waiting will continue until
+ * the required WAL segment is fully streamed to the standby server and
+ * then archived by its archiver process.
+ */
 static void
 wait_for_archive(pgBackup *backup, const char *sql)
 {
@@ -1228,7 +1264,18 @@ wait_for_archive(pgBackup *backup, const char *sql)
 }
 
 /*
- * Notify end of backup to PostgreSQL server.
+ * Notify the end of backup to PostgreSQL server.
+ *
+ * Contacts the primary server and issues pg_stop_backup(), then waits for
+ * either the primary or standby server to successfully archive the last
+ * needed WAL segment to be archived.  Returns once that's been done.
+ *
+ * As of PG version 9.6, pg_stop_backup() returns 2 more fields in addition
+ * to the backup end LSN: backup_label text and tablespace_map text which
+ * need to be written to files in the backup root directory.
+ *
+ * Returns an array of pgFile structs of files written so that caller can add
+ * it to the backup file list.
  */
 static void
 pg_stop_backup(pgBackup *backup)
