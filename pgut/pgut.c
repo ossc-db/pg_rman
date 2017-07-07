@@ -855,7 +855,7 @@ parse_pair(const char buffer[], char key[], char value[])
 	if ((start = skip_space(end, buffer)) == NULL)
 		return false;
 
-	if (*start != '=')
+	if (*start != '=' && strcmp(key, "include") != 0)
 	{
 		elog(WARNING, "syntax error in \"%s\"", buffer);
 		return false;
