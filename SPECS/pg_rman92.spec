@@ -13,7 +13,7 @@ Version:    1.3.4
 Release:    1%{?dist}
 License:    BSD
 Group:      Applications/Databases
-Source0:    %{name}-%{version}.tar.gz
+Source0:    %{name}-%{version}-pg92.tar.gz
 URL:        https://github.com/ossc-db/pg_rman
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-%(%{__id_u} -n)
 Vendor:	    NIPPON TELEGRAPH AND TELEPHONE CORPORATION
@@ -34,7 +34,7 @@ pg_rman has the features below:
 
 ## pre work for build pg_rman
 %prep
-%setup -q -n %{name}-%{version}
+%setup -q -n %{name}-%{version}-pg92
 
 ## Set variables for build environment
 %build
