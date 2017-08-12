@@ -101,7 +101,7 @@ do_restore(const char *target_time,
 		ereport(ERROR,
 			(errcode(ERROR_PG_RUNNING),
 			 errmsg("PostgreSQL server is running"),
-			 errhint("Please stop PostgreSQL server before exectute restore.")));
+			 errhint("Please stop PostgreSQL server before executing restore.")));
 
 	rt = checkIfCreateRecoveryConf(target_time, target_xid, target_inclusive);
 	if(rt == NULL)
