@@ -168,6 +168,7 @@ sleep 1
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
+sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0004-after.out
 diff ${TEST_BASE}/TEST-0004-before.out ${TEST_BASE}/TEST-0004-after.out
 echo ''
@@ -226,6 +227,7 @@ pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
 pg_ctl stop -m fast > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --recovery-target-xid="${TARGET_XID}" --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
+sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0007-after.out
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM tbl0007;" > ${TEST_BASE}/TEST-0007-tbl.dump
 diff ${TEST_BASE}/TEST-0007-before.out ${TEST_BASE}/TEST-0007-after.out
@@ -249,6 +251,7 @@ pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
 pg_ctl stop -m fast > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --recovery-target-xid="${TARGET_XID}" --recovery-target-inclusive=false --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
+sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0008-after.out
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM tbl0008;" > ${TEST_BASE}/TEST-0008-tbl.dump
 diff ${TEST_BASE}/TEST-0008-before.out ${TEST_BASE}/TEST-0008-after.out
@@ -299,6 +302,7 @@ psql --no-psqlrc -p ${TEST_PGPORT} -d db0010 -c "SELECT * FROM pgbench_branches;
 pg_ctl stop -m fast > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
+sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0010 -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0010-after.out
 diff ${TEST_BASE}/TEST-0010-before.out ${TEST_BASE}/TEST-0010-after.out
 echo ''
