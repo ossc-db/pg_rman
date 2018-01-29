@@ -58,8 +58,8 @@ rm -rf %{buildroot}
 
 # History of pg_rman.
 %changelog
-* Fri Jul 14 2017 - NTT OSS Center <langote_amit_f8@lab.ntt.co.jp> 1.3.5-1
-* Fri Apr 21 2017 - NTT OSS Center <langote_amit_f8@lab.ntt.co.jp> 1.3.4-1
+* Fri Jul 14 2018 - NTT OSS Center <langote_amit_f8@lab.ntt.co.jp> 1.3.5-1
+* Fri Apr 21 2018 - NTT OSS Center <langote_amit_f8@lab.ntt.co.jp> 1.3.4-1
 * Fri Oct  7 2016 - NTT OSS Center <furutani.kaname@lab.ntt.co.jp> 1.3.3-1
 * Mon Jan 25 2016 - NTT OSS Center <langote_amit_f8@lab.ntt.co.jp> 1.3.2-1
 * Mon Aug 31 2015 - NTT OSS Center <langote_amit_f8@lab.ntt.co.jp> 1.3.1-1
