@@ -1,5 +1,5 @@
 # SPEC file for pg_rman
-# Copyright(C) 2009-2015 NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+# Copyright(C) 2009-2018 NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 
 %define _pgdir   /usr/pgsql-9.5
 %define _bindir  %{_pgdir}/bin
@@ -9,7 +9,7 @@
 ## Set general information for pg_rman.
 Summary:    Backup and Recovery Tool for PostgreSQL
 Name:       pg_rman
-Version:    1.3.5
+Version:    1.3.6
 Release:    1%{?dist}
 License:    BSD
 Group:      Applications/Databases
@@ -58,6 +58,7 @@ rm -rf %{buildroot}
 
 # History of pg_rman.
 %changelog
+* Mon Jan 29 2018 - NTT OSS Center <moon_insung_i3@lab.ntt.co.jp> 1.3.6-1
 * Fri Jul 14 2017 - NTT OSS Center <langote_amit_f8@lab.ntt.co.jp> 1.3.5-1
 * Fri Apr 21 2017 - NTT OSS Center <langote_amit_f8@lab.ntt.co.jp> 1.3.4-1
 * Fri Oct  7 2016 - NTT OSS Center <furutani.kaname@lab.ntt.co.jp> 1.3.3-1
