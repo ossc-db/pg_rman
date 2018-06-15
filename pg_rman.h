@@ -312,9 +312,10 @@ extern int pgFileCompareMtime(const void *f1, const void *f2);
 extern int pgFileCompareMtimeDesc(const void *f1, const void *f2);
 
 /* in xlog.c */
-extern bool xlog_is_complete_wal(const pgFile *file);
+extern bool xlog_is_complete_wal(const pgFile *file, int wal_segment_size);
 extern bool xlog_logfname2lsn(const char *logfname, XLogRecPtr *lsn);
-extern void xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn);
+extern void xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn,
+					   int wal_segment_size);
 
 /* in data.c */
 extern bool backup_data_file(const char *from_root, const char *to_root,
@@ -342,9 +343,9 @@ extern bool is_pg_running(void);
 #define PGRMAN_COMP_CRC32(crc, data, len) COMP_CRC32C(crc, data, len)
 #define PGRMAN_EQ_CRC32(c1, c2) EQ_CRC32C(c1, c2)
 
-#define NextLogSeg(logId, logSeg)	\
+#define NextLogSeg(logId, logSeg, wal_segment_size)	\
 	do { \
-		if ((logSeg) >= XLogSegmentsPerXLogId - 1) \
+		if ((logSeg) >= XLogSegmentsPerXLogId((wal_segment_size)) - 1) \
 		{ \
 			(logId)++; \
 			(logSeg) = 0; \

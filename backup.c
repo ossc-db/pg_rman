@@ -18,12 +18,12 @@
 #include <time.h>
 #include <math.h>
 
-#include "libpq/pqsignal.h"
+#include "catalog/pg_control.h"
 #include "common/controldata_utils.h"
+#include "libpq/pqsignal.h"
 #include "pgut/pgut-port.h"
 
 #define TIMEOUT_ARCHIVE		10		/* wait 10 sec until WAL archive complete */
-#define XLogSegOffsetBits	((uint32) log2(XLogSegSize))
 
 static bool		 in_backup = false;	/* TODO: more robust logic */
 static parray	*cleanup_list;		/* list of command to execute at error processing for snapshot */
@@ -71,6 +71,8 @@ static void add_files(parray *files, const char *root, bool add_root, bool is_pg
 static int strCompare(const void *str1, const void *str2);
 static void create_file_list(parray *files, const char *root, const char *prefix, bool is_append);
 static void check_server_version(void);
+
+static int wal_segment_size = 0;
 
 /*
  * Take a backup of database.
@@ -643,7 +645,8 @@ do_backup_arclog(parray *backup_list)
 	dir_list_file(files, arclog_path, NULL, true, false);
 
 	/* remove WALs archived after pg_stop_backup()/pg_switch_wal() */
-	xlog_fname(last_wal, lengthof(last_wal), current.tli, &current.stop_lsn);
+	xlog_fname(last_wal, lengthof(last_wal), current.tli, &current.stop_lsn,
+			   wal_segment_size);
 	for (i = 0; i < parray_num(files); i++)
 	{
 		pgFile *file = (pgFile *) parray_get(files, i);
@@ -828,6 +831,9 @@ do_backup(pgBackupOption bkupopt)
 	int	keep_data_generations = bkupopt.keep_data_generations;
 	int	keep_data_days        = bkupopt.keep_data_days;
 
+	ControlFileData *controlFile;
+	bool	crc_ok;
+
 	/* PGDATA and BACKUP_MODE are always required */
 	if (pgdata == NULL)
 		ereport(ERROR,
@@ -878,6 +884,14 @@ do_backup(pgBackupOption bkupopt)
 		current.compress_data = false;
 	}
 #endif
+
+	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+	if (!crc_ok)
+		ereport(WARNING,
+				(errmsg("control file appears to be corrupt"),
+				 errdetail("Calculated CRC checksum does not match value stored in file.")));
+	wal_segment_size = controlFile->xlog_seg_size;
+	pg_free(controlFile);
 
 	/* Check that we're working with the correct database cluster */
 	check_system_identifier();
@@ -1308,7 +1322,8 @@ get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
 				PQerrorMessage(connection))));
 	}
 
-	xrecoff += off_upper << XLogSegOffsetBits;
+	Assert(wal_segment_size > 0);
+	xrecoff += off_upper << ((uint32) log2(wal_segment_size));
 
 	*lsn = (XLogRecPtr) ((uint64) xlogid << 32) | xrecoff;
 	return;
@@ -1688,7 +1703,8 @@ delete_old_files(const char *root,
 
 		elog(DEBUG, "checking \"%s\"", file->path);
 		/* Delete completed WALs only. */
-		if (is_arclog && !xlog_is_complete_wal(file))
+		Assert(wal_segment_size > 0);
+		if (is_arclog && !xlog_is_complete_wal(file, wal_segment_size))
 		{
 			elog(DEBUG, "this is not complete WAL: \"%s\"", file->path);
 			continue;
