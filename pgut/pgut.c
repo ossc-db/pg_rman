@@ -8,6 +8,7 @@
  */
 
 #include "libpq/pqsignal.h"
+#include "fe_utils/connect.h"
 
 #include <getopt.h>
 #include <limits.h>
@@ -942,7 +943,21 @@ pgut_connect(void)
 		conn = PQconnectdbParams(keywords, values, true);
 
 		if (PQstatus(conn) == CONNECTION_OK)
+		{
+			PGresult   *res;
+
+			res = PQexec(conn, ALWAYS_SECURE_SEARCH_PATH_SQL);
+			if (PQresultStatus(res) != PGRES_TUPLES_OK)
+			{
+				fprintf(stderr, _("pg_rman: could not clear search_path: %s"),
+						PQerrorMessage(conn));
+				PQclear(res);
+				PQfinish(conn);
+				return NULL;
+			}
+			PQclear(res);
 			return conn;
+		}
 
 #ifndef PGUT_NO_PROMPT
 		if (conn && PQconnectionNeedsPassword(conn) && prompt_password != NO)
