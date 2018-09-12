@@ -190,17 +190,6 @@ typedef union DataPage
 } DataPage;
 
 /*
- * Along with each data page, the following information is written to the
- * backup.
- */
-typedef struct BackupPageHeader
-{
-	BlockNumber	block;			/* block number */
-	uint16		hole_offset;	/* number of bytes before "hole" */
-	uint16		hole_length;	/* number of bytes in "hole" */
-} BackupPageHeader;
-
-/*
  * From the page header of the actual PostgreSQL data page, extract
  * information that is written to the backup as part of BackupPageHeader.
  *
@@ -369,6 +358,7 @@ backup_data_file(const char *from_root,
 		int		upper_length;
 
 		header.block = blknum;
+		header.endpoint = false;
 
 		/*
 		 * If a invalid data page was found, fallback to simple copy to ensure
@@ -525,11 +515,59 @@ backup_data_file(const char *from_root,
 
 		file->read_size += read_len;
 	}
+	/*
+	 * In incremental backup mode, put an additional data to remember
+	 * the last block number.
+	 * Without this, if a vacuum shrinks pages, which happens when one
+	 * or more pages at the end of a table are deleted, pg_rman has
+	 * no way to know those pages are shrinked and the deleted pages
+	 * comeback during pg_rman recovery.
+	 */
+	if (current.backup_mode == BACKUP_MODE_INCREMENTAL)
+	{
+		header.block = ++blknum;
+		header.endpoint = true;
+
+		/*
+		 * pg_rman processes backup data in page unit, so create a
+		 * dummy page
+		 */
+		memset(page.data + sizeof(header), 0, BLCKSZ - sizeof(header));
+#ifdef HAVE_LIBZ
+		if (compress)
+		{
+			doDeflate(&z, sizeof(header), sizeof(outbuf), &header, outbuf, in,
+					  out, &crc, &file->write_size, Z_NO_FLUSH);
+			doDeflate(&z, BLCKSZ, sizeof(outbuf), page.data, outbuf, in,
+					  out, &crc, &file->write_size, Z_NO_FLUSH);
+		}
+		else
+#endif
+		{
+		    if (fwrite(&header, 1, sizeof(header), out) != sizeof(header) ||
+				fwrite(page.data, 1, BLCKSZ - sizeof(header), out)
+					!= BLCKSZ - sizeof(header))
+			{
+				int errno_tmp = errno;
+				/* oops */
+				fclose(in);
+				fclose(out);
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not write at block %u of \"%s\": %s to put endpoint",
+						blknum, to_path, strerror(errno_tmp))));
+			}
+			PGRMAN_COMP_CRC32(crc, &header, sizeof(header));
+			PGRMAN_COMP_CRC32(crc, page.data, BLCKSZ - sizeof(header));
+
+			file->write_size += BLCKSZ;
+		}
+	}
 
 #ifdef HAVE_LIBZ
 	if (compress)
 	{
-		if (file->read_size > 0)
+		if (file->read_size > 0 || header.endpoint)
 		{
 			while (doDeflate(&z, 0, sizeof(outbuf), NULL, outbuf, in, out, &crc,
 							 &file->write_size, Z_FINISH) != Z_STREAM_END)
@@ -720,6 +758,20 @@ restore_data_file(const char *from_root,
 						 errmsg("could not read block %u of \"%s\": %s",
 							blknum, file->path, strerror(errno_tmp))));
 			}
+		}
+		if (header.endpoint)
+		{
+		/*
+		 * endpoint means there are no pages any more at the point of
+		 * incremental backup, so truncate it.
+		 * This process is necessary for preventing unexpected deleted
+		 * data comeback which happens when a vacuum shrink relations
+		 * between a full backup and an incremental backup.
+		 */
+		    blknum = header.block;
+			elog(DEBUG, "truncating file. %s blknum: %d", to_path, blknum);
+			truncate(to_path, (blknum - 1) * BLCKSZ);
+			break;
 		}
 
 		if (header.block < blknum || header.hole_offset > BLCKSZ ||

@@ -88,6 +88,20 @@ typedef struct pgBackupRange
 	time_t	end;			/* begin +1 when one backup is target */
 } pgBackupRange;
 
+/*
+ * Along with each data page, the following information is written to the
+ * backup.
+ */
+typedef struct BackupPageHeader
+{
+    BlockNumber block;          /* block number */
+    uint16      hole_offset;    /* number of bytes before "hole" */
+    uint16      hole_length;    /* number of bytes in "hole" */
+    bool        endpoint;       /* true at the end of each tables.
+                                   used only for incremental backups */
+} BackupPageHeader;
+
+
 #define pgBackupRangeIsValid(range)	\
 	(((range)->begin != (time_t) 0) || ((range)->end != (time_t) 0))
 #define pgBackupRangeIsSingle(range) \
