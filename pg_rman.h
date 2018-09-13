@@ -97,8 +97,9 @@ typedef struct BackupPageHeader
     BlockNumber block;          /* block number */
     uint16      hole_offset;    /* number of bytes before "hole" */
     uint16      hole_length;    /* number of bytes in "hole" */
-    bool        endpoint;       /* true at the end of each tables.
-                                   used only for incremental backups */
+    bool        endpoint;       /* If set to true, this page marks the end
+                                   of relation, which means any subsequent
+                                   pages are truncated. */
 } BackupPageHeader;
 
 

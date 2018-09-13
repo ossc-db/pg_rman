@@ -516,12 +516,13 @@ backup_data_file(const char *from_root,
 		file->read_size += read_len;
 	}
 	/*
-	 * In incremental backup mode, put an additional data to remember
-	 * the last block number.
-	 * Without this, if a vacuum shrinks pages, which happens when one
-	 * or more pages at the end of a table are deleted, pg_rman has
-	 * no way to know those pages are shrinked and the deleted pages
-	 * comeback during pg_rman recovery.
+	 * In incremental backup mode, append a special 0-filled page, with
+	 * lastpage field set to true, to mark the end of relation as of this
+	 * backup.
+	 * This is used when restoring to truncate any subsequent pages that
+	 * may be present in the previous full backup.
+	 * In incremental backup mode, put the endpoint to remember the last
+	 * block number.
 	 */
 	if (current.backup_mode == BACKUP_MODE_INCREMENTAL)
 	{
@@ -567,6 +568,12 @@ backup_data_file(const char *from_root,
 #ifdef HAVE_LIBZ
 	if (compress)
 	{
+		/*
+		 * finalize zstream.
+		 *
+		 * NOTE: We need to this even if we didn't read anything from the file
+		 * but still had to write the 0-filled dummy page.
+		 */
 		if (file->read_size > 0 || header.endpoint)
 		{
 			while (doDeflate(&z, 0, sizeof(outbuf), NULL, outbuf, in, out, &crc,
