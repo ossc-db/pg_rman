@@ -571,8 +571,8 @@ backup_data_file(const char *from_root,
 		/*
 		 * finalize zstream.
 		 *
-		 * NOTE: We need to this even if we didn't read anything from the file
-		 * but still had to write the 0-filled dummy page.
+		 * NOTE: We need to do this even if we didn't read anything from the
+		 * file but still had to write the 0-filled dummy page.
 		 */
 		if (file->read_size > 0 || header.endpoint)
 		{
