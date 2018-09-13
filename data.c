@@ -517,10 +517,10 @@ backup_data_file(const char *from_root,
 	}
 	/*
 	 * In incremental backup mode, append a special 0-filled page, with
-	 * lastpage field set to true, to mark the end of relation as of this
+	 * endpoint field set to true, to mark the end of relation as of this
 	 * backup.
-	 * This is used when restoring to truncate any subsequent pages that
-	 * may be present in the previous full backup.
+	 * This is used when restoring the backup, to truncate any subsequent
+	 * pages that may be present in the previous full backup.
 	 * In incremental backup mode, put the endpoint to remember the last
 	 * block number.
 	 */
