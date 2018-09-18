@@ -516,7 +516,7 @@ backup_data_file(const char *from_root,
 		file->read_size += read_len;
 	}
 	/*
-	 * In incremental backup mode, append a special 0-filled page, with
+	 * In incremental backup mode, append a special page header, with
 	 * endpoint field set to true, to mark the end of relation as of this
 	 * backup.
 	 * This is used when restoring the backup, to truncate any subsequent
@@ -529,25 +529,16 @@ backup_data_file(const char *from_root,
 		header.block = ++blknum;
 		header.endpoint = true;
 
-		/*
-		 * pg_rman processes backup data in page unit, so create a
-		 * dummy page
-		 */
-		memset(page.data + sizeof(header), 0, BLCKSZ - sizeof(header));
 #ifdef HAVE_LIBZ
 		if (compress)
 		{
 			doDeflate(&z, sizeof(header), sizeof(outbuf), &header, outbuf, in,
 					  out, &crc, &file->write_size, Z_NO_FLUSH);
-			doDeflate(&z, BLCKSZ, sizeof(outbuf), page.data, outbuf, in,
-					  out, &crc, &file->write_size, Z_NO_FLUSH);
 		}
 		else
 #endif
 		{
-		    if (fwrite(&header, 1, sizeof(header), out) != sizeof(header) ||
-				fwrite(page.data, 1, BLCKSZ - sizeof(header), out)
-					!= BLCKSZ - sizeof(header))
+		    if (fwrite(&header, 1, sizeof(header), out) != sizeof(header))
 			{
 				int errno_tmp = errno;
 				/* oops */
@@ -559,9 +550,8 @@ backup_data_file(const char *from_root,
 						blknum, to_path, strerror(errno_tmp))));
 			}
 			PGRMAN_COMP_CRC32(crc, &header, sizeof(header));
-			PGRMAN_COMP_CRC32(crc, page.data, BLCKSZ - sizeof(header));
 
-			file->write_size += BLCKSZ;
+			file->write_size += sizeof(header);
 		}
 	}
 
@@ -572,7 +562,7 @@ backup_data_file(const char *from_root,
 		 * finalize zstream.
 		 *
 		 * NOTE: We need to do this even if we didn't read anything from the
-		 * file but still had to write the 0-filled dummy page.
+		 * file but still had to write the special page header.
 		 */
 		if (file->read_size > 0 || header.endpoint)
 		{
@@ -730,7 +720,10 @@ restore_data_file(const char *from_root,
 		{
 			status = doInflate(&z, sizeof(inbuf), sizeof(header), inbuf,
 						&header, in, out, &crc, &read_size);
-			if (status == Z_STREAM_END)
+
+			/* when the stream ends, proceed to next block unless the block is
+			 * flagged as endpoint, which needs an additional truncation process.*/
+			if (status == Z_STREAM_END && !header.endpoint)
 			{
 				if (z.avail_out != sizeof(header))
 					ereport(ERROR,
