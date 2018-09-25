@@ -58,3 +58,15 @@ OK: hard-copy option works well.
 0
 0
 
+###### RESTORE COMMAND TEST-0011 ######
+###### vacuum shrinks a page between full and incremental backups ######
+0
+0
+0
+
+###### RESTORE COMMAND TEST-0012 ######
+###### vacuum shrinks a page between full and incremental backups(compressed) ######
+0
+0
+0
+
