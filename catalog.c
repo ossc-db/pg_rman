@@ -703,7 +703,7 @@ check_system_identifier()
 		if (parse_pair(buf, key, value))
 		{
 			elog(DEBUG, "the initially configured target database : %s = %s", key, value);
-			system_identifier = strtoul(value, NULL, 10);
+			system_identifier = strtoull(value, NULL, 10);
 		}
 	}
 
