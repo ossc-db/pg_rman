@@ -307,6 +307,49 @@ psql --no-psqlrc -p ${TEST_PGPORT} -d db0010 -c "SELECT * FROM pgbench_branches;
 diff ${TEST_BASE}/TEST-0010-before.out ${TEST_BASE}/TEST-0010-after.out
 echo ''
 
+echo '###### RESTORE COMMAND TEST-0011 ######'
+echo '###### vacuum shrinks a page between full and incremental backups ######'
+init_backup
+pg_ctl start -w -t 600 > /dev/null 2>&1
+createdb db0011 -p ${TEST_PGPORT}
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "CREATE TABLE t0011(i int,j int,k varchar);" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "INSERT INTO t0011 (i,j,k) select generate_series(1,1000),1, repeat('a', 10);" > /dev/null 2>&1
+pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "DELETE FROM t0011 WHERE i > 10;" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "VACUUM t0011;" > /dev/null 2>&1
+pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "SELECT * FROM t0011;" > ${TEST_BASE}/TEST-0011-before.out
+pg_ctl stop -m fast > /dev/null 2>&1
+pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
+pg_ctl start -w -t 600 > /dev/null 2>&1
+sleep 1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "SELECT * FROM t0011;" > ${TEST_BASE}/TEST-0011-after.out
+diff ${TEST_BASE}/TEST-0011-before.out ${TEST_BASE}/TEST-0011-after.out
+echo ''
+
+echo '###### RESTORE COMMAND TEST-0012 ######'
+echo '###### vacuum shrinks a page between full and incremental backups(compressed) ######'
+init_backup
+pg_ctl start -w -t 600 > /dev/null 2>&1
+createdb db0012 -p ${TEST_PGPORT}
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "CREATE TABLE t0012(i int,j int,k varchar);" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "INSERT INTO t0012 (i,j,k) select generate_series(1,1000),1, repeat('a', 10);" > /dev/null 2>&1
+pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "DELETE FROM t0012 WHERE i > 10;" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "VACUUM t0012;" > /dev/null 2>&1
+pg_rman backup -B ${BACKUP_PATH} -b incremental -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "SELECT * FROM t0012;" > ${TEST_BASE}/TEST-0012-before.out
+pg_ctl stop -m fast > /dev/null 2>&1
+pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
+pg_ctl start -w -t 600 > /dev/null 2>&1
+sleep 1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "SELECT * FROM t0012;" > ${TEST_BASE}/TEST-0012-after.out
+diff ${TEST_BASE}/TEST-0012-before.out ${TEST_BASE}/TEST-0012-after.out
+echo ''
 
 # clean up the temporal test data
 pg_ctl stop -m immediate > /dev/null 2>&1
