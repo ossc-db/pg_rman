@@ -18,6 +18,7 @@
 #include "pgut/pgut.h"
 #include "access/xlogdefs.h"
 #include "storage/bufpage.h"
+#include "storage/block.h"
 #include "utils/pg_crc.h"
 #include "parray.h"
 
