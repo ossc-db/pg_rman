@@ -126,6 +126,9 @@ main(int argc, char *argv[])
 			(errcode(ERROR_ARGS),
 			 errmsg("required parameter not specified: BACKUP_PATH (-B, --backup-path)")));
 
+	/* initialize catalog format version (backup_path must be known) */
+	catalog_init_version();
+
 	for (; i < argc; i++)
 	{
 		if (cmd == NULL)
