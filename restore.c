@@ -14,6 +14,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "catalog/pg_control.h"
+#include "common/controldata_utils.h"
 #include "common/fe_memutils.h"
 
 static void backup_online_files(bool re_recovery);
@@ -39,6 +41,8 @@ static bool existsTimeLineHistory(TimeLineID probeTLI);
 static void print_backup_id(const pgBackup *backup);
 static void search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timelines);
 
+static int wal_segment_size = 0;
+
 int
 do_restore(const char *target_time,
 		   const char *target_xid,
@@ -63,6 +67,9 @@ do_restore(const char *target_time,
 	uint32 needId = 0;
 	uint32 needSeg = 0;
 	pgRecoveryTarget *rt = NULL;
+
+	ControlFileData		*controlFile;
+	bool		crc_ok;
 
 	/* PGDATA and ARCLOG_PATH are always required */
 	if (pgdata == NULL)
@@ -116,6 +123,14 @@ do_restore(const char *target_time,
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not get list of backup already taken")));
+
+	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+	if (!crc_ok)
+		ereport(WARNING,
+				(errmsg("control file appears to be corrupt"),
+				 errdetail("Calculated CRC checksum does not match value stored in file.")));
+	wal_segment_size = controlFile->xlog_seg_size;
+	pg_free(controlFile);
 
 	cur_tli = get_current_timeline();
 	elog(DEBUG, "the current timeline ID of database cluster is %d", cur_tli);
@@ -286,7 +301,7 @@ base_backup_found:
 	{
 		pgBackup *backup = (pgBackup *) parray_get(backups, last_restored_index);
 		needId = (uint32) (backup->start_lsn >> 32);
-		needSeg = (uint32) backup->start_lsn / XLogSegSize;
+		needSeg = (uint32) backup->start_lsn / wal_segment_size;
 	}
 
 	if (verbose)
@@ -1112,13 +1127,18 @@ search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timel
 	char	xlogpath[MAXPGPATH];
 	struct stat	st;
 
+	Assert(wal_segment_size > 0);
+
 	count = 0;
 	for (;;)
 	{
 		for (i = 0; i < parray_num(timelines); i++)
 		{
 			pgTimeLine *timeline = (pgTimeLine *) parray_get(timelines, i);
-			XLogFileName(xlogfname, timeline->tli, *needId * XLogSegmentsPerXLogId + *needSeg);
+			XLogFileName(xlogfname,
+						 timeline->tli,
+						 *needId * XLogSegmentsPerXLogId(wal_segment_size) + *needSeg,
+						 wal_segment_size);
 			join_path_components(xlogpath, path, xlogfname);
 
 			if (stat(xlogpath, &st) == 0)
@@ -1147,7 +1167,7 @@ search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timel
 			parray_remove(timelines, i + 1);
 		/* XXX: should we add a linebreak when we find a timeline? */
 
-		NextLogSeg(*needId, *needSeg);
+		NextLogSeg(*needId, *needSeg, wal_segment_size);
 	}
 }
 

@@ -34,7 +34,7 @@ typedef union XLogPage
  * based on ValidXLOGHeader() in src/backend/access/transam/xlog.c.
  */
 bool
-xlog_is_complete_wal(const pgFile *file)
+xlog_is_complete_wal(const pgFile *file, int wal_segment_size)
 {
 	FILE		   *fp;
 	XLogPage		page;
@@ -56,7 +56,7 @@ xlog_is_complete_wal(const pgFile *file)
 		return false;
 	if ((page.header.xlp_info & XLP_LONG_HEADER) == 0)
 		return false;
-	if (page.lheader.xlp_seg_size != XLogSegSize)
+	if (page.lheader.xlp_seg_size != wal_segment_size)
 		return false;
 	if (page.lheader.xlp_xlog_blcksz != XLOG_BLCKSZ)
 		return false;
@@ -65,7 +65,7 @@ xlog_is_complete_wal(const pgFile *file)
 	 * check size (actual file size, not backup file size)
 	 * TODO: Support pre-compressed xlog. They might have different file sizes.
 	 */
-	if (file->size != XLogSegSize)
+	if (file->size != wal_segment_size)
 		return false;
 
 	return true;
@@ -75,7 +75,8 @@ xlog_is_complete_wal(const pgFile *file)
  * based on XLogFileName() in xlog_internal.h
  */
 void
-xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn)
+xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn,
+		   int wal_segment_size)
 {
 	uint32 xlogid, xrecoff;
 
@@ -83,5 +84,5 @@ xlog_fname(char *fname, size_t len, TimeLineID tli, XLogRecPtr *lsn)
 	xrecoff = (uint32) *lsn;
 
 	snprintf(fname, len, "%08X%08X%08X", tli,
-		xlogid, xrecoff / XLogSegSize);
+		xlogid, xrecoff / wal_segment_size);
 }

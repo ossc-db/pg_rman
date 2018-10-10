@@ -1,7 +1,7 @@
 # SPEC file for pg_rman
 # Copyright(C) 2009-2018 NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 
-%define _pgdir   /usr/pgsql-10
+%define _pgdir   /usr/pgsql-11
 %define _bindir  %{_pgdir}/bin
 %define _libdir  %{_pgdir}/lib
 %define _datadir %{_pgdir}/share
@@ -13,14 +13,14 @@ Version:    1.3.7
 Release:    1%{?dist}
 License:    BSD
 Group:      Applications/Databases
-Source0:    %{name}-%{version}-pg10.tar.gz
+Source0:    %{name}-%{version}-pg11.tar.gz
 URL:        https://github.com/ossc-db/pg_rman
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-%(%{__id_u} -n)
 Vendor:	    NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 
 ## We use postgresql-devel package
-BuildRequires:  postgresql10-devel, zlib-devel
-Requires:  postgresql10-libs
+BuildRequires:  postgresql11-devel, zlib-devel
+Requires:  postgresql11-libs
 
 ## Description for "pg_rman"
 %description
@@ -34,7 +34,7 @@ pg_rman has the features below:
 
 ## pre work for build pg_rman
 %prep
-%setup -q -n %{name}-%{version}-pg10
+%setup -q -n %{name}-%{version}-pg11
 
 ## Set variables for build environment
 %build
