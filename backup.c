@@ -1470,6 +1470,12 @@ backup_files(const char *from_root,
 				(errcode(ERROR_INTERRUPTED),
 				 errmsg("interrupted during backup")));
 
+		/* For correct operation of incremental backup, 
+		 * initialize prev_file_not_found variable to false of 
+		 * checking to next backup files.
+		 */
+		prev_file_not_found = false;
+		
 		/* print progress in verbose mode */
 		if (verbose)
 		{
