@@ -2,7 +2,7 @@
  *
  * parray.h: pointer array collection.
  *
- * Copyright (c) 2009-2018, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+ * Copyright (c) 2009-2019, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
  *
  *-------------------------------------------------------------------------
  */
