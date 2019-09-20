@@ -124,7 +124,11 @@ do_restore(const char *target_time,
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not get list of backup already taken")));
 
+#if PG_VERSION_NUM >= 120000
+	controlFile = get_controlfile(pgdata, &crc_ok);
+#else
 	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+#endif
 	if (!crc_ok)
 		ereport(WARNING,
 				(errmsg("control file appears to be corrupt"),
