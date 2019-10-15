@@ -28,6 +28,15 @@ do_delete(pgBackupRange *range, bool force)
 	char 	backup_timestamp[20];
 	char 	given_timestamp[20];
 
+	if (force)
+		ereport(WARNING,
+			(errmsg("Problems can occur that make recovery impossible."),
+			 errdetail("If the backup file is deleted using the force option,"
+				 " an incremental backup file that cannot be used may be"
+				 " left behind depending on the case. If cannot restore using"
+				 " an incremental backup file in such a case,"
+				 " it is need to perform a FULL backup.")));
+
 	/* DATE are always required */
 	if (!pgBackupRangeIsValid(range))
 		ereport(ERROR,
