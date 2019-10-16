@@ -136,9 +136,9 @@ hot_standby = on
 logging_collector = on
 wal_level = hot_standby
 EOF
+	touch ${SBYDATA_PATH}/standby.signal
 
-	cat >> ${SBYDATA_PATH}/recovery.conf << EOF
-standby_mode = on
+	cat >> ${SBYDATA_PATH}/postgresql.conf << EOF
 restore_command = 'cp "${ARCLOG_PATH}/%f" "%p"'
 primary_conninfo = 'port=${TEST_PGPORT} application_name=slave'
 EOF
@@ -165,7 +165,13 @@ pg_ctl stop -m immediate -D ${PGDATA_PATH} > /dev/null 2>&1
 cp ${PGDATA_PATH}/postgresql.conf ${TEST_BASE}/postgresql.conf
 sleep 1
 pg_rman restore -B ${BACKUP_PATH} -D ${PGDATA_PATH} --recovery-target-xid=${TARGET_XID} --quiet;echo $?
-cp ${TEST_BASE}/postgresql.conf ${PGDATA_PATH}/postgresql.conf 
+BACKUP_RESTORE_COMMAND=`grep "restore_command = " ${PGDATA_PATH}/postgresql.conf | tail -1`
+BACKUP_TARGET_XID_COMMAND=`grep "recovery_target_xid = " ${PGDATA_PATH}/postgresql.conf | tail -1`
+cp ${TEST_BASE}/postgresql.conf ${PGDATA_PATH}/postgresql.conf
+cat >> ${PGDATA_PATH}/postgresql.conf << EOF
+${BACKUP_RESTORE_COMMAND}
+${BACKUP_TARGET_XID_COMMAND}
+EOF
 pg_ctl start -w -t 600 -D ${PGDATA_PATH} > /dev/null 2>&1
 psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0001-after.out
 diff ${TEST_BASE}/TEST-0001-before.out ${TEST_BASE}/TEST-0001-after.out
@@ -189,7 +195,13 @@ pg_ctl stop -m immediate -D ${PGDATA_PATH} > /dev/null 2>&1
 cp ${PGDATA_PATH}/postgresql.conf ${TEST_BASE}/postgresql.conf
 sleep 1
 pg_rman restore -B ${BACKUP_PATH} -D ${PGDATA_PATH} --recovery-target-xid=${TARGET_XID} --quiet;echo $?
-cp ${TEST_BASE}/postgresql.conf ${PGDATA_PATH}/postgresql.conf 
+BACKUP_RESTORE_COMMAND=`grep "restore_command = " ${PGDATA_PATH}/postgresql.conf | tail -1`
+BACKUP_TARGET_XID_COMMAND=`grep "recovery_target_xid = " ${PGDATA_PATH}/postgresql.conf | tail -1`
+cp ${TEST_BASE}/postgresql.conf ${PGDATA_PATH}/postgresql.conf
+cat >> ${PGDATA_PATH}/postgresql.conf << EOF
+${BACKUP_RESTORE_COMMAND}
+${BACKUP_TARGET_XID_COMMAND}
+EOF
 pg_ctl start -w -t 600 -D ${PGDATA_PATH} > /dev/null 2>&1
 psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0002-after.out
 diff ${TEST_BASE}/TEST-0002-before.out ${TEST_BASE}/TEST-0002-after.out

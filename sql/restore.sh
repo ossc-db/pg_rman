@@ -187,7 +187,7 @@ pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --recovery-target-timeline=${TARGET_TLI} --quiet;echo $?
 echo "checking postgresql.conf..."
-TARGET_TLI_IN_RECOVERY_CONF=`grep "recovery_target_timeline = " ${PGDATA_PATH}/postgresql.conf | awk '{print $3}' | sed -e "s/'//g"`
+TARGET_TLI_IN_RECOVERY_CONF=`grep "recovery_target_timeline = " ${PGDATA_PATH}/postgresql.conf | tail -1 | awk '{print $3}' | sed -e "s/'//g"`
 if [ ${TARGET_TLI} = ${TARGET_TLI_IN_RECOVERY_CONF} ]; then
 	echo 'OK: postgresql.conf has the given target timeline.'
 else
