@@ -856,12 +856,16 @@ do_backup(pgBackupOption bkupopt)
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
 			 errmsg("required parameter not specified: SRVLOG_PATH (-S, --srvlog-path)")));
-
 	/*
-	 * If we are taking backup from standby (ie, $PGDATA has recovery.conf),
+	 * If we are taking backup from standby
+	 * (ie, $PGDATA has recovery.conf or standby.signal),
 	 * check required parameters (ie, standby connection info).
 	 */
+#if PG_VERSION_NUM >= 120000
+	snprintf(path, lengthof(path), "%s/standby.signal", pgdata);
+#else
 	snprintf(path, lengthof(path), "%s/recovery.conf", pgdata);
+#endif
 	make_native_path(path);
 	if (fileExists(path))
 	{
