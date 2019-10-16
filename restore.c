@@ -125,7 +125,8 @@ do_restore(const char *target_time,
 	if(rt == NULL)
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
-			 errmsg("could not create recovery.conf"),
+			 errmsg("could not create recovery.conf or"
+					"add recovery related options to postgresql.conf(after PG12)"),
 			 errdetail("The specified options are invalid.")));
 
 	/* get list of backups. (index == 0) is the last backup */
@@ -1290,7 +1291,8 @@ checkIfCreateRecoveryConf(const char *target_time,
 		else
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
-				 errmsg("could not create recovery.conf with %s", target_time)));
+				 errmsg("could not create recovery.conf or"
+						"add recovery related options to postgresql.conf(after PG12) with %s", target_time)));
 	}
 
 	if(target_xid)
@@ -1302,7 +1304,8 @@ checkIfCreateRecoveryConf(const char *target_time,
 		else
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
-				 errmsg("could not create recovery.conf with %s", target_xid)));
+				 errmsg("could not create recovery.conf or"
+						" add recovery related options to postgresql.conf(after PG12) with %s", target_xid)));
 	}
 
 	if(target_inclusive)
@@ -1312,7 +1315,8 @@ checkIfCreateRecoveryConf(const char *target_time,
 		else
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
-				 errmsg("could not create recovery.conf with %s", target_inclusive)));
+				 errmsg("could not create recovery.conf or"
+						"add recovery related options to postgresql.conf(after PG12) with %s", target_inclusive)));
 	}
 
 	return rt;
