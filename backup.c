@@ -18,7 +18,6 @@
 #include <time.h>
 #include <math.h>
 
-#include "libpq/pqsignal.h"
 #include "common/controldata_utils.h"
 #include "pgut/pgut-port.h"
 
