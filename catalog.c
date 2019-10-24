@@ -702,11 +702,7 @@ check_system_identifier()
 	fclose(fp);
 	Assert(system_identifier > 0);
 
-#if PG_VERSION_NUM >= 120000
 	controlFile = get_controlfile(pgdata, &crc_ok);
-#else
-	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
-#endif
 
 	if (!crc_ok)
 		ereport(WARNING,
@@ -741,11 +737,7 @@ get_current_timeline(void)
 	{
 		bool	crc_ok;
 
-#if PG_VERSION_NUM >= 120000
 		controlFile = get_controlfile(pgdata, &crc_ok);
-#else
-		controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
-#endif
 
 		if (!crc_ok)
 		{

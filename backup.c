@@ -861,11 +861,7 @@ do_backup(pgBackupOption bkupopt)
 	 * (ie, $PGDATA has recovery.conf or standby.signal),
 	 * check required parameters (ie, standby connection info).
 	 */
-#if PG_VERSION_NUM >= 120000
 	snprintf(path, lengthof(path), "%s/standby.signal", pgdata);
-#else
-	snprintf(path, lengthof(path), "%s/recovery.conf", pgdata);
-#endif
 	make_native_path(path);
 	if (fileExists(path))
 	{
@@ -889,11 +885,7 @@ do_backup(pgBackupOption bkupopt)
 	}
 #endif
 
-#if PG_VERSION_NUM >= 120000
 	controlFile = get_controlfile(pgdata, &crc_ok);
-#else
-	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
-#endif
 
 	if (!crc_ok)
 		ereport(WARNING,
@@ -2147,11 +2139,7 @@ init_data_checksum_enabled()
 	{
 		bool	crc_ok;
 
-#if PG_VERSION_NUM >= 120000
 		controlFile = get_controlfile(pgdata, &crc_ok);
-#else
-		controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
-#endif
 		if (!crc_ok)
 		{
 			ereport(WARNING,

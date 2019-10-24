@@ -83,11 +83,7 @@ do_init(void)
 	}
 
 	/* get system identifier of the current database.*/
-#if PG_VERSION_NUM >= 120000
 	controlFile = get_controlfile(pgdata, &crc_ok);
-#else
-	controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
-#endif
 
 	if (!crc_ok)
 		ereport(WARNING,
