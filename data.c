@@ -18,7 +18,6 @@
 
 #include "catalog/pg_control.h"
 #include "common/controldata_utils.h"
-#include "libpq/pqsignal.h"
 #include "storage/block.h"
 #include "storage/bufpage.h"
 #include "storage/checksum.h"
