@@ -30,12 +30,9 @@ do_delete(pgBackupRange *range, bool force)
 
 	if (force)
 		ereport(WARNING,
-			(errmsg("Problems can occur that make recovery impossible."),
-			 errdetail("If the backup file is deleted using the force option,"
-				 " an incremental backup file that cannot be used may be"
-				 " left behind depending on the case. If cannot restore using"
-				 " an incremental backup file in such a case,"
-				 " it is need to perform a FULL backup.")));
+				(errmsg("using force option will make some of the remaining backups unusable"),
+				 errdetail("Any remaining incremental backups that are older than the oldest"
+					 " available full backup cannot be restored.")));
 
 	/* DATE are always required */
 	if (!pgBackupRangeIsValid(range))

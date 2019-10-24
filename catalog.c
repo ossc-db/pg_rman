@@ -263,10 +263,10 @@ err_proc:
 }
 
 /*
- * Find the last completed database backup from the backup list.
+ * Find the last completed database full valid backup from the backup list.
  */
 pgBackup *
-catalog_get_last_data_backup(parray *backup_list, bool isFull)
+catalog_get_last_full_backup(parray *backup_list)
 {
 	int			i;
 	pgBackup   *backup = NULL;
@@ -276,15 +276,9 @@ catalog_get_last_data_backup(parray *backup_list, bool isFull)
 	{
 		backup = (pgBackup *) parray_get(backup_list, i);
 
-		/*
-		 * If a search for a full backup file(isFull),
-		 * ignore everything except BACKUP_MODE_FULL mode backup files.
-		 */
-		if (isFull && backup->backup_mode != BACKUP_MODE_FULL)
-			continue;
-
-		/* we need completed database backup */
-		if (backup->status == BACKUP_STATUS_OK && HAVE_DATABASE(backup))
+		/* Return the first full valid backup. */
+		if (backup->backup_mode == BACKUP_MODE_FULL &&
+			backup->status == BACKUP_STATUS_OK)
 			return backup;
 	}
 
