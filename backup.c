@@ -20,7 +20,6 @@
 
 #include "catalog/pg_control.h"
 #include "common/controldata_utils.h"
-#include "libpq/pqsignal.h"
 #include "pgut/pgut-port.h"
 
 #define TIMEOUT_ARCHIVE		10		/* wait 10 sec until WAL archive complete */
