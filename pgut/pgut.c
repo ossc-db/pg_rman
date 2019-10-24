@@ -7,11 +7,11 @@
  *-------------------------------------------------------------------------
  */
 
-#include "libpq/pqsignal.h"
 #include "fe_utils/connect.h"
 
 #include <getopt.h>
 #include <limits.h>
+#include <signal.h>
 #include <time.h>
 #include <unistd.h>
 
