@@ -135,7 +135,7 @@ do_restore(const char *target_time,
 		snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
 		if (fileExists(ControlFilePath))
 		{
-			controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+			controlFile = get_controlfile(pgdata, &crc_ok);
 			if (!crc_ok)
 				ereport(ERROR,
 						(errmsg("control file appears to be corrupt"),
