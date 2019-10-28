@@ -73,6 +73,7 @@ do_restore(const char *target_time,
 
 	ControlFileData		*controlFile;
 	bool		crc_ok;
+	char		ControlFilePath[MAXPGPATH];
 
 	/* PGDATA and ARCLOG_PATH are always required */
 	if (pgdata == NULL)
@@ -128,14 +129,26 @@ do_restore(const char *target_time,
 			(errcode(ERROR_SYSTEM),
 			 errmsg("could not get list of backup already taken")));
 
-	controlFile = get_controlfile(pgdata, &crc_ok);
-
-	if (!crc_ok)
-		ereport(WARNING,
-				(errmsg("control file appears to be corrupt"),
-				 errdetail("Calculated CRC checksum does not match value stored in file.")));
-	wal_segment_size = controlFile->xlog_seg_size;
-	pg_free(controlFile);
+	/* get wal_segment_size from pg_control file, it is needed for check option. */
+	if (check)
+	{
+		snprintf(ControlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
+		if (fileExists(ControlFilePath))
+		{
+			controlFile = get_controlfile(pgdata, "pg_rman", &crc_ok);
+			if (!crc_ok)
+				ereport(ERROR,
+						(errmsg("control file appears to be corrupt"),
+						 errdetail("Calculated CRC checksum does not match value stored in file.")));
+			wal_segment_size = controlFile->xlog_seg_size;
+			pg_free(controlFile);
+		}
+		else
+		{
+			elog(ERROR, _("pg_controldata file \"%s\" does not exist"),
+				 ControlFilePath);
+		}
+	}
 
 	cur_tli = get_current_timeline();
 	elog(DEBUG, "the current timeline ID of database cluster is %d", cur_tli);
