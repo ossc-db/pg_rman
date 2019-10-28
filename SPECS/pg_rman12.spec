@@ -13,7 +13,7 @@ Version:    1.3.9
 Release:    1%{?dist}
 License:    BSD
 Group:      Applications/Databases
-Source0:    %{name}-%{version}-pg11.tar.gz
+Source0:    %{name}-%{version}-pg12.tar.gz
 URL:        https://github.com/ossc-db/pg_rman
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-%(%{__id_u} -n)
 Vendor:	    NIPPON TELEGRAPH AND TELEPHONE CORPORATION
