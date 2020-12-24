@@ -7,7 +7,7 @@
  *-------------------------------------------------------------------------
  */
 
-#include "fe_utils/connect.h"
+#include "common/connect.h"
 
 #include <getopt.h>
 #include <limits.h>
