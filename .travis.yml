@@ -39,7 +39,7 @@ before_script:
 
 env:
   matrix:
-    - PGVERSION=12
+    - PGVERSION=13
 
 language: cpp
 compiler:
