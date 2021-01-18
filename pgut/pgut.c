@@ -7,8 +7,6 @@
  *-------------------------------------------------------------------------
  */
 
-#include "fe_utils/connect.h"
-
 #include <getopt.h>
 #include <limits.h>
 #include <signal.h>
@@ -16,6 +14,10 @@
 #include <unistd.h>
 
 #include "pgut.h"
+
+#if PG_VERSION_NUM >=  100003
+#include "fe_utils/connect.h"
+#endif
 
 /* old gcc doesn't have LLONG_MAX. */
 #ifndef LLONG_MAX
@@ -944,6 +946,7 @@ pgut_connect(void)
 
 		if (PQstatus(conn) == CONNECTION_OK)
 		{
+#if PG_VERSION_NUM >= 100003
 			PGresult   *res;
 
 			res = PQexec(conn, ALWAYS_SECURE_SEARCH_PATH_SQL);
@@ -956,6 +959,7 @@ pgut_connect(void)
 				return NULL;
 			}
 			PQclear(res);
+#endif
 			return conn;
 		}
 
