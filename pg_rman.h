@@ -289,6 +289,8 @@ extern parray *catalog_get_backup_list(const pgBackupRange *range);
 extern pgBackup *catalog_get_last_full_backup(parray *backup_list);
 extern pgBackup *catalog_get_last_arclog_backup(parray *backup_list);
 extern pgBackup *catalog_get_last_srvlog_backup(parray *backup_list);
+extern pgBackup *catalog_get_last_backup(parray *backup_list);
+extern pgBackup *catalog_get_lastest_backup(parray *backup_list);
 
 extern int catalog_lock(void);
 extern void catalog_unlock(void);

@@ -286,6 +286,51 @@ catalog_get_last_full_backup(parray *backup_list)
 }
 
 /*
+ * Find the last backup completed database backup from the backup list.
+ */
+pgBackup *
+catalog_get_last_backup(parray *backup_list)
+{
+        int                    i;
+        pgBackup  *backup = NULL;
+
+        for (i = 0; i < parray_num(backup_list); i++)
+        {
+                backup = (pgBackup *) parray_get(backup_list, i);
+
+                /* Return the lastest valid backup. */
+
+                 if (backup->status == BACKUP_STATUS_OK)
+                        return backup;
+
+
+        }
+
+        return NULL;
+}
+
+/*
+ * Find the lastest backup completed database backup from the backup list.
+ */
+pgBackup *
+catalog_get_lastest_backup(parray *backup_list)
+{
+        pgBackup *last_full_backup = NULL;
+        pgBackup *last_backup = NULL;
+
+       last_full_backup = catalog_get_last_full_backup(backup_list);
+       last_backup = catalog_get_last_backup(backup_list);
+
+       if (last_full_backup != NULL)
+        {
+                return last_backup;
+        }
+
+       return NULL;
+
+}
+
+/*
  * Find the last completed archived WAL backup from the backup list.
  */
 pgBackup *

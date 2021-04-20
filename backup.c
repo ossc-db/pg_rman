@@ -192,7 +192,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		uint32		xlogid, xrecoff;
 
 		/* find last completed database backup */
-		prev_backup = catalog_get_last_full_backup(backup_list);
+		prev_backup = catalog_get_lastest_backup(backup_list);
 		if (prev_backup == NULL || prev_backup->tli != current.tli)
 		{
 			if (current.full_backup_on_error)
@@ -1091,11 +1091,12 @@ confirm_block_size(const char *name, int blcksz)
 	else if (strcmp(name, "wal_block_size") == 0)
 		elog(DEBUG, "wal block size is %d", block_size);
 
-	PQclear(res);
+	//PQclear(res);
 	if ((endp && *endp) || block_size != blcksz)
 		ereport(ERROR,
 			(errcode(ERROR_PG_INCOMPATIBLE),
 			 errmsg("%s(%d) is not compatible(%d expected)", name, block_size, blcksz)));
+        PQclear(res);
 }
 
 /*
