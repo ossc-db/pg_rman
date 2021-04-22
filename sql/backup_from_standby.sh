@@ -150,17 +150,38 @@ EOF
 	pg_ctl -D ${SBYDATA_PATH} start -w -t 600 > /dev/null 2>&1
 }
 
+function load_with_pgbench
+{
+	pgbench -p ${TEST_PGPORT} -T ${DURATION} -d pgbench > /dev/null 2>&1
+}
+
+function full_backup_from_standby
+{
+	pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres -D ${SBYDATA_PATH} --standby-host=localhost --standby-port=${TEST_SBYPGPORT} --quiet;echo $?
+	pg_rman validate -B ${BACKUP_PATH} --quiet; echo $?
+}
+
+function incremental_backup_from_standby
+{
+	pg_rman backup -B ${BACKUP_PATH} -b incremental -Z -p ${TEST_PGPORT} -d postgres -D ${SBYDATA_PATH} --standby-host=localhost --standby-port=${TEST_SBYPGPORT} --quiet;echo $?
+	pg_rman validate -B ${BACKUP_PATH} --quiet; echo $?
+}
+
+function get_database_data
+{
+	psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT * FROM pgbench_branches;"
+}
+
 init_backup
 setup_standby
 init_catalog
 echo '###### BACKUP COMMAND FROM STANDBY SERVER TEST-0001 ######'
 echo '###### full backup mode ######'
-pgbench -p ${TEST_PGPORT} -T ${DURATION} -d pgbench > /dev/null 2>&1
-psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0001-before.out
-pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres -D ${SBYDATA_PATH} --standby-host=localhost --standby-port=${TEST_SBYPGPORT} --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet; echo $?
+load_with_pgbench
+get_database_data > ${TEST_BASE}/TEST-0001-before.out
+full_backup_from_standby
 TARGET_XID=`psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -tAq -c "INSERT INTO pgbench_history VALUES (1) RETURNING(xmin);"`
-pgbench -p ${TEST_PGPORT} -T ${DURATION} -d pgbench > /dev/null 2>&1
+load_with_pgbench
 pg_ctl stop -m immediate -D ${PGDATA_PATH} > /dev/null 2>&1
 cp ${PGDATA_PATH}/postgresql.conf ${TEST_BASE}/postgresql.conf
 sleep 1
@@ -173,7 +194,7 @@ ${BACKUP_RESTORE_COMMAND}
 ${BACKUP_TARGET_XID_COMMAND}
 EOF
 pg_ctl start -w -t 600 -D ${PGDATA_PATH} > /dev/null 2>&1
-psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0001-after.out
+get_database_data > ${TEST_BASE}/TEST-0001-after.out
 diff ${TEST_BASE}/TEST-0001-before.out ${TEST_BASE}/TEST-0001-after.out
 echo ''
 
@@ -182,15 +203,13 @@ setup_standby
 init_catalog
 echo '###### BACKUP COMMAND FROM STANDBY SERVER TEST-0002 ######'
 echo '###### full + incremental backup mode ######'
-pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
-pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres -D ${SBYDATA_PATH} --standby-host=localhost --standby-port=${TEST_SBYPGPORT} --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet; echo $?
-pgbench -p ${TEST_PGPORT} -T ${DURATION} -d pgbench > /dev/null 2>&1
-pg_rman backup -B ${BACKUP_PATH} -b incremental -Z -p ${TEST_PGPORT} -d postgres -D ${SBYDATA_PATH} --standby-host=localhost --standby-port=${TEST_SBYPGPORT} --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet; echo $?
-psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0002-before.out
+load_with_pgbench
+full_backup_from_standby
+load_with_pgbench
+incremental_backup_from_standby
+get_database_data > ${TEST_BASE}/TEST-0002-before.out
 TARGET_XID=`psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -tAq -c "INSERT INTO pgbench_history VALUES (1) RETURNING(xmin);"`
-pgbench -p ${TEST_PGPORT} -T ${DURATION} pgbench > /dev/null 2>&1
+load_with_pgbench
 pg_ctl stop -m immediate -D ${PGDATA_PATH} > /dev/null 2>&1
 cp ${PGDATA_PATH}/postgresql.conf ${TEST_BASE}/postgresql.conf
 sleep 1
@@ -203,9 +222,31 @@ ${BACKUP_RESTORE_COMMAND}
 ${BACKUP_TARGET_XID_COMMAND}
 EOF
 pg_ctl start -w -t 600 -D ${PGDATA_PATH} > /dev/null 2>&1
-psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0002-after.out
+get_database_data > ${TEST_BASE}/TEST-0002-after.out
 diff ${TEST_BASE}/TEST-0002-before.out ${TEST_BASE}/TEST-0002-after.out
+echo ''
 
+# check to start as primary (stand-alone) if the recovery target is latest
+init_backup
+setup_standby
+init_catalog
+echo '###### BACKUP COMMAND FROM STANDBY SERVER TEST-0003 ######'
+load_with_pgbench
+get_database_data > ${TEST_BASE}/TEST-0003-before.out
+full_backup_from_standby
+# Don't load_with_pgbench again. It makes the *.out result difference because
+# restoring to the latest point using archived wal including the one generated
+# by the second load.
+pg_ctl stop -m immediate -D ${PGDATA_PATH} > /dev/null 2>&1
+pg_rman restore -B ${BACKUP_PATH} -D ${PGDATA_PATH} --quiet;echo $?
+sed -i -e "s/^port = .*$/port = ${TEST_PGPORT}/" ${PGDATA_PATH}/postgresql.conf
+pg_ctl start -w -t 600 -D ${PGDATA_PATH} > /dev/null 2>&1
+get_database_data > ${TEST_BASE}/TEST-0003-after.out
+diff ${TEST_BASE}/TEST-0003-before.out ${TEST_BASE}/TEST-0003-after.out
+echo ''
+echo '###### must be primary or stand-alone if the recovery target is latest ######'
+sleep 3  # wait until finishing recovery
+psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT pg_is_in_recovery();"
 
 # clean up the temporal test data
 pg_ctl stop -m immediate -D ${PGDATA_PATH} > /dev/null 2>&1

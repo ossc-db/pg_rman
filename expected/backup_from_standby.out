@@ -12,3 +12,15 @@
 0
 0
 0
+
+###### BACKUP COMMAND FROM STANDBY SERVER TEST-0003 ######
+0
+0
+0
+
+###### must be primary or stand-alone if the recovery target is latest ######
+ pg_is_in_recovery 
+-------------------
+ f
+(1 row)
+
