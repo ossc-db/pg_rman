@@ -1,0 +1,102 @@
+name: make and make installcheck for pg_rman
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    - cron: "0 1 * * SUN"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PGVERSION: 13.2  # currently, pg_rman supports only stable version.
+      #PGVERSION: master
+
+    steps:
+    - name: cache builded resources
+      id: cache-postgresql-core
+      uses: actions/cache@v2
+      with:
+        path: "~/pgsql/${{ env.PGVERSION }}"
+        key: ${{ env.PGVERSION }}
+
+    - name: build postgresql
+      if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
+      shell: bash -xe {0}
+      run: |
+        # set environment variables
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+
+        # install
+        sudo apt-get update -qq
+        sudo apt-get -y install bc libpam-dev libedit-dev
+        wget -q https://ftp.postgresql.org/pub/source/v13.2/postgresql-13.2.tar.gz
+        tar xzf postgresql-${{ env.PGVERSION }}.tar.gz
+
+        # TODO: if master branch
+        # git clone --single-branch --branch ${{ env.PGVERSION }} \
+        #   https://github.com/postgres/postgres.git ${{ env.PGVERSION }}
+
+        cd postgresql-${{ env.PGVERSION }}
+        ./configure --prefix=$PGHOME
+
+        LOGFILE=~/make.log
+        make -j 4 2>&1 | tee $LOGFILE
+        make install 2>&1 | tee -a $LOGFILE
+
+    - name: show build warning
+      if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
+      shell: bash -xe {0}
+      run: |
+        LOGFILE=~/make.log  # TODO: though I want to remove duplicated vars...
+        grep -C 1 warning $LOGFILE
+        rm $LOGFILE
+      continue-on-error: true    # it's ok if warning doesn't exists
+
+    - name: create database directory
+      shell: bash -xe {0}
+      run: |
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+        export PGDATA=~/pgdata/${{ env.PGVERSION }}
+        export ARCHIVEDIR=~/pgdata/arc
+        export PATH=$PGHOME/bin:$PATH:
+
+        mkdir -p $PGDATA
+        initdb --no-locale -D $PGDATA
+        echo "local   all         postgres                          trust" > $PGDATA/pg_hba.conf
+        echo "local   all         all                               trust" >> $PGDATA/pg_hba.conf
+        echo "host    all         all         127.0.0.1/32          trust" >> $PGDATA/pg_hba.conf
+        echo "host    all         all         ::1/128               trust" >> $PGDATA/pg_hba.conf
+        echo "wal_level = replica" >> $PGDATA/postgresql.conf
+        echo "archive_mode = on" >> $PGDATA/postgresql.conf
+        echo "archive_command = 'cp %p ${{ env.ARCHIVEDIR }}/%f'" >> $PGDATA/postgresql.conf
+        pg_ctl -V
+        pg_ctl -D $PGDATA start
+
+    - uses: actions/checkout@v2
+
+    - name: make install
+      shell: bash -xe {0}
+      run: |
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+        export PATH=$PGHOME/bin:$PATH:
+        LOGFILE=~/make.log
+        make install 2>&1 | tee $LOGFILE
+
+    - name: show build warning
+      shell: bash -xe {0}
+      run: |
+        LOGFILE=~/make.log
+        grep -C 1 warning $LOGFILE
+        rm $LOGFILE
+      continue-on-error: true     # it's ok if warning doesn't exists
+
+    - name: make installcheck
+      shell: bash -xe {0}
+      run: |
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+        export PATH=$PGHOME/bin:$PATH:
+        make installcheck
