@@ -14,13 +14,13 @@ different PostgreSQL server versions without introducing server version
 check code blocks.  Please choose a branch to match the PostgreSQL version
 you will be building pg_rman against.
 
-* master : branch for latest PostgreSQL development version [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=master)](https://travis-ci.org/ossc-db/pg_rman)
-* REL_13_STABLE : branch for PostgreSQL 13.0 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL_13_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
-* REL_12_STABLE : branch for PostgreSQL 12.0 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL_12_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
-* REL_11_STABLE : branch for PostgreSQL 11.0 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL_11_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
-* REL_10_STABLE : branch for PostgreSQL 10.0 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL_10_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
-* REL9_6_STABLE : branch for PostgreSQL 9.6 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL9_6_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
-* REL9_5_STABLE : branch for PostgreSQL 9.5 [![Build Status](https://travis-ci.org/ossc-db/pg_rman.svg?branch=REL9_5_STABLE)](https://travis-ci.org/ossc-db/pg_rman)
+* master : branch for latest PostgreSQL stable version [![Test with PG13](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
+* REL_13_STABLE : branch for PostgreSQL 13.0
+* REL_12_STABLE : branch for PostgreSQL 12.0
+* REL_11_STABLE : branch for PostgreSQL 11.0
+* REL_10_STABLE : branch for PostgreSQL 10.0
+* REL9_6_STABLE : branch for PostgreSQL 9.6
+* REL9_5_STABLE : branch for PostgreSQL 9.5
 
 How to use
 ----------
