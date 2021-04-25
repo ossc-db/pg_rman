@@ -2,7 +2,7 @@ name: Test with PG13
 
 on:
   push:
-    branches: [ update_github_action_workflow ]  # todo: fix to master
+    branches: [ master ]
   pull_request:
     branches: [ master ]
   schedule:
