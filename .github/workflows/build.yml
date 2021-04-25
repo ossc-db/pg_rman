@@ -2,7 +2,7 @@ name: Test with PG13
 
 on:
   push:
-    branches: [ master ]
+    branches: [ update_github_action_workflow ]  # todo: fix to master
   pull_request:
     branches: [ master ]
   schedule:
@@ -70,9 +70,18 @@ jobs:
         echo "host    all         all         ::1/128               trust" >> $PGDATA/pg_hba.conf
         echo "wal_level = replica" >> $PGDATA/postgresql.conf
         echo "archive_mode = on" >> $PGDATA/postgresql.conf
-        echo "archive_command = 'cp %p ${{ env.ARCHIVEDIR }}/%f'" >> $PGDATA/postgresql.conf
+        echo "archive_command = 'cp %p $ARCHIVEDIR/%f'" >> $PGDATA/postgresql.conf
         pg_ctl -V
         pg_ctl -D $PGDATA start
+
+    - name: show postgresql configuration
+      shell: bash -xe {0}
+      run: |
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+        export PGDATA=~/pgdata/${{ env.PGVERSION }}
+        export PATH=$PGHOME/bin:$PATH:
+        pg_config --version
+        cat $PGDATA/postgresql.conf
 
     - uses: actions/checkout@v2
 
