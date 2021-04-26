@@ -12,7 +12,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      PGVERSION: 13.2  # currently, pg_rman supports only stable version.
+      CACHE_VERSION: 20210426  # to identify cache version
+      PGVERSION: 13.2          # currently, pg_rman supports only stable version.
       #PGVERSION: master
 
     steps:
@@ -21,7 +22,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: "~/pgsql/${{ env.PGVERSION }}"
-        key: ${{ env.PGVERSION }}
+        key: ${{ env.PGVERSION }}-${{ env.CACHE_VERSION }}
 
     - name: build postgresql
       if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
