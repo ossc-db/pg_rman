@@ -134,7 +134,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 
 	/* notify start of backup to PostgreSQL server */
 	time2iso(label, lengthof(label), current.start_time);
-	strncat(label, " with pg_rman", lengthof(label));
+	strncat(label, " with pg_rman", lengthof(label) - strlen(label) - 1);
 	pg_start_backup(label, smooth_checkpoint, &current);
 
 	/* Execute restartpoint on standby once replay reaches the backup LSN */
