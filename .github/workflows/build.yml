@@ -55,7 +55,7 @@ jobs:
           ["REL9_2_STABLE"]="9.2.24"
         )
         [ -z "${versions[${{ env.BRANCH }}]}" ] && exit 1         # check if the key exists
-        echo "PGVERSION=versions[${{ env.BRANCH }}" >>  $GITHUB_ENV ;;
+        echo "PGVERSION=versions[${{ env.BRANCH }}]" >> $GITHUB_ENV
 
     - name: cache builded resources
       id: cache-postgresql-core
