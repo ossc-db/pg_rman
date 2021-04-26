@@ -16,15 +16,15 @@ jobs:
       #PGVERSION: master
 
     steps:
-    #- name: cache builded resources
-    #  id: cache-postgresql-core
-    #  uses: actions/cache@v2
-    #  with:
-    #    path: "~/pgsql/${{ env.PGVERSION }}"
-    #    key: ${{ env.PGVERSION }}
+    - name: cache builded resources
+      id: cache-postgresql-core
+      uses: actions/cache@v2
+      with:
+        path: "~/pgsql/${{ env.PGVERSION }}"
+        key: ${{ env.PGVERSION }}
 
     - name: build postgresql
-    #  if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
+      if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
       shell: bash -xe {0}
       run: |
         # set environment variables
@@ -49,7 +49,7 @@ jobs:
         make install 2>&1 | tee -a $LOGFILE
 
     - name: show build warning
-    #  if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
+      if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
       shell: bash -xe {0}
       run: |
         LOGFILE=~/make.log  # TODO: though I want to remove duplicated vars...
