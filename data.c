@@ -769,7 +769,10 @@ restore_data_file(const char *from_root,
 		 */
 		    blknum = header.block;
 			elog(DEBUG, "truncating file. %s blknum: %d", to_path, blknum);
-			truncate(to_path, (blknum - 1) * BLCKSZ);
+			if(truncate(to_path, (blknum - 1) * BLCKSZ) == -1)
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not truncate file \"%s\": %s", to_path, strerror(errno))));
 			break;
 		}
 
