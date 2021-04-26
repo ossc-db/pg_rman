@@ -41,7 +41,7 @@ jobs:
         #   https://github.com/postgres/postgres.git ${{ env.PGVERSION }}
 
         cd postgresql-${{ env.PGVERSION }}
-        ./configure --prefix=$PGHOME / --enable-cassert
+        ./configure --prefix=$PGHOME --enable-cassert
 
         gcc -v
         LOGFILE=~/make.log
