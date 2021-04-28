@@ -38,7 +38,12 @@ jobs:
     steps:
     - name: get current branch name
       shell: bash -xe {0}
-      run: echo "BRANCH=${GITHUB_REF##*/}" >>  $GITHUB_ENV
+      run: |
+        if [ ${{ github.event_name }} = "pull_request" ]; then
+          echo "BRANCH=${{ github.base_ref }}" >>  $GITHUB_ENV
+        else # push
+          echo "BRANCH=${GITHUB_REF##*/}" >>  $GITHUB_ENV
+        fi
 
     - name: set build postgresql version
       shell: bash -xe {0}
