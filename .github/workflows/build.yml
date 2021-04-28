@@ -1,0 +1,163 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+      - REL_13_STABLE
+      - REL_12_STABLE
+      - REL_11_STABLE
+      - REL_10_STABLE
+      - REL9_6_STABLE
+      - REL9_5_STABLE
+      - REL9_4_STABLE
+      - REL9_3_STABLE
+      - REL9_2_STABLE
+  pull_request:
+    branches:
+      - master
+      - REL_13_STABLE
+      - REL_12_STABLE
+      - REL_11_STABLE
+      - REL_10_STABLE
+      - REL9_6_STABLE
+      - REL9_5_STABLE
+      - REL9_4_STABLE
+      - REL9_3_STABLE
+      - REL9_2_STABLE
+  schedule:
+    - cron: "0 1 * * SUN"      # only master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CACHE_VERSION: 20210426  # to identify cache version
+
+    steps:
+    - name: get current branch name
+      shell: bash -xe {0}
+      run: |
+        if [ ${{ github.event_name }} = "pull_request" ]; then
+          echo "BRANCH=${{ github.base_ref }}" >>  $GITHUB_ENV
+        else # push
+          echo "BRANCH=${GITHUB_REF##*/}" >>  $GITHUB_ENV
+        fi
+
+    - name: set build postgresql version
+      shell: bash -xe {0}
+      run: |
+        declare -A versions=(
+          ["master"]="13.2"                # TODO: build with master branch
+          ["REL_13_STABLE"]="13.2"
+          ["REL_12_STABLE"]="12.6"
+          ["REL_11_STABLE"]="11.11"
+          ["REL_10_STABLE"]="10.16"
+          ["REL9_6_STABLE"]="9.6.21"
+          ["REL9_5_STABLE"]="9.5.25"
+          ["REL9_4_STABLE"]="9.4.26"
+          ["REL9_3_STABLE"]="9.3.25"
+          ["REL9_2_STABLE"]="9.2.24"
+        )
+        [ -z "${versions[${{ env.BRANCH }}]}" ] && exit 1         # check if the key exists
+        echo "PGVERSION=${versions[${{ env.BRANCH }}]}" >> $GITHUB_ENV
+
+    - name: cache builded resources
+      id: cache-postgresql-core
+      uses: actions/cache@v2
+      with:
+        path: "~/pgsql/${{ env.PGVERSION }}"
+        key: ${{ env.PGVERSION }}-${{ env.CACHE_VERSION }}
+
+    - name: build postgresql
+      if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
+      shell: bash -xe {0}
+      run: |
+        # set environment variables
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+
+        # install
+        sudo apt-get update -qq
+        sudo apt-get -y install bc libpam-dev libedit-dev
+        wget -q https://ftp.postgresql.org/pub/source/v${{ env.PGVERSION }}/postgresql-${{ env.PGVERSION }}.tar.gz
+        tar xzf postgresql-${{ env.PGVERSION }}.tar.gz
+
+        # TODO: if test with master branch
+        # git clone --single-branch --branch ${{ env.PGVERSION }} \
+        #   https://github.com/postgres/postgres.git ${{ env.PGVERSION }}
+
+        cd postgresql-${{ env.PGVERSION }}
+        ./configure --prefix=$PGHOME --enable-cassert
+
+        gcc -v
+        LOGFILE=~/make.log
+        make -j 4 2>&1 | tee $LOGFILE
+        make install 2>&1 | tee -a $LOGFILE
+
+    - name: show build warning
+      if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
+      shell: bash -xe {0}
+      run: |
+        LOGFILE=~/make.log  # TODO: though I want to remove duplicated vars...
+        grep -C 1 warning $LOGFILE || exit 0     # ok if warning doesn't exists (= status code is 1)
+
+    - name: create database directory
+      shell: bash -xe {0}
+      run: |
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+        export PGDATA=~/pgdata/${{ env.PGVERSION }}
+        export ARCHIVEDIR=~/pgdata/arc
+        export PATH=$PGHOME/bin:$PATH:
+
+        mkdir -p $PGDATA
+        initdb --no-locale -D $PGDATA
+        echo "local   all         postgres                          trust" > $PGDATA/pg_hba.conf
+        echo "local   all         all                               trust" >> $PGDATA/pg_hba.conf
+        echo "host    all         all         127.0.0.1/32          trust" >> $PGDATA/pg_hba.conf
+        echo "host    all         all         ::1/128               trust" >> $PGDATA/pg_hba.conf
+        #echo "wal_level = replica" >> $PGDATA/postgresql.conf
+        echo "wal_level = hot_standby" >> $PGDATA/postgresql.conf
+        echo "archive_mode = on" >> $PGDATA/postgresql.conf
+        echo "archive_command = 'cp %p $ARCHIVEDIR/%f'" >> $PGDATA/postgresql.conf
+        pg_ctl -V
+        pg_ctl -D $PGDATA start
+
+    - name: show postgresql configuration
+      shell: bash -xe {0}
+      run: |
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+        export PGDATA=~/pgdata/${{ env.PGVERSION }}
+        export PATH=$PGHOME/bin:$PATH:
+        pg_config --version
+        cat $PGDATA/postgresql.conf
+
+    - uses: actions/checkout@v2
+
+    - name: make install
+      shell: bash -xe {0}
+      run: |
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+        export PATH=$PGHOME/bin:$PATH:
+        LOGFILE=~/make.log
+        make install 2>&1 | tee $LOGFILE
+
+    - name: show build warning
+      shell: bash -xe {0}
+      run: |
+        LOGFILE=~/make.log
+        grep -C 1 warning $LOGFILE || exit 0     # ok if warning doesn't exists (= status code is 1)
+
+    - name: make installcheck
+      shell: bash -xe {0}
+      run: |
+        export PGHOME=~/pgsql/${{ env.PGVERSION }}
+        export PATH=$PGHOME/bin:$PATH:
+        make installcheck
+
+    - name: show the result if the regression test failed
+      if: failure()
+      shell: bash -xe {0}
+      run: |
+        cat regression.diffs   \
+         && exit 1     # notify fail
