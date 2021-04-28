@@ -116,7 +116,8 @@ jobs:
         echo "local   all         all                               trust" >> $PGDATA/pg_hba.conf
         echo "host    all         all         127.0.0.1/32          trust" >> $PGDATA/pg_hba.conf
         echo "host    all         all         ::1/128               trust" >> $PGDATA/pg_hba.conf
-        echo "wal_level = replica" >> $PGDATA/postgresql.conf
+        #echo "wal_level = replica" >> $PGDATA/postgresql.conf
+        echo "wal_level = hot_standby" >> $PGDATA/postgresql.conf
         echo "archive_mode = on" >> $PGDATA/postgresql.conf
         echo "archive_command = 'cp %p $ARCHIVEDIR/%f'" >> $PGDATA/postgresql.conf
         pg_ctl -V
