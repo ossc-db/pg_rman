@@ -90,14 +90,14 @@ checkpoint_segments = 10
 EOF
 
     # start PostgreSQL
-    pg_ctl start -D ${PGDATA_PATH} -w -t 300 > /dev/null 2>&1
+    pg_ctl start -D ${PGDATA_PATH} -w -t 300
 	mkdir -p ${TBLSPC_PATH}/pgbench
-	psql --no-psqlrc -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1 << EOF
+	psql --no-psqlrc -p ${TEST_PGPORT} -d postgres << EOF
 CREATE TABLESPACE pgbench LOCATION '${TBLSPC_PATH}/pgbench';
 CREATE DATABASE pgbench TABLESPACE = pgbench;
 EOF
 
-    pgbench -i -s $SCALE -p ${TEST_PGPORT} -d pgbench > ${TEST_BASE}/pgbench.log 2>&1
+    pgbench -i -s $SCALE -p ${TEST_PGPORT} -d pgbench
 
     # init backup catalog
     init_catalog
@@ -113,7 +113,7 @@ init_backup
 
 echo '###### RESTORE COMMAND TEST-0001 ######'
 echo '###### recovery to latest from full backup ######'
-pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
+pgbench -p ${TEST_PGPORT} -d pgbench
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0001-before.out
 pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
