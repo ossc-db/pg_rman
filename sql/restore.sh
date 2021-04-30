@@ -100,6 +100,7 @@ EOF
     psql -p ${TEST_PGPORT} -c "\l"
     psql -p ${TEST_PGPORT} -d pgbench -c "\l"
     pgbench -i -s $SCALE -p ${TEST_PGPORT} -d pgbench
+    cat /home/runner/work/pg_rman/pg_rman/results/restore/srvlog
 
     # init backup catalog
     init_catalog
