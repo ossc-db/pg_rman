@@ -29,8 +29,7 @@ OBJS = $(SRCS:.c=.o)
 PG_CPPFLAGS = -I$(libpq_srcdir) -lm
 PG_LIBS = $(libpq_pgport)
 
-REGRESS = init restore
-#REGRESS = init option show delete purge backup backup_management restore restore_checksum backup_from_standby arc_srv_log_management
+REGRESS = init option show delete purge backup backup_management restore restore_checksum backup_from_standby arc_srv_log_management
 
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
