@@ -94,7 +94,7 @@ jobs:
         LOGFILE=~/make.log
         #make -j 4 2>&1 | tee $LOGFILE
         make world -j 4 2>&1 | tee $LOGFILE    # pgbench is contrib module
-        make install 2>&1 | tee -a $LOGFILE
+        make install-world 2>&1 | tee -a $LOGFILE
 
     - name: show build warning
       if: steps.cache-postgresql-core.outputs.cache-hit != 'true'
