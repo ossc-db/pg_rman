@@ -97,8 +97,11 @@ CREATE TABLESPACE pgbench LOCATION '${TBLSPC_PATH}/pgbench';
 CREATE DATABASE pgbench TABLESPACE = pgbench;
 EOF
 
+    which pgbench
+    which psql
     psql -p ${TEST_PGPORT} -d pgbench -c "\l"
-    ll /var/run/postgresql/
+    ls -al /var/run/postgresql/
+    ls -al /tmp
     pgbench -i -p ${TEST_PGPORT} postgres
     pgbench -i -p ${TEST_PGPORT} pgbench
     pgbench -i -s $SCALE -p ${TEST_PGPORT} -d pgbench
