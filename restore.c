@@ -815,7 +815,7 @@ remove_standby_signal(void)
 	if (verbose && !check)
 		printf(_("----------------------------------------\n"));
 
-	elog(INFO, _("removing standby.signal if exists"));
+	elog(INFO, _("removing standby.signal if exists to restore as primary"));
 
 	if (!check)
 	{
@@ -825,10 +825,15 @@ remove_standby_signal(void)
 		{
 			if (remove(path))
 			{
-				elog(ERROR, _("could not remove \"%s\": %s"), path,
-					strerror(errno));
+				ereport(ERROR,
+					(errcode(ERROR_SYSTEM),
+					 errmsg("could not remove \"%s\": %s", path,
+						strerror(errno))));
 			}
-			elog(INFO, _("removed standby.signal"));
+			ereport(INFO,
+				(errmsg("removed standby.signal"),
+				 errhint("if you want to start as standby, additional manual"
+						"setups to make standby.signal and so on are required")));
 		}
 	}
 }
