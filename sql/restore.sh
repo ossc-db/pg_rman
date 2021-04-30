@@ -97,6 +97,8 @@ CREATE TABLESPACE pgbench LOCATION '${TBLSPC_PATH}/pgbench';
 CREATE DATABASE pgbench TABLESPACE = pgbench;
 EOF
 
+    psql -p ${TEST_PGPORT} -c "\l"
+    psql -p ${TEST_PGPORT} -d pgbench -c "\l"
     pgbench -i -s $SCALE -p ${TEST_PGPORT} -d pgbench
 
     # init backup catalog
