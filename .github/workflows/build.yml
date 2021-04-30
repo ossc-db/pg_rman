@@ -92,7 +92,6 @@ jobs:
 
         gcc -v
         LOGFILE=~/make.log
-        #make -j 4 2>&1 | tee $LOGFILE
         make world -j 4 2>&1 | tee $LOGFILE    # pgbench is contrib module
         make install-world 2>&1 | tee -a $LOGFILE
 
