@@ -860,9 +860,7 @@ do_backup(pgBackupOption bkupopt)
 	 * (ie, $PGDATA has recovery.conf or standby.signal),
 	 * check required parameters (ie, standby connection info).
 	 */
-	snprintf(path, lengthof(path), "%s/standby.signal", pgdata);
-	make_native_path(path);
-	if (fileExists(path))
+	if (get_standby_signal_filepath(path, sizeof(path)))
 	{
 		if (!bkupopt.standby_host || !bkupopt.standby_port)
 			ereport(ERROR,
@@ -1381,6 +1379,18 @@ dirExists(const char *path)
 		return false;
 	else
 		return true;
+}
+
+/*
+ * Return true if standby.signal file exists and
+ * store the file path to the "path"
+ */
+bool
+get_standby_signal_filepath(char *path, size_t size)
+{
+	snprintf(path, size, "%s/standby.signal", pgdata);
+	make_native_path(path);
+	return fileExists(path);
 }
 
 /*
