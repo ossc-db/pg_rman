@@ -273,6 +273,13 @@ psql -p ${TEST_SBYPGPORT} --no-psqlrc -d pgbench -c "SELECT status FROM pg_stat_
 get_database_data_from_standby > ${TEST_BASE}/TEST-0004-after.out
 diff ${TEST_BASE}/TEST-0004-before.out ${TEST_BASE}/TEST-0004-after.out
 
+# check to fail if "--standby-host" and "--standby-port" are not specified
+init_backup
+setup_standby
+init_catalog
+echo '###### BACKUP COMMAND FROM STANDBY SERVER TEST-0005 ######'
+pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres -D ${SBYDATA_PATH}
+
 # clean up the temporal test data
 pg_ctl stop -m immediate -D ${PGDATA_PATH} > /dev/null 2>&1
 pg_ctl stop -m immediate -D ${SBYDATA_PATH} > /dev/null 2>&1

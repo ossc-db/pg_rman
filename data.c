@@ -1276,3 +1276,31 @@ figure_out_segno(char *filepath)
 
 	return segno;
 }
+
+/*
+ * Return true if the path is a existing regular file.
+ */
+bool
+fileExists(const char *path)
+{
+	struct stat buf;
+
+	if (stat(path, &buf) == -1 && errno == ENOENT)
+		return false;
+	else if (!S_ISREG(buf.st_mode))
+		return false;
+	else
+		return true;
+}
+
+/*
+ * Return true if standby.signal file exists and
+ * store the file path to the "path"
+ */
+bool
+get_standby_signal_filepath(char *path, size_t size)
+{
+	snprintf(path, size, "%s/standby.signal", pgdata);
+	make_native_path(path);
+	return fileExists(path);
+}

@@ -860,9 +860,7 @@ do_backup(pgBackupOption bkupopt)
 	 * (ie, $PGDATA has recovery.conf or standby.signal),
 	 * check required parameters (ie, standby connection info).
 	 */
-	snprintf(path, lengthof(path), "%s/standby.signal", pgdata);
-	make_native_path(path);
-	if (fileExists(path))
+	if (get_standby_signal_filepath(path, sizeof(path)))
 	{
 		if (!bkupopt.standby_host || !bkupopt.standby_port)
 			ereport(ERROR,
@@ -1349,22 +1347,6 @@ get_xid(PGresult *res, uint32 *xid)
 				PQerrorMessage(connection))));
 	}
 	elog(DEBUG, "current XID is %s", PQgetvalue(res, 0, 0));
-}
-
-/*
- * Return true if the path is a existing regular file.
- */
-bool
-fileExists(const char *path)
-{
-	struct stat buf;
-
-	if (stat(path, &buf) == -1 && errno == ENOENT)
-		return false;
-	else if (!S_ISREG(buf.st_mode))
-		return false;
-	else
-		return true;
 }
 
 /*
