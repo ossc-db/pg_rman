@@ -809,7 +809,6 @@ create_recovery_signal(void)
 static void
 remove_standby_signal(void)
 {
-	struct stat stat_buf;
 	char path[MAXPGPATH];
 
 	if (verbose && !check)
@@ -819,9 +818,7 @@ remove_standby_signal(void)
 
 	if (!check)
 	{
-		snprintf(path, lengthof(path), "%s/standby.signal", pgdata);
-
-		if (stat(path, &stat_buf) == 0)
+		if (get_standby_signal_filepath(path, sizeof(path)))
 		{
 			if (remove(path))
 			{

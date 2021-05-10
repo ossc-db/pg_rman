@@ -35,3 +35,5 @@
  streaming
 (1 row)
 
+###### BACKUP COMMAND FROM STANDBY SERVER TEST-0005 ######
+ERROR: please specify both standby host and port
