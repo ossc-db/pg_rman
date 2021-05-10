@@ -258,8 +258,6 @@ extern bool data_checksum_enabled;
 /* in backup.c */
 extern int do_backup(pgBackupOption bkupopt);
 extern BackupMode parse_backup_mode(const char *value, int elevel);
-extern bool fileExists(const char *path);
-extern bool get_standby_signal_filepath(char *path, size_t size);
 
 /* in restore.c */
 extern int do_restore(const char *target_time,
@@ -341,6 +339,8 @@ extern void restore_data_file(const char *from_root, const char *to_root,
 extern bool copy_file(const char *from_root, const char *to_root,
 					  pgFile *file, CompressionMode compress);
 extern pgFile *write_stop_backup_file(pgBackup *backup, const char *buf, int len, const char *file_name);
+extern bool fileExists(const char *path);
+extern bool get_standby_signal_filepath(char *path, size_t size);
 
 /* in util.c */
 extern void time2iso(char *buf, size_t len, time_t time);
