@@ -176,9 +176,9 @@ do_init(void)
 		}
 		else if (pgdata)
 		{
-			/* default: log_directory = 'pg_log' */
+			/* default: log_directory = 'log' if PostgreSQL version is 10 or above */
 			srvlog_path = pgut_malloc(MAXPGPATH);
-			join_path_components(srvlog_path, pgdata, "pg_log");
+			join_path_components(srvlog_path, pgdata, "log");
 		}
 	}
 	if (srvlog_path)
