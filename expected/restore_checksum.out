@@ -70,3 +70,27 @@ OK: hard-copy option works well.
 0
 0
 
+###### RESTORE COMMAND TEST-0013 ######
+###### server logs (in the default log_directory) do not be backuped without "--with-serverlog" ######
+0
+0
+1
+
+###### RESTORE COMMAND TEST-0014 ######
+###### server logs (in the default log_directory) should be backuped with "--with-serverlog" ######
+0
+0
+0
+
+###### RESTORE COMMAND TEST-0015 ######
+###### server logs do not be backuped without "--with-serverlog" ######
+0
+0
+1
+
+###### RESTORE COMMAND TEST-0016 ######
+###### server logs should be backuped with "--with-serverlog" ######
+0
+0
+0
+
