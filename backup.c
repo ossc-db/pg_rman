@@ -1089,11 +1089,11 @@ confirm_block_size(const char *name, int blcksz)
 	else if (strcmp(name, "wal_block_size") == 0)
 		elog(DEBUG, "wal block size is %d", block_size);
 
-	PQclear(res);
 	if ((endp && *endp) || block_size != blcksz)
 		ereport(ERROR,
 			(errcode(ERROR_PG_INCOMPATIBLE),
 			 errmsg("%s(%d) is not compatible(%d expected)", name, block_size, blcksz)));
+	PQclear(res);
 }
 
 /*
