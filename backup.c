@@ -103,7 +103,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			pgBackup   *prev_backup;
 
 			/* find last completed database backup */
-			prev_backup = catalog_get_last_full_backup(backup_list);
+			prev_backup = catalog_get_last_data_backup(backup_list);
 			if (prev_backup == NULL)
 			{
 				if (current.full_backup_on_error)
@@ -192,7 +192,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		uint32		xlogid, xrecoff;
 
 		/* find last completed database backup */
-		prev_backup = catalog_get_last_full_backup(backup_list);
+		prev_backup = catalog_get_last_data_backup(backup_list);
 		if (prev_backup == NULL || prev_backup->tli != current.tli)
 		{
 			if (current.full_backup_on_error)
