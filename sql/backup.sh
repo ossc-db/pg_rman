@@ -184,7 +184,20 @@ pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0011.log 2>&1
 grep OK ${TEST_BASE}/TEST-0011.log | grep FULL | wc -l
 grep ERROR ${TEST_BASE}/TEST-0011.log | grep ARCH | wc -l
 
-echo '###### BACKUP COMMAND TEST-0009 ######'
+echo '###### BACKUP COMMAND TEST-0009 #######'
+echo '###### confirm incremental backup is right #######'
+init_catalog
+pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+pgbench -i -s 50 -d postgres >  ${TEST_BASE}/pgbench.log 2>&1
+pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0012.log 2>&1
+grep -c 16kB ${TEST_BASE}/TEST-0012.log
+
+echo '###### BACKUP COMMAND TEST-0010 ######'
 echo '###### failure in backup with different system identifier database ######'
 init_catalog
 pg_ctl stop -m immediate > /dev/null 2>&1
