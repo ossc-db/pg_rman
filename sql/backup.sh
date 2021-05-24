@@ -184,7 +184,7 @@ pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0011.log 2>&1
 grep OK ${TEST_BASE}/TEST-0011.log | grep FULL | wc -l
 grep ERROR ${TEST_BASE}/TEST-0011.log | grep ARCH | wc -l
 
-echo '##### BACKUP COMMAND TEST-0009 ######'
+echo '###### BACKUP COMMAND TEST-0009 #######'
 echo '##### confirm incremental backup is right ######'
 init_catalog
 pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
@@ -203,11 +203,6 @@ init_catalog
 pg_ctl stop -m immediate > /dev/null 2>&1
 init_database
 pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-
-
-
-
-
 
 
 # cleanup
