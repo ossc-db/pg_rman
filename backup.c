@@ -185,6 +185,10 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	/*
 	 * To take incremental backup, the file list of the latest validated
 	 * full database backup is needed.
+	 * There a problem of increment backup.
+	 * IF a physical backup file is deleted(rm command, etc.) other than the pg_rman delete command of pg_rman, 
+	 * It cannot find the correct status of a full backup and incremental backup.
+	 * we need to discuss it later to resolve this problem.
 	 */
 	if (current.backup_mode < BACKUP_MODE_FULL)
 	{
