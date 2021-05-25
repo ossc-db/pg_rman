@@ -142,6 +142,20 @@ pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0004.log 2>&1
 grep -c OK ${TEST_BASE}/TEST-0004.log
 
 echo '###### BACKUP COMMAND TEST-0005 ######'
+echo '###### Make sure incremental backup work ######'
+init_catalog
+pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+psql -p ${TEST_PGPORT} -d postgres -c 'create table test (c1 int);'
+psql -p ${TEST_PGPORT} -d postgres -c 'insert into test values(generate_series(1,1000000));' 
+pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0012.log 2>&1
+grep -c 16kB ${TEST_BASE}/TEST-0012.log
+
+echo '###### BACKUP COMMAND TEST-0006 ######'
 echo '###### full backup with compression ######'
 init_catalog
 pg_rman backup -B ${BACKUP_PATH} -b full -s -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
@@ -150,7 +164,7 @@ pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0005.log 2>&1
 grep -c OK ${TEST_BASE}/TEST-0005.log
 grep OK ${TEST_BASE}/TEST-0005.log | grep -c true
 
-echo '###### BACKUP COMMAND TEST-0006 ######'
+echo '###### BACKUP COMMAND TEST-0007 ######'
 echo '###### full backup with smooth checkpoint ######'
 init_catalog
 pg_rman backup -B ${BACKUP_PATH} -b full -s -C -p ${TEST_PGPORT} -d postgres --quiet;echo $?
@@ -158,7 +172,7 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0006.log 2>&1
 grep -c OK ${TEST_BASE}/TEST-0006.log
 
-echo '###### BACKUP COMMAND TEST-0007 ######'
+echo '###### BACKUP COMMAND TEST-0008 ######'
 echo '###### switch backup mode from incremental to full ######'
 init_catalog
 echo 'incremental backup without validated full backup'
@@ -171,7 +185,7 @@ pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0010.log 2>&1
 grep OK ${TEST_BASE}/TEST-0010.log | grep FULL | wc -l
 grep ERROR ${TEST_BASE}/TEST-0010.log | grep INCR | wc -l
 
-echo '###### BACKUP COMMAND TEST-0008 ######'
+echo '###### BACKUP COMMAND TEST-0009 ######'
 echo '###### switch backup mode from archive to full ######'
 init_catalog
 echo 'archive backup without validated full backup'
@@ -184,26 +198,12 @@ pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0011.log 2>&1
 grep OK ${TEST_BASE}/TEST-0011.log | grep FULL | wc -l
 grep ERROR ${TEST_BASE}/TEST-0011.log | grep ARCH | wc -l
 
-echo '###### BACKUP COMMAND TEST-0009 #######'
-echo '###### confirm incremental backup is right #######'
-init_catalog
-pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-pgbench -i -s 50 -d postgres >  ${TEST_BASE}/pgbench.log 2>&1
-pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0012.log 2>&1
-grep -c 16kB ${TEST_BASE}/TEST-0012.log
-
 echo '###### BACKUP COMMAND TEST-0010 ######'
 echo '###### failure in backup with different system identifier database ######'
 init_catalog
 pg_ctl stop -m immediate > /dev/null 2>&1
 init_database
 pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-
 
 # cleanup
 ## clean up the temporal test data
