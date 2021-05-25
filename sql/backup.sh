@@ -118,7 +118,6 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0001.log 2>&1
 grep -c OK ${TEST_BASE}/TEST-0001.log
 
-
 echo '###### BACKUP COMMAND TEST-0002 ######'
 echo '###### incremental backup mode ######'
 pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
@@ -204,6 +203,7 @@ init_catalog
 pg_ctl stop -m immediate > /dev/null 2>&1
 init_database
 pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+
 
 # cleanup
 ## clean up the temporal test data
