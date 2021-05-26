@@ -186,7 +186,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	 * To take incremental backup, the file list of the latest validated
 	 * full database backup is needed.
 	 * TODO: fix for issue #154
-	 * When a backup list is deleted with rm command,
+	 * When a backup list is deleted with rm command or pg_rman's delete command with '--force' option,
 	 * pg_rman can't detect there is a missing piece of backup.
 	 * We need the way tracing the backup chains or something else...
 	 */
