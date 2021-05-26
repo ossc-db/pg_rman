@@ -16,7 +16,7 @@
 0
 1
 ###### BACKUP COMMAND TEST-0005 ######
-###### Make sure incremental backup work ######
+###### Make sure that pg_rman does not take a differential backup, but a incremental backup ######
 0
 CREATE TABLE
 INSERT 0 1000000
