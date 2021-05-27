@@ -154,7 +154,7 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0012.log 2>&1
-grep -c 16kB ${TEST_BASE}/TEST-0012.log
+cat ${TEST_BASE}/TEST-0012.log  | head -n 4 | tail -n 1 | awk '{print $5, $6, $13}' 
 
 echo '###### BACKUP COMMAND TEST-0006 ######'
 echo '###### full backup with compression ######'
