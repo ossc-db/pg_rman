@@ -266,7 +266,7 @@ err_proc:
  * Find the last completed database full valid backup from the backup list.
  */
 pgBackup *
-catalog_get_last_full_backup(parray *backup_list)
+catalog_get_last_data_backup(parray *backup_list)
 {
 	int			i;
 	pgBackup   *backup = NULL;
@@ -276,9 +276,8 @@ catalog_get_last_full_backup(parray *backup_list)
 	{
 		backup = (pgBackup *) parray_get(backup_list, i);
 
-		/* Return the first full valid backup. */
-		if (backup->backup_mode == BACKUP_MODE_FULL &&
-			backup->status == BACKUP_STATUS_OK)
+		/* we need completed database backup */
+		if (backup -> status == BACKUP_STATUS_OK && HAVE_DATABASE(backup))
 			return backup;
 	}
 
