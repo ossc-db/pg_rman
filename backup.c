@@ -103,7 +103,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 			pgBackup   *prev_backup;
 
 			/* find last completed database backup */
-			prev_backup = catalog_get_last_full_backup(backup_list);
+			prev_backup = catalog_get_last_data_backup(backup_list);
 			if (prev_backup == NULL)
 			{
 				if (current.full_backup_on_error)
@@ -185,6 +185,10 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	/*
 	 * To take incremental backup, the file list of the latest validated
 	 * full database backup is needed.
+	 * TODO: fix for issue #154
+	 * When a backup list is deleted with rm command or pg_rman's delete command with '--force' option,
+	 * pg_rman can't detect there is a missing piece of backup.
+	 * We need the way tracing the backup chains or something else...
 	 */
 	if (current.backup_mode < BACKUP_MODE_FULL)
 	{
@@ -192,7 +196,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		uint32		xlogid, xrecoff;
 
 		/* find last completed database backup */
-		prev_backup = catalog_get_last_full_backup(backup_list);
+		prev_backup = catalog_get_last_data_backup(backup_list);
 		if (prev_backup == NULL || prev_backup->tli != current.tli)
 		{
 			if (current.full_backup_on_error)
