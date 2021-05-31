@@ -49,7 +49,7 @@ jobs:
       shell: bash -xe {0}
       run: |
         declare -A versions=(
-          ["master"]="13.2"                # TODO: build with master branch
+          ["master"]="14beta1"
           ["REL_13_STABLE"]="13.2"
           ["REL_12_STABLE"]="12.6"
           ["REL_11_STABLE"]="11.11"

@@ -14,11 +14,11 @@ different PostgreSQL server versions without introducing server version
 check code blocks.  Please choose a branch to match the PostgreSQL version
 you will be building pg_rman against.
 
-* master : branch for latest PostgreSQL stable version [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_13_STABLE : branch for PostgreSQL 13.0 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_13_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_12_STABLE : branch for PostgreSQL 12.0 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_12_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_11_STABLE : branch for PostgreSQL 11.0 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_11_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_10_STABLE : branch for PostgreSQL 10.0 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_10_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
+* master : branch for PostgreSQL 14beta [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
+* REL_13_STABLE : branch for PostgreSQL 13 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_13_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
+* REL_12_STABLE : branch for PostgreSQL 12 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_12_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
+* REL_11_STABLE : branch for PostgreSQL 11 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_11_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
+* REL_10_STABLE : branch for PostgreSQL 10 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_10_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 * REL9_6_STABLE : branch for PostgreSQL 9.6 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL9_6_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 * REL9_5_STABLE : branch for PostgreSQL 9.5 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL9_5_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 
