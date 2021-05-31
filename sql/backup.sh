@@ -147,8 +147,8 @@ echo '###### Make sure that pg_rman does not take a differential backup, but a i
 init_catalog
 pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
-psql -p ${TEST_PGPORT} -d postgres -c 'create table test (c1 int);'
-psql -p ${TEST_PGPORT} -d postgres -c 'insert into test values(generate_series(1,1000000));' 
+psql --no-psqlrc -p ${TEST_PGPORT} -d postgres -c 'create table test (c1 int);'
+psql --no-psqlrc -p ${TEST_PGPORT} -d postgres -c 'insert into test values(generate_series(1,1000000));'
 pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
