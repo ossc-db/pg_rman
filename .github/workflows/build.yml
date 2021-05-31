@@ -147,6 +147,10 @@ jobs:
         LOGFILE=~/make.log
         grep -C 1 warning $LOGFILE || exit 0     # ok if warning doesn't exists (= status code is 1)
 
+    - name: make a .psqlrc file because there is a possibility that make installcheck may fail
+      shell: bash -xe {0}
+      run: echo '\\timing' > ~/.psqlrc
+
     - name: make installcheck
       shell: bash -xe {0}
       run: |
