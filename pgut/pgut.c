@@ -7,7 +7,9 @@
  *-------------------------------------------------------------------------
  */
 
+#include "postgres_fe.h"
 #include "common/connect.h"
+#include "common/string.h"
 
 #include <getopt.h>
 #include <limits.h>
@@ -32,7 +34,7 @@ const char	   *dbname = NULL;
 const char	   *host = NULL;
 const char	   *port = NULL;
 const char	   *username = NULL;
-char			password[100];
+char			*password = NULL;
 bool			debug = false;
 bool			quiet = false;
 
@@ -892,12 +894,12 @@ static void
 prompt_for_password(const char *username)
 {
 	if (username == NULL)
-		simple_prompt("Password: ", password, sizeof(password), false);
+		password = simple_prompt("Password: ", false);
 	else
 	{
 		char	message[256];
 		snprintf(message, lengthof(message), "Password for user %s: ", username);
-		simple_prompt(message, password, sizeof(password), false);
+		password = simple_prompt(message, false);
 	}
 }
 #endif
