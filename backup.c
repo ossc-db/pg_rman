@@ -1114,7 +1114,7 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 	/* 2nd argument is 'fast' (IOW, !smooth) */
 	params[1] = smooth ? "false" : "true";
 
-	/* 3rd argument is 'exclusive' (assumes PG version >= 9.6) */
+	/* 3rd argument is 'non-exclusive' (assumes PG version >= 9.6) */
 	params[2] = "false";
 	res = execute("SELECT * from pg_walfile_name_offset(pg_start_backup($1, $2, $3))", 3, params);
 
