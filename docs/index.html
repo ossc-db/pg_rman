@@ -613,6 +613,13 @@ $ pg_ctl start
 <li>Specifies whether we stop just after the specified recovery target (true), or just before the recovery target (false). Default is true. 
 </ul>
 </li>
+<li><strong><code>--recovery-target-action {{ pause | promote | shutdown }}</code></strong>
+
+<ul>
+<li>Specifies what action the server should take once the recovery target is reached. The default is pause, which means recovery will be paused. promote means the recovery process will finish and the server will start to accept connections. Finally shutdown will stop the server after reaching the recovery target. This option is provided version higher than 1.3.12.</li>
+</ul>
+</li>
+</ul>
 </li>
 </ul>
 
@@ -958,6 +965,14 @@ $ pg_ctl start
 <td>Yes</td>
 <td>whether we stop just after the recovery target</td>
 <td></td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;recovery-target-action</td>
+<td>RECOVERY_TARGET_ACTION</td>
+<td>Yes</td>
+<td>action the server should take once the recovery target is reached</td>
+<td>This option is provided versions higher than 1.3.12</td>
 </tr>
 <tr>
 <td></td>
