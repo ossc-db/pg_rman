@@ -45,6 +45,7 @@ Restore options:
   --recovery-target-xid     transaction ID up to which recovery will proceed
   --recovery-target-inclusive whether we stop just after the recovery target
   --recovery-target-timeline  recovering into a particular timeline
+  --recovery-target-action    action the server should take once the recovery target is reached
   --hard-copy                 copying archivelog not symbolic link
 
 Catalog options:
