@@ -20,7 +20,6 @@ you will be building pg_rman against.
 * REL_11_STABLE : branch for PostgreSQL 11 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_11_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 * REL_10_STABLE : branch for PostgreSQL 10 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_10_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 * REL9_6_STABLE : branch for PostgreSQL 9.6 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL9_6_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL9_5_STABLE : branch for PostgreSQL 9.5 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL9_5_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 
 How to use
 ----------
