@@ -219,6 +219,7 @@ typedef struct pgRecoveryTarget
 	bool		xid_specified;
 	unsigned int	recovery_target_xid;
 	bool		recovery_target_inclusive;
+	const char	*recovery_target_action;
 } pgRecoveryTarget;
 
 typedef enum CompressionMode
@@ -265,6 +266,7 @@ extern int do_restore(const char *target_time,
 					  const char *target_xid,
 					  const char *target_inclusive,
 					  const char *target_tli_string,
+					  const char *target_action,
 					  bool is_hard_copy);
 
 /* in init.c */
