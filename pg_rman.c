@@ -48,6 +48,7 @@ static char		   *target_time;
 static char		   *target_xid;
 static char		   *target_inclusive;
 static char		   *target_tli_string;
+static char		   *target_action;
 static bool		is_hard_copy = false;
 
 /* delete configuration */
@@ -92,7 +93,8 @@ static pgut_option options[] =
 	{ 's',  8, "recovery-target-xid"		, &target_xid		, SOURCE_ENV },
 	{ 's',  9, "recovery-target-inclusive"	, &target_inclusive	, SOURCE_ENV },
 	{ 's', 10, "recovery-target-timeline"	, &target_tli_string, SOURCE_ENV },
-	{ 'b', 11, "hard-copy"	, &is_hard_copy		, SOURCE_ENV },
+	{ 's', 11, "recovery-target-action"		, &target_action	, SOURCE_ENV },
+	{ 'b', 12, "hard-copy"	, &is_hard_copy		, SOURCE_ENV },
 	/* catalog options */
 	{ 'b', 'a', "show-all"		, &show_all },
 	{ 0 }
@@ -221,7 +223,7 @@ main(int argc, char *argv[])
 	}
 	else if (pg_strcasecmp(cmd, "restore") == 0)
 		return do_restore(target_time, target_xid,
-					target_inclusive, target_tli_string, is_hard_copy);
+					target_inclusive, target_tli_string, target_action, is_hard_copy);
 	else if (pg_strcasecmp(cmd, "show") == 0)
 		return do_show(&range, show_detail, show_all);
 	else if (pg_strcasecmp(cmd, "validate") == 0)
@@ -285,6 +287,7 @@ pgut_help(bool details)
 	printf(_("  --recovery-target-xid     transaction ID up to which recovery will proceed\n"));
 	printf(_("  --recovery-target-inclusive whether we stop just after the recovery target\n"));
 	printf(_("  --recovery-target-timeline  recovering into a particular timeline\n"));
+	printf(_("  --recovery-target-action    action the server should take once the recovery target is reached\n"));
 	printf(_("  --hard-copy                 copying archivelog not symbolic link\n"));
 	printf(_("\nCatalog options:\n"));
 	printf(_("  -a, --show-all            show deleted backup too\n"));
