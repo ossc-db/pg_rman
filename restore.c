@@ -26,6 +26,7 @@ static void restore_archive_logs(pgBackup *backup, bool is_hard_copy);
 static void add_recovery_related_options(const char *target_time,
 										 const char *target_xid,
 										 const char *target_inclusive,
+										 const char *target_action,
 										 TimeLineID target_tli,
 										 bool target_tli_latest);
 static void create_recovery_signal(void);
@@ -33,7 +34,8 @@ static void remove_standby_signal(void);
 
 static pgRecoveryTarget *checkIfCreateRecoveryConf(const char *target_time,
 								 const char *target_xid,
-								 const char *target_inclusive);
+								 const char *target_inclusive,
+								 const char *target_action);
 static parray * readTimeLineHistory(TimeLineID targetTLI);
 static bool satisfy_timeline(const parray *timelines, const pgBackup *backup);
 static bool satisfy_recovery_target(const pgBackup *backup, const pgRecoveryTarget *rt);
@@ -52,6 +54,7 @@ do_restore(const char *target_time,
 		   const char *target_xid,
 		   const char *target_inclusive,
 		   const char *target_tli_string,
+		   const char *target_action,
 		   bool is_hard_copy)
 {
 	int i;
@@ -115,7 +118,7 @@ do_restore(const char *target_time,
 			 errmsg("PostgreSQL server is running"),
 			 errhint("Please stop PostgreSQL server before executing restore.")));
 
-	rt = checkIfCreateRecoveryConf(target_time, target_xid, target_inclusive);
+	rt = checkIfCreateRecoveryConf(target_time, target_xid, target_inclusive, target_action);
 	if(rt == NULL)
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
@@ -375,7 +378,7 @@ base_backup_found:
 
 	/* Add recovery related options to postgresql.conf file */
 	add_recovery_related_options(target_time, target_xid, target_inclusive,
-								 target_tli, target_tli_latest);
+					 target_action, target_tli, target_tli_latest);
 	/* Create recovery.signal file */
 	create_recovery_signal();
 
@@ -744,6 +747,7 @@ static void
 add_recovery_related_options(const char *target_time,
 							 const char *target_xid,
 							 const char *target_inclusive,
+							 const char *target_action,
 							 TimeLineID target_tli,
 							 bool target_tli_latest)
 {
@@ -780,6 +784,8 @@ add_recovery_related_options(const char *target_time,
 			fprintf(fp, "recovery_target_timeline = 'latest'\n");
 		else
 			fprintf(fp, "recovery_target_timeline = '%u'\n", target_tli);
+		if (target_action)
+			fprintf(fp, "recovery_target_action = '%s'\n", target_action);
 
 		fclose(fp);
 	}
@@ -1252,7 +1258,8 @@ search_next_wal(const char *path, uint32 *needId, uint32 *needSeg, parray *timel
 static pgRecoveryTarget *
 checkIfCreateRecoveryConf(const char *target_time,
                    const char *target_xid,
-                   const char *target_inclusive)
+                   const char *target_inclusive,
+                   const char *target_action)
 {
 	time_t		dummy_time;
 	unsigned int	dummy_xid;
@@ -1266,6 +1273,7 @@ checkIfCreateRecoveryConf(const char *target_time,
 	rt->recovery_target_time = 0;
 	rt->recovery_target_xid  = 0;
 	rt->recovery_target_inclusive = false;
+	rt->recovery_target_action = NULL;
 
 	if(target_time)
 	{
@@ -1302,6 +1310,21 @@ checkIfCreateRecoveryConf(const char *target_time,
 				(errcode(ERROR_ARGS),
 				 errmsg("could not create recovery.conf or"
 						"add recovery related options to postgresql.conf(after PG12) with %s", target_inclusive)));
+	}
+
+	if(target_action)
+	{
+		if (pg_strcasecmp("pause", target_action) == 0 ||
+			pg_strcasecmp("promote", target_action) == 0 ||
+			pg_strcasecmp("shutdown", target_action) == 0 )
+		{
+			/* Although this value doesn't be used, set to match "recovery_target_inclusive". */
+			rt->recovery_target_action = target_action;
+		} else
+			ereport(ERROR,
+				(errcode(ERROR_ARGS),
+				 errmsg("could not create recovery.conf or"
+						"add recovery related options to postgresql.conf(after PG12) with %s", target_action)));
 	}
 
 	return rt;
