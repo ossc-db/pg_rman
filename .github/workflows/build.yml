@@ -49,7 +49,7 @@ jobs:
       shell: bash -xe {0}
       run: |
         declare -A versions=(
-          ["master"]="14beta1"
+          ["master"]="14beta2"
           ["REL_13_STABLE"]="13.2"
           ["REL_12_STABLE"]="12.6"
           ["REL_11_STABLE"]="11.11"
