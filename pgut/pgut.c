@@ -128,7 +128,7 @@ option_merge(const pgut_option opts1[], const pgut_option opts2[])
 	result = pgut_newarray(struct option, n + 1);
 	option_copy(result, opts1, len1);
 	option_copy(result + len1, opts2, len2);
-	memset(&result[n], 0, sizeof(pgut_option));
+	memset(&result[n], 0, sizeof(struct option));
 
 	return result;
 }
