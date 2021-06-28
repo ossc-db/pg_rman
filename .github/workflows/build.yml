@@ -55,10 +55,6 @@ jobs:
           ["REL_11_STABLE"]="11.11"
           ["REL_10_STABLE"]="10.16"
           ["REL9_6_STABLE"]="9.6.21"
-          ["REL9_5_STABLE"]="9.5.25"
-          ["REL9_4_STABLE"]="9.4.26"
-          ["REL9_3_STABLE"]="9.3.25"
-          ["REL9_2_STABLE"]="9.2.24"
         )
         [ -z "${versions[${{ env.BRANCH }}]}" ] && exit 1         # check if the key exists
         echo "PGVERSION=${versions[${{ env.BRANCH }}]}" >> $GITHUB_ENV
