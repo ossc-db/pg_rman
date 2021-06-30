@@ -47,24 +47,54 @@ OK: recovery-target-xid options works well.
 OK: recovery-target-inclusive=false works well.
 
 ###### RESTORE COMMAND TEST-0009 ######
+###### recovery with target action pause ######
+recovery-target-action=pause
+0
+0
+0
+0
+0
+OK: not promoted. recovery-target-action works well.
+
+###### RESTORE COMMAND TEST-0010 ######
+###### recovery with target action promote ######
+recovery-target-action=promote
+0
+0
+0
+0
+0
+OK: promoted. recovery-target-action works well.
+
+###### RESTORE COMMAND TEST-0011 ######
+###### recovery with target action shutdown ######
+recovery-target-action=shutdown
+0
+0
+0
+0
+0
+OK: server is stopped. recovery-target-action works well.
+
+###### RESTORE COMMAND TEST-0012 ######
 ###### recovery with hard-copy option ######
 0
 0
 OK: hard-copy option works well.
 
-###### RESTORE COMMAND TEST-0010 ######
+###### RESTORE COMMAND TEST-0013 ######
 ###### recovery from incremental backup after database creation ######
 0
 0
 0
 
-###### RESTORE COMMAND TEST-0011 ######
+###### RESTORE COMMAND TEST-0014 ######
 ###### vacuum shrinks a page between full and incremental backups ######
 0
 0
 0
 
-###### RESTORE COMMAND TEST-0012 ######
+###### RESTORE COMMAND TEST-0015 ######
 ###### vacuum shrinks a page between full and incremental backups(compressed) ######
 0
 0
