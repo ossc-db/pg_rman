@@ -109,6 +109,82 @@ function init_catalog()
     pg_rman init -B ${BACKUP_PATH} --quiet
 }
 
+function load_with_pgbench
+{
+	pgbench -p ${TEST_PGPORT} -T ${DURATION} -d pgbench > /dev/null 2>&1
+}
+
+function get_database_data
+{
+	psql -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT * FROM pgbench_branches;"
+}
+
+function server_is_running
+{
+	# if 1: running, 0: stopped
+	pg_ctl status | grep "server is running" | wc -l
+}
+
+function pg_is_in_recovery
+{
+	psql -tA -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT pg_is_in_recovery();"
+}
+
+function full_backup
+{
+	pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+	pg_rman validate -B ${BACKUP_PATH} --quiet; echo $?
+}
+
+function recovery_target_action_test
+{
+	recovery_target_action=$1
+	test_log=$2                   # ${TEST_BASE}/TEST-XXXX
+
+	echo "recovery-target-action=$recovery_target_action"
+
+	init_backup
+	load_with_pgbench
+	full_backup
+	get_database_data > ${test_log}-before.out
+	TARGET_TIME=`date +"%Y-%m-%d %H:%M:%S"`
+	load_with_pgbench
+	full_backup
+	pg_ctl stop -m fast > /dev/null 2>&1
+	pg_rman restore -B ${BACKUP_PATH} --recovery-target-time="${TARGET_TIME}" \
+			 --recovery-target-action="${recovery_target_action}" --quiet;echo $?
+	pg_ctl start -w -t 600 > /dev/null 2>&1
+	sleep 5
+
+	if [ $recovery_target_action = "shutdown" ]; then
+		if [ `server_is_running` = "0" ]; then
+			echo 'OK: server is stopped. recovery-target-action works well.'
+		else
+			echo 'NG: server is running. recovery-target-action does not work well.'
+		fi
+		return;
+	fi
+
+	# check the data records after shutdown check is done
+	get_database_data > ${test_log}-after.out
+	diff ${test_log}-before.out ${test_log}-after.out
+
+	if [ `pg_is_in_recovery` = "f" ]; then
+		if [ $recovery_target_action = "promote" ]; then
+			echo 'OK: promoted. recovery-target-action works well.'
+		else
+			echo 'NG: promoted. recovery-target-action does not work well.'
+		fi
+	else
+		if [ $recovery_target_action = "pause" ]; then
+			echo 'OK: not promoted. recovery-target-action works well.'
+		else
+			echo 'NG: not promoted. recovery-target-action does not work well.'
+		fi
+	fi
+}
+
+
 init_backup
 
 echo '###### RESTORE COMMAND TEST-0001 ######'
@@ -262,12 +338,26 @@ else
 fi
 echo ''
 
-
 echo '###### RESTORE COMMAND TEST-0009 ######'
+echo '###### recovery with target action pause ######'
+recovery_target_action_test pause "${TEST_BASE}/TEST-0009"
+echo ''
+
+echo '###### RESTORE COMMAND TEST-0010 ######'
+echo '###### recovery with target action promote ######'
+recovery_target_action_test promote "${TEST_BASE}/TEST-0010"
+echo ''
+
+echo '###### RESTORE COMMAND TEST-0011 ######'
+echo '###### recovery with target action shutdown ######'
+recovery_target_action_test shutdown "${TEST_BASE}/TEST-0011"
+echo ''
+
+echo '###### RESTORE COMMAND TEST-0012 ######'
 echo '###### recovery with hard-copy option ######'
 init_backup
 pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
-psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0009-before.out
+psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0012-before.out
 pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_ctl stop -m immediate > /dev/null 2>&1
@@ -287,68 +377,68 @@ else
 fi
 echo ''
 
-echo '###### RESTORE COMMAND TEST-0010 ######'
+echo '###### RESTORE COMMAND TEST-0013 ######'
 echo '###### recovery from incremental backup after database creation ######'
 init_backup
 pg_ctl start -w -t 600 > /dev/null 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
-createdb db0010 -p ${TEST_PGPORT}
-pgbench -i -s $SCALE -d db0010 -p ${TEST_PGPORT} > ${TEST_BASE}/TEST-0010-db0010-init.out 2>&1
+createdb db0013 -p ${TEST_PGPORT}
+pgbench -i -s $SCALE -d db0013 -p ${TEST_PGPORT} > ${TEST_BASE}/TEST-0013-db0013-init.out 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b incremental -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
-pgbench -p ${TEST_PGPORT} -d db0010 >> ${TEST_BASE}/TEST-0010-db0010-init.out 2>&1
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0010 -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0010-before.out
+pgbench -p ${TEST_PGPORT} -d db0013 >> ${TEST_BASE}/TEST-0013-db0013-init.out 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0013 -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0013-before.out
 pg_ctl stop -m fast > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
 sleep 1
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0010 -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0010-after.out
-diff ${TEST_BASE}/TEST-0010-before.out ${TEST_BASE}/TEST-0010-after.out
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0013 -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0013-after.out
+diff ${TEST_BASE}/TEST-0013-before.out ${TEST_BASE}/TEST-0013-after.out
 echo ''
 
-echo '###### RESTORE COMMAND TEST-0011 ######'
+echo '###### RESTORE COMMAND TEST-0014 ######'
 echo '###### vacuum shrinks a page between full and incremental backups ######'
 init_backup
 pg_ctl start -w -t 600 > /dev/null 2>&1
-createdb db0011 -p ${TEST_PGPORT}
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "CREATE TABLE t0011(i int,j int,k varchar);" > /dev/null 2>&1
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "INSERT INTO t0011 (i,j,k) select generate_series(1,1000),1, repeat('a', 10);" > /dev/null 2>&1
+createdb db0014 -p ${TEST_PGPORT}
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "CREATE TABLE t0014(i int,j int,k varchar);" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "INSERT INTO t0014 (i,j,k) select generate_series(1,1000),1, repeat('a', 10);" > /dev/null 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "DELETE FROM t0011 WHERE i > 10;" > /dev/null 2>&1
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "VACUUM t0011;" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "DELETE FROM t0014 WHERE i > 10;" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "VACUUM t0014;" > /dev/null 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "SELECT * FROM t0011;" > ${TEST_BASE}/TEST-0011-before.out
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "SELECT * FROM t0014;" > ${TEST_BASE}/TEST-0014-before.out
 pg_ctl stop -m fast > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
 sleep 1
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0011 -c "SELECT * FROM t0011;" > ${TEST_BASE}/TEST-0011-after.out
-diff ${TEST_BASE}/TEST-0011-before.out ${TEST_BASE}/TEST-0011-after.out
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "SELECT * FROM t0014;" > ${TEST_BASE}/TEST-0014-after.out
+diff ${TEST_BASE}/TEST-0014-before.out ${TEST_BASE}/TEST-0014-after.out
 echo ''
 
-echo '###### RESTORE COMMAND TEST-0012 ######'
+echo '###### RESTORE COMMAND TEST-0015 ######'
 echo '###### vacuum shrinks a page between full and incremental backups(compressed) ######'
 init_backup
 pg_ctl start -w -t 600 > /dev/null 2>&1
-createdb db0012 -p ${TEST_PGPORT}
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "CREATE TABLE t0012(i int,j int,k varchar);" > /dev/null 2>&1
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "INSERT INTO t0012 (i,j,k) select generate_series(1,1000),1, repeat('a', 10);" > /dev/null 2>&1
+createdb db0015 -p ${TEST_PGPORT}
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "CREATE TABLE t0015(i int,j int,k varchar);" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "INSERT INTO t0015 (i,j,k) select generate_series(1,1000),1, repeat('a', 10);" > /dev/null 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "DELETE FROM t0012 WHERE i > 10;" > /dev/null 2>&1
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "VACUUM t0012;" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "DELETE FROM t0015 WHERE i > 10;" > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "VACUUM t0015;" > /dev/null 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b incremental -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "SELECT * FROM t0012;" > ${TEST_BASE}/TEST-0012-before.out
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "SELECT * FROM t0015;" > ${TEST_BASE}/TEST-0015-before.out
 pg_ctl stop -m fast > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
 pg_ctl start -w -t 600 > /dev/null 2>&1
 sleep 1
-psql --no-psqlrc -p ${TEST_PGPORT} -d db0012 -c "SELECT * FROM t0012;" > ${TEST_BASE}/TEST-0012-after.out
-diff ${TEST_BASE}/TEST-0012-before.out ${TEST_BASE}/TEST-0012-after.out
+psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "SELECT * FROM t0015;" > ${TEST_BASE}/TEST-0015-after.out
+diff ${TEST_BASE}/TEST-0015-before.out ${TEST_BASE}/TEST-0015-after.out
 echo ''
 
 # clean up the temporal test data
