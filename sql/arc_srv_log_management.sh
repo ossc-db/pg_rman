@@ -34,20 +34,35 @@ function cleanup()
 
 function init_backup()
 {
+	DEFAULT_LOG_DIRECTORY="FALSE";
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--default-log_directory)
+				DEFAULT_LOG_DIRECTORY="TRUE"
+			;;
+		esac
+		shift
+	done
+
 	# cleanup environment
 	cleanup
 
 	# create new database cluster
-    initdb --no-locale -D ${PGDATA_PATH} > ${TEST_BASE}/initdb.log 2>&1
-    cp $PGDATA_PATH/postgresql.conf $PGDATA_PATH/postgresql.conf_org
-    cat << EOF >> $PGDATA_PATH/postgresql.conf
+	initdb --no-locale -D ${PGDATA_PATH} > ${TEST_BASE}/initdb.log 2>&1
+	cp $PGDATA_PATH/postgresql.conf $PGDATA_PATH/postgresql.conf_org
+	cat << EOF >> $PGDATA_PATH/postgresql.conf
 port = ${TEST_PGPORT}
 logging_collector = on
 wal_level = hot_standby
-log_directory = '${SRVLOG_PATH}'
 archive_mode = on
 archive_command = 'cp %p ${ARCLOG_PATH}/%f'
 EOF
+
+	if [ "$DEFAULT_LOG_DIRECTORY" = "FALSE" ]; then
+		cat << EOF >> $PGDATA_PATH/postgresql.conf
+log_directory = '${SRVLOG_PATH}'
+EOF
+	fi
 
 	# start PostgreSQL
 	pg_ctl start -D ${PGDATA_PATH} -w -t 300 > /dev/null 2>&1
@@ -77,6 +92,67 @@ function change_files_timestamp()
 	for file in $2/*; do
 		touch -t ${TIMESTAMP} ${file}
 	done
+}
+
+function test_keep_srvlog_files()
+{
+	SRVLOG_PATH_ARG=$1
+
+	create_dummy_files ${SRVLOG_PATH_ARG} logfile 3
+	pg_rman backup -B ${BACKUP_PATH} -b full -Z -s -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+	pg_rman validate -B ${BACKUP_PATH} --quiet
+	NUM_OF_SRVLOG_FILES_BEFORE=`ls ${SRVLOG_PATH_ARG} | grep -v backup | wc -l`
+	echo "Number of existing server log files: ${NUM_OF_SRVLOG_FILES_BEFORE}"
+	echo "do --keep-srvlog-files=3"
+	#ls -l ${SRVLOG_PATH_ARG}
+	pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-files=3 -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
+	# FOR DEBUG
+	#pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-files=3 -p ${TEST_PGPORT} -d postgres --debug;echo $?
+	NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH_ARG} | grep -v backup | wc -l`
+	echo "Number of remaining server log files: ${NUM_OF_SRVLOG_FILES_AFTER}"
+	#ls -l ${SRVLOG_PATH_ARG}
+}
+
+function test_keep_srvlog_days()
+{
+	SRVLOG_PATH_ARG=$1
+
+	create_dummy_files ${SRVLOG_PATH_ARG} old_logfile 3
+	change_files_timestamp 2 ${SRVLOG_PATH_ARG}
+	create_dummy_files ${SRVLOG_PATH_ARG} new_logfile 3
+	pg_rman backup -B ${BACKUP_PATH} -b full -Z -s -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+	pg_rman validate -B ${BACKUP_PATH} --quiet
+	NUM_OF_SRVLOG_FILES_BEFORE=`ls ${SRVLOG_PATH_ARG} | grep -v backup | wc -l`
+	echo "Number of existing server log files: ${NUM_OF_SRVLOG_FILES_BEFORE}"
+	echo "do --keep-srvlog-days=1"
+	#ls -l ${SRVLOG_PATH_ARG}
+	pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-days=1 -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
+	# FOR DEBUG
+	#pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-days=1 -p ${TEST_PGPORT} -d postgres --debug;echo $?
+	NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH_ARG} | grep -v backup | wc -l`
+	echo "Number of remaining server log files: ${NUM_OF_SRVLOG_FILES_AFTER}"
+	#ls -l ${SRVLOG_PATH_ARG}
+}
+
+function test_keep_srvlog_files_and_keep_srvlog_days_together()
+{
+	SRVLOG_PATH_ARG=$1
+
+	create_dummy_files ${SRVLOG_PATH_ARG} old_logfile 3
+	change_files_timestamp 2 ${SRVLOG_PATH_ARG}
+	create_dummy_files ${SRVLOG_PATH_ARG} new_logfile 3
+	pg_rman backup -B ${BACKUP_PATH} -b full -Z -s -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+	pg_rman validate -B ${BACKUP_PATH} --quiet
+	NUM_OF_SRVLOG_FILES_BEFORE=`ls ${SRVLOG_PATH_ARG} | grep -v backup | wc -l`
+	echo "Number of existing server log files: ${NUM_OF_SRVLOG_FILES_BEFORE}"
+	echo "do --keep-srvlog-files=4 AND --keep-srvlog-days=1"
+	#ls -l ${SRVLOG_PATH_ARG}
+	pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-files=4 --keep-srvlog-days=1 -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
+	# FOR DEBUG
+	#pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-files=4 --keep-srvlog-days=1 -p ${TEST_PGPORT} -d postgres --debug;echo $?
+	NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH_ARG} | grep -v backup | wc -l`
+	echo "Number of remaining server log files: ${NUM_OF_SRVLOG_FILES_AFTER}"
+	#ls -l ${SRVLOG_PATH_ARG}
 }
 
 init_backup
@@ -139,59 +215,39 @@ init_catalog
 
 echo '###### LOG FILE MANAGEMENT TEST-0004 ######'
 echo '###### keep-srvlog-files only ######'
-create_dummy_files ${SRVLOG_PATH} logfile 3
-pg_rman backup -B ${BACKUP_PATH} -b full -Z -s -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-NUM_OF_SRVLOG_FILES_BEFORE=`ls ${SRVLOG_PATH} | grep -v backup | wc -l`
-echo "Number of existing server log files: ${NUM_OF_SRVLOG_FILES_BEFORE}"
-echo "do --keep-srvlog-files=3"
-#ls -l ${SRVLOG_PATH}
-pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-files=3 -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
-# FOR DEBUG
-#pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-files=3 -p ${TEST_PGPORT} -d postgres --debug;echo $?
-NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH} | grep -v backup | wc -l`
-echo "Number of remaining server log files: ${NUM_OF_SRVLOG_FILES_AFTER}"
-#ls -l ${SRVLOG_PATH}
+test_keep_srvlog_files ${SRVLOG_PATH}
 
 init_backup
 
 echo '###### LOG FILE MANAGEMENT TEST-0005 ######'
 echo '###### keep-srvlog-days only ######'
-create_dummy_files ${SRVLOG_PATH} old_logfile 3
-change_files_timestamp 2 ${SRVLOG_PATH}
-create_dummy_files ${SRVLOG_PATH} new_logfile 3
-pg_rman backup -B ${BACKUP_PATH} -b full -Z -s -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-NUM_OF_SRVLOG_FILES_BEFORE=`ls ${SRVLOG_PATH} | grep -v backup | wc -l`
-echo "Number of existing server log files: ${NUM_OF_SRVLOG_FILES_BEFORE}"
-echo "do --keep-srvlog-days=1"
-#ls -l ${SRVLOG_PATH}
-pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-days=1 -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
-# FOR DEBUG
-#pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-days=1 -p ${TEST_PGPORT} -d postgres --debug;echo $?
-NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH} | grep -v backup | wc -l`
-echo "Number of remaining server log files: ${NUM_OF_SRVLOG_FILES_AFTER}"
-#ls -l ${SRVLOG_PATH}
+test_keep_srvlog_days ${SRVLOG_PATH}
 
 init_backup
 
 echo '###### LOG FILE MANAGEMENT TEST-0006 ######'
 echo '###### keep-srvlog-files and keep-srvlog-days together ######'
-create_dummy_files ${SRVLOG_PATH} old_logfile 3
-change_files_timestamp 2 ${SRVLOG_PATH}
-create_dummy_files ${SRVLOG_PATH} new_logfile 3
-pg_rman backup -B ${BACKUP_PATH} -b full -Z -s -p ${TEST_PGPORT} -d postgres --quiet;echo $?
-pg_rman validate -B ${BACKUP_PATH} --quiet
-NUM_OF_SRVLOG_FILES_BEFORE=`ls ${SRVLOG_PATH} | grep -v backup | wc -l`
-echo "Number of existing server log files: ${NUM_OF_SRVLOG_FILES_BEFORE}"
-echo "do --keep-srvlog-files=4 AND --keep-srvlog-days=1"
-#ls -l ${SRVLOG_PATH}
-pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-files=4 --keep-srvlog-days=1 -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1;echo $?
-# FOR DEBUG
-#pg_rman backup -B ${BACKUP_PATH} -b arc -Z -s --keep-srvlog-files=4 --keep-srvlog-days=1 -p ${TEST_PGPORT} -d postgres --debug;echo $?
-NUM_OF_SRVLOG_FILES_AFTER=`ls ${SRVLOG_PATH} | grep -v backup | wc -l`
-echo "Number of remaining server log files: ${NUM_OF_SRVLOG_FILES_AFTER}"
-#ls -l ${SRVLOG_PATH}
+test_keep_srvlog_files_and_keep_srvlog_days_together ${SRVLOG_PATH}
+
+# Test with default log directory from TEST-0007 to TEST-0009
+init_backup --default-log_directory
+DEFAULT_SRVLOG_PATH=${PGDATA_PATH}/`get_guc_value log_directory`
+
+echo '###### LOG FILE MANAGEMENT TEST-0007 ######'
+echo '###### keep-srvlog-files only with default "log_directory" option ######'
+test_keep_srvlog_files $DEFAULT_SRVLOG_PATH
+
+init_backup --default-log_directory
+
+echo '###### LOG FILE MANAGEMENT TEST-0008 ######'
+echo '###### keep-srvlog-days only with default "log_directory" option ######'
+test_keep_srvlog_days $DEFAULT_SRVLOG_PATH
+
+init_backup --default-log_directory
+
+echo '###### LOG FILE MANAGEMENT TEST-0009 ######'
+echo '###### keep-srvlog-files and keep-srvlog-days together with default "log_directory" option ######'
+test_keep_srvlog_files_and_keep_srvlog_days_together $DEFAULT_SRVLOG_PATH
 
 
 # clean up the temporal test data

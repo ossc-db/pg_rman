@@ -21,6 +21,7 @@
 static void backup_online_files(bool re_recovery);
 static void restore_online_files(void);
 static void restore_database(pgBackup *backup);
+static void restore_server_logs(pgBackup *backup);
 static void restore_archive_logs(pgBackup *backup, bool is_hard_copy);
 
 static void add_recovery_related_options(const char *target_time,
@@ -279,6 +280,9 @@ base_backup_found:
 
 	/* restore base backup */
 	restore_database(base_backup);
+	
+	/* restore server logs */
+	restore_server_logs(base_backup);
 
 	last_restored_index = base_index;
 
@@ -311,6 +315,7 @@ base_backup_found:
 			timestamp);
 
 		restore_database(backup);
+		restore_server_logs(backup);
 		last_restored_index = i;
 	}
 
@@ -613,6 +618,117 @@ show_progress:
 
 	if (verbose && !check)
 		printf(_("restore backup completed\n"));
+}
+
+/*
+ * restore server logs
+ */
+void
+restore_server_logs(pgBackup *backup)
+{
+	char	timestamp[100];
+	char	path[MAXPGPATH];
+	char	list_path[MAXPGPATH];
+	parray *files;
+	int		i;
+	int		num_skipped = 0;
+	
+	/* we need completed serverlog backup */
+	if (!(backup->status == BACKUP_STATUS_OK && backup->with_serverlog))
+		return;
+
+	time2iso(timestamp, lengthof(timestamp), backup->start_time);
+	if (verbose && !check)
+	{
+		printf(_("----------------------------------------\n"));
+	}
+
+	/*
+	 * Validate backup files with its size, because load of CRC calculation is
+	 * not light.
+	 */
+	pgBackupValidate(backup, true, false, true);
+
+	if (backup->backup_mode == BACKUP_MODE_FULL)
+		elog(INFO, "restoring server log files from the full mode backup \"%s\"",
+			timestamp);
+	else if (backup->backup_mode == BACKUP_MODE_INCREMENTAL)
+		elog(INFO, "restoring server log files from the incremental mode backup \"%s\"",
+			timestamp);
+
+	/*
+	 * get list of files which need to be restored.
+	 */
+	pgBackupGetPath(backup, path, lengthof(path), SRVLOG_DIR);
+	pgBackupGetPath(backup, list_path, lengthof(list_path), SRVLOG_FILE_LIST);
+	files = dir_read_file_list(path, list_path);
+	for (i = parray_num(files) - 1; i >= 0; i--)
+	{
+		pgFile *file = (pgFile *) parray_get(files, i);
+
+		/* remove files which are not backed up */
+		if (file->write_size == BYTES_INVALID)
+			pgFileFree(parray_remove(files, i));
+	}
+
+	/* restore server log files into $PGDATA */
+	for (i = 0; i < parray_num(files); i++)
+	{
+		char from_root[MAXPGPATH];
+		pgFile *file = (pgFile *) parray_get(files, i);
+
+		pgBackupGetPath(backup, from_root, lengthof(from_root), SRVLOG_DIR);
+
+		/* check for interrupt */
+		if (interrupted)
+			ereport(FATAL,
+				(errcode(ERROR_INTERRUPTED),
+				 errmsg("interrupted during restore server log files")));
+
+		/* print progress in verbose mode */
+		if (verbose && !check)
+			printf(_("(%d/%lu) %s "), i + 1, (unsigned long) parray_num(files),
+				file->path + strlen(from_root) + 1);
+
+		/* not backed up */
+		if (file->write_size == BYTES_INVALID)
+		{
+			num_skipped++;
+			if (verbose && !check)
+				printf(_("not backed up, skip\n"));
+			goto show_progress;
+		}
+
+		/* restore a server log file */
+		if (!check)
+			copy_file(from_root, srvlog_path, file, backup->compress_data);
+
+		/* print size of restored file */
+		if (verbose && !check)
+		{
+			printf(_("restored %lu\n"), (unsigned long) file->write_size);
+			continue;
+		}
+
+show_progress:
+		/* print progress in non-verbose format */
+		if (progress)
+		{
+			fprintf(stderr, _("Processed %d of %lu files, skipped %d"),
+					i + 1, (unsigned long) parray_num(files), num_skipped);
+			if(i + 1 < (unsigned long) parray_num(files))
+				fprintf(stderr, "\r");
+			else
+				fprintf(stderr, "\n");
+		}
+	}
+
+	/* cleanup */
+	parray_walk(files, pgFileFree);
+	parray_free(files);
+
+	if (verbose && !check)
+		printf(_("restore server log files completed\n"));
 }
 
 /*
