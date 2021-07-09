@@ -254,8 +254,8 @@ STATUS=OK
 
 <h2>Delete backups</h2>
 
-<p>The delete command deletes all backup files before the specified date not required by other incremental backups. Incremental backups depend on earlier validated full backup.</p>
-<p> The following example deletes unneeded backup files to recovery at 12:00 11, September 2009.</p>
+<p>The delete command deletes all backup files older than the latest full backup necessary for recovery up to the specified date.</p>
+<p> For example, the following command deletes all backup files unnecessary for recovery up to 2015-07-30 13:30:30, which includes all backups older than the full backup with StartTime 2015-07-30 13:30:11, because that full backup can be used as a starting point for recovery up to 2015-07-30 13:30:30.</p>
 
 <pre><code>$ pg_rman show
 =====================================================================
