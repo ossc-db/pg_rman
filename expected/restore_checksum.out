@@ -26,8 +26,8 @@
 0
 0
 0
-checking postgresql.conf...
-OK: postgresql.conf has the given target timeline.
+checking recovery_target_timeline...
+OK: the given target timeline works.
 
 ###### RESTORE COMMAND TEST-0006 ######
 ###### recovery to target time ######
@@ -83,18 +83,35 @@ OK: server is stopped. recovery-target-action works well.
 OK: hard-copy option works well.
 
 ###### RESTORE COMMAND TEST-0013 ######
+###### check if existed recovery configuration is removed and new one is appended ######
+0
+0
+0
+OK: pg_rman_recovery.conf has "recovery_target_action" configuration.
+OK: postgresql.conf has include = 'pg_rman_recovery.conf'.
+OK: postgresql.conf doesn't have duplicate gucs configured by pg_rman.
+recovery_target_timeline = latest
+0
+0
+0
+OK: pg_rman_recovery.conf has "recovery_target_action" configuration.
+OK: postgresql.conf has include = 'pg_rman_recovery.conf'.
+OK: postgresql.conf doesn't have duplicate gucs configured by pg_rman.
+OK: new value is configured for recovery_target_timeline.
+
+###### RESTORE COMMAND TEST-0014 ######
 ###### recovery from incremental backup after database creation ######
 0
 0
 0
 
-###### RESTORE COMMAND TEST-0014 ######
+###### RESTORE COMMAND TEST-0015 ######
 ###### vacuum shrinks a page between full and incremental backups ######
 0
 0
 0
 
-###### RESTORE COMMAND TEST-0015 ######
+###### RESTORE COMMAND TEST-0016 ######
 ###### vacuum shrinks a page between full and incremental backups(compressed) ######
 0
 0

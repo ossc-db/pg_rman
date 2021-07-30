@@ -191,13 +191,9 @@ pg_ctl stop -m immediate -D ${PGDATA_PATH} > /dev/null 2>&1
 cp ${PGDATA_PATH}/postgresql.conf ${TEST_BASE}/postgresql.conf
 sleep 1
 pg_rman restore -B ${BACKUP_PATH} -D ${PGDATA_PATH} --recovery-target-xid=${TARGET_XID} --quiet;echo $?
-BACKUP_RESTORE_COMMAND=`grep "restore_command = " ${PGDATA_PATH}/postgresql.conf | tail -1`
-BACKUP_TARGET_XID_COMMAND=`grep "recovery_target_xid = " ${PGDATA_PATH}/postgresql.conf | tail -1`
+RMAN_RECOVERY_CONF=`tail -n 2 ${PGDATA_PATH}/postgresql.conf` # must be appended
 cp ${TEST_BASE}/postgresql.conf ${PGDATA_PATH}/postgresql.conf
-cat >> ${PGDATA_PATH}/postgresql.conf << EOF
-${BACKUP_RESTORE_COMMAND}
-${BACKUP_TARGET_XID_COMMAND}
-EOF
+echo "${RMAN_RECOVERY_CONF}" >> ${PGDATA_PATH}/postgresql.conf
 pg_ctl start -w -t 600 -D ${PGDATA_PATH} > /dev/null 2>&1
 get_database_data_from_primary > ${TEST_BASE}/TEST-0001-after.out
 diff ${TEST_BASE}/TEST-0001-before.out ${TEST_BASE}/TEST-0001-after.out
@@ -219,13 +215,9 @@ pg_ctl stop -m immediate -D ${PGDATA_PATH} > /dev/null 2>&1
 cp ${PGDATA_PATH}/postgresql.conf ${TEST_BASE}/postgresql.conf
 sleep 1
 pg_rman restore -B ${BACKUP_PATH} -D ${PGDATA_PATH} --recovery-target-xid=${TARGET_XID} --quiet;echo $?
-BACKUP_RESTORE_COMMAND=`grep "restore_command = " ${PGDATA_PATH}/postgresql.conf | tail -1`
-BACKUP_TARGET_XID_COMMAND=`grep "recovery_target_xid = " ${PGDATA_PATH}/postgresql.conf | tail -1`
+RMAN_RECOVERY_CONF=`tail -n 2 ${PGDATA_PATH}/postgresql.conf` # must be appended
 cp ${TEST_BASE}/postgresql.conf ${PGDATA_PATH}/postgresql.conf
-cat >> ${PGDATA_PATH}/postgresql.conf << EOF
-${BACKUP_RESTORE_COMMAND}
-${BACKUP_TARGET_XID_COMMAND}
-EOF
+echo "${RMAN_RECOVERY_CONF}" >> ${PGDATA_PATH}/postgresql.conf
 pg_ctl start -w -t 600 -D ${PGDATA_PATH} > /dev/null 2>&1
 get_database_data_from_primary > ${TEST_BASE}/TEST-0002-after.out
 diff ${TEST_BASE}/TEST-0002-before.out ${TEST_BASE}/TEST-0002-after.out

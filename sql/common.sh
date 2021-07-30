@@ -39,3 +39,9 @@ SRVLOG_PATH=${TEST_BASE}/srvlog
 TBLSPC_PATH=${TEST_BASE}/tblspc
 TEST_PGPORT=54321
 export PGDATA=${PGDATA_PATH}
+
+# Common functions
+get_guc_value()
+{
+	psql -tA --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SHOW $1;"
+}
