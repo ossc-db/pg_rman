@@ -246,7 +246,17 @@ STATUS=OK
 
 <p>PostgreSQL server should be stopped before restore. In addition, do not erase a original database cluster, because pg_rman has to check the timeline ID or data checksum status from it. Restore command will save unarchived transaction log and delete all database files. You can retry recovery until a new backup is taken. After restoring files, pg_rman create recovery.conf in <code>$PGDATA</code>. The conf file contains parameters to recovery, and you can also modify the file if needed.</p>
 
-<p>It is recommended to take a full backup as soon as possible after recovery is succeeded.</p>
+<p>It is recommended to take a full backup as soon as possible after recovery is succeeded and
+to remove the recovery-related parameters configured by pg_rman manually. The reason is that there
+is a case that even after recovery is done, PostgreSQL doesn't work with HA cluster software since
+recovery.conf is integrated to postgresql.conf after PostgreSQL's version is 12 or higher.
+Pacemaker which is a HA cluster software start postgresql server as standby at first,
+after that it decides it should promote or not.  So, the postgresql server doesn't start properly
+because the recovery-related parameter configured by pg_rman works as valid values unexpectedly.
+For example, in case using PostgreSQL's version is 12 or higher, and pg_rman's version is higher
+than 1.3.12, you need to remove an <code>include</code> directive in <code>$PGDATA/postgresql.conf</code>
+and <code>$PGDATA/pg_rman_recovery.conf</code>.
+</p>
 
 <p>If <code>--recovery-target-timeline</code> is not specified, the last checkpoint&rsquo;s TimeLineID in control file (<code>$PGDATA/global/pg_control</code>) will be a restore target. If pg_control is not present, TimeLineID in the full backup used by the restore will be a restore target.</p>
 

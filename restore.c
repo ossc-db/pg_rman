@@ -404,7 +404,7 @@ base_backup_found:
 	if (!check)
 		ereport(INFO,
 			(errmsg("restore complete"),
-			 errhint("Recovery will start automatically when the PostgreSQL server is started.")));
+			 errhint("Recovery will start automatically when the PostgreSQL server is started. After the recovery is done, we recommend to remove recovery-related parameters configured by pg_rman.")));
 
 	return 0;
 }	
