@@ -211,21 +211,19 @@ function check_recovery_configuration_file()
 	fi
 
 	# check if pg_rman_recovery.conf is included in postgresql.conf
-	# must be appended
-	line1=`tail -n 2 "${PG_CONF}" | head -n 1`
-	line2=`tail -n 1 "${PG_CONF}"`
+	include_conf="include = '${PG_RMAN_CONF_NAME}'"
 
-	if [ "${line1}" == '# include directive added by pg_rman' ] && \
-		[ "${line2}" == "include = '${PG_RMAN_CONF_NAME}'" ] ; then
-		echo "OK: postgresql.conf has include = '${PG_RMAN_CONF_NAME}'."
+	# must have it at last line
+	exists=`tail -n 1 "${PG_CONF}" | grep "${include_conf}" | wc -l`
+	if [ "${exists}" -eq 1 ] ; then
+		echo "OK: postgresql.conf has ${include_conf}."
 	else
-		echo "NG: postgresql.conf doesn't have include = '${PG_RMAN_CONF_NAME}'."
+		echo "NG: postgresql.conf doesn't have ${include_conf}."
 	fi
 
-	# must be overwritten
-	line1_cnt=`grep "${line1}" "${PG_CONF}" | wc -l`
-	line2_cnt=`grep "${line2}" "${PG_CONF}" | wc -l`
-	if [ ${line1_cnt} -eq 1 ] && [ ${line2_cnt} -eq 1 ] ; then
+	# must have it only one line.
+	cnt=`grep "${include_conf}" "${PG_CONF}" | wc -l`
+	if [ ${cnt} -eq 1 ] ; then
 		echo "OK: postgresql.conf doesn't have duplicate gucs configured by pg_rman."
 	else
 		echo "NG: postgresql.conf has duplicate gucs configured by pg_rman."
@@ -441,7 +439,7 @@ check_recovery_configuration_file recovery_target_action "${RECOVERY_TARGET_ACTI
 start_postgres
 sleep 3
 load_with_pgbench
-# Add to check if the recovery-related parameter is appended.
+# Add for checking if the recovery-related parameter is appended.
 echo "recovery_target_timeline = latest" >> ${PGDATA_PATH}/postgresql.conf
 grep "^recovery_target_timeline" ${PGDATA_PATH}/postgresql.conf
 full_backup

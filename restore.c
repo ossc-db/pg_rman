@@ -21,7 +21,7 @@
 #define POSTGRES_CONF "postgresql.conf"
 #define POSTGRES_CONF_TMP "postgresql.conf.pg_rman.tmp"
 #define PG_RMAN_RECOVERY_CONF "pg_rman_recovery.conf"
-#define PG_RMAN_COMMENT "# include directive added by pg_rman"
+#define PG_RMAN_COMMENT "# added by pg_rman"
 
 static void backup_online_files(bool re_recovery);
 static void restore_online_files(void);
@@ -784,7 +784,7 @@ remove_include_directive_for_pg_rman()
 	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
 	snprintf(tmppath, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF_TMP);
 
-	elog(INFO, "remove an 'include' directive which configured by pg_rman in \"%s\"", path);
+	elog(INFO, "remove an 'include' directive added by pg_rman in %s if exists", POSTGRES_CONF);
 
 	if (!check)
 	{
@@ -806,9 +806,6 @@ remove_include_directive_for_pg_rman()
 
 			/* skip the lines which pg_rman configured */
 			if (strstr(fline, "include") && strstr(fline, PG_RMAN_RECOVERY_CONF))
-				continue;
-
-			if (strstr(fline, PG_RMAN_COMMENT))
 				continue;
 
 			fprintf(w_fd, "%s", fline);
@@ -843,7 +840,7 @@ create_recovery_configuration_file(const char *target_time,
 	}
 
 	snprintf(path, lengthof(path), "%s/%s", pgdata, PG_RMAN_RECOVERY_CONF);
-	elog(INFO, "create \"%s\" for recovery-related parameters.", path);
+	elog(INFO, "create %s for recovery-related parameters.", PG_RMAN_RECOVERY_CONF);
 
 	if (!check)
 	{
@@ -853,8 +850,7 @@ create_recovery_configuration_file(const char *target_time,
 					(ERROR_SYSTEM,
 					 errmsg("could not create file \"%s\": %s", path, strerror(errno))));
 
-		fprintf(fp, "# added by pg_rman %s\n",
-			PROGRAM_VERSION);
+		fprintf(fp, "%s %s\n", PG_RMAN_COMMENT, PROGRAM_VERSION);
 		fprintf(fp, "restore_command = 'cp %s/%%f %%p'\n", arclog_path);
 		if (target_time)
 			fprintf(fp, "recovery_target_time = '%s'\n", target_time);
@@ -886,7 +882,7 @@ append_include_directive_for_pg_rman()
 	}
 
 	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
-	elog(INFO, "append an 'include' directive in \"%s\" for \"%s\"", path, PG_RMAN_RECOVERY_CONF);
+	elog(INFO, "append an 'include' directive in %s for %s", POSTGRES_CONF, PG_RMAN_RECOVERY_CONF);
 
 	if (!check)
 	{
@@ -896,8 +892,7 @@ append_include_directive_for_pg_rman()
 				(errcode(ERROR_SYSTEM),
 				 errmsg("could not open \"%s\": %s", path, strerror(errno))));
 
-		fprintf(fp, "%s\n", PG_RMAN_COMMENT);
-		fprintf(fp, "include = '%s'\n", PG_RMAN_RECOVERY_CONF);
+		fprintf(fp, "include = '%s' %s %s\n", PG_RMAN_RECOVERY_CONF, PG_RMAN_COMMENT, PROGRAM_VERSION);
 
 		fclose(fp);
 	}

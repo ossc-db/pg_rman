@@ -296,9 +296,8 @@ restore_command = 'cp /home/postgres/arclog/%f %p'
 recovery_target_timeline = '1'
 
 # PostgreSQLが12以上、pg_rmanが1.3.12よりも後のバージョンの場合
-$ tail -n 2 $PGDATA/postgresql.conf
-# include directive added by pg_rman
-include = 'pg_rman_recovery.conf'
+$ tail -n 1 $PGDATA/postgresql.conf
+include = 'pg_rman_recovery.conf' # added by pg_rman 1.3.13
 $ cat $PGDATA/pg_rman_recovery.conf
 # added by pg_rman 1.3.13
 restore_command = 'cp /home/postgres/arclog/%f %p'
