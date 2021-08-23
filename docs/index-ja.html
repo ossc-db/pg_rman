@@ -304,7 +304,14 @@ restore_command = 'cp /home/postgres/arclog/%f %p'
 recovery_target_timeline = '1'
 </code></pre>
 
-<p>リカバリ結果が確認できたら、速やかに全体バックアップを取得してください。</p>
+<p>リカバリ結果が確認できたら、速やかに全体バックアップを取得してください。また、pg_rmanが実施した
+recovery関連の設定を手動で削除することを推奨いたします。
+PostgreSQLのバージョン12から、recovery.confがpostgresql.confにマージされたことに起因し、HAクラスタソフトと連携させて動作させた場合などに、
+正常に動作しない可能性があるためです。一部のHAクラスタソフト（pacemaker）では、プライマリとして起動する場合でも、
+必ず、初めにスタンバイとして起動します。そのため、予期せず、リカバリ関連の設定が有効に働いてしまい、正常に起動しない可能性があります。
+例えば、PostgreSQLが12以上、pg_rmanが1.3.12よりも後のバージョンの場合は、<code>$PGDATA/postgresql.conf</code>に追加された<code>include</code>ディレクティブと、
+<code>$PGDATA/pg_rman_recovery.conf</code>を削除してください。
+</p>
 
 <p><code>--recovery-target-timeline</code> を指定しなかった場合は、制御ファイル(<code>$PGDATA/global/pg_control</code>) の最終チェックポイントタイムラインをターゲットとしてリストアします。
 pg_control が存在しない場合は、リストアのベースとなる全体バックアップのタイムラインをターゲットとしてリストアします。</p>
