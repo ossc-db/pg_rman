@@ -125,6 +125,16 @@ function server_is_running
 	pg_ctl status | grep "server is running" | wc -l
 }
 
+function start_postgres
+{
+	pg_ctl start -w -t 600 > /dev/null 2>&1
+}
+
+function stop_postgres
+{
+	pg_ctl stop -m fast > /dev/null 2>&1
+}
+
 function pg_is_in_recovery
 {
 	psql -tA -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT pg_is_in_recovery();"
@@ -150,10 +160,10 @@ function recovery_target_action_test
 	TARGET_TIME=`date +"%Y-%m-%d %H:%M:%S"`
 	load_with_pgbench
 	full_backup
-	pg_ctl stop -m fast > /dev/null 2>&1
+	stop_postgres
 	pg_rman restore -B ${BACKUP_PATH} --recovery-target-time="${TARGET_TIME}" \
 			 --recovery-target-action="${recovery_target_action}" --quiet;echo $?
-	pg_ctl start -w -t 600 > /dev/null 2>&1
+	start_postgres
 	sleep 5
 
 	if [ $recovery_target_action = "shutdown" ]; then
@@ -184,6 +194,41 @@ function recovery_target_action_test
 	fi
 }
 
+function check_recovery_configuration_file()
+{
+	guc=$1
+	guc_value=$2
+
+	PG_RMAN_CONF_NAME=pg_rman_recovery.conf
+	PG_RMAN_CONF=${PGDATA}/${PG_RMAN_CONF_NAME}
+	PG_CONF=${PGDATA}/postgresql.conf
+
+	# check if pg_rman_recovery.conf is created
+	if [ `grep "$guc = '$guc_value'" $PG_RMAN_CONF | wc -l` -eq 1 ]; then  # must be one line
+		echo "OK: ${PG_RMAN_CONF_NAME} has \"$guc\" configuration."
+	else
+		echo "NG: ${PG_RMAN_CONF_NAME} doesn't have \"$guc = '$guc_value'\" configuration."
+	fi
+
+	# check if pg_rman_recovery.conf is included in postgresql.conf
+	include_conf="include = '${PG_RMAN_CONF_NAME}'"
+
+	# must have it at last line
+	exists=`tail -n 1 "${PG_CONF}" | grep "${include_conf}" | wc -l`
+	if [ "${exists}" -eq 1 ] ; then
+		echo "OK: postgresql.conf has ${include_conf}."
+	else
+		echo "NG: postgresql.conf doesn't have ${include_conf}."
+	fi
+
+	# must have it only one line.
+	cnt=`grep "${include_conf}" "${PG_CONF}" | wc -l`
+	if [ ${cnt} -eq 1 ] ; then
+		echo "OK: postgresql.conf doesn't have duplicate gucs configured by pg_rman."
+	else
+		echo "NG: postgresql.conf has duplicate gucs configured by pg_rman."
+	fi
+}
 
 init_backup
 
@@ -195,7 +240,7 @@ pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quie
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0001-after.out
 diff ${TEST_BASE}/TEST-0001-before.out ${TEST_BASE}/TEST-0001-after.out
 echo ''
@@ -211,7 +256,7 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0002-before.out
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0002-after.out
 diff ${TEST_BASE}/TEST-0002-before.out ${TEST_BASE}/TEST-0002-after.out
 echo ''
@@ -225,7 +270,7 @@ pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quie
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0003-after.out
 diff ${TEST_BASE}/TEST-0003-before.out ${TEST_BASE}/TEST-0003-after.out
 echo ''
@@ -243,7 +288,7 @@ psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches
 sleep 1
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0004-after.out
 diff ${TEST_BASE}/TEST-0004-before.out ${TEST_BASE}/TEST-0004-after.out
@@ -258,19 +303,19 @@ pg_rman validate -B ${BACKUP_PATH} --quiet
 TARGET_TLI=`pg_controldata | grep " TimeLineID:" | awk '{print $4}'`
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --recovery-target-timeline=${TARGET_TLI} --quiet;echo $?
-echo "checking postgresql.conf..."
-TARGET_TLI_IN_RECOVERY_CONF=`grep "recovery_target_timeline = " ${PGDATA_PATH}/postgresql.conf | tail -1 | awk '{print $3}' | sed -e "s/'//g"`
-if [ ${TARGET_TLI} = ${TARGET_TLI_IN_RECOVERY_CONF} ]; then
-	echo 'OK: postgresql.conf has the given target timeline.'
-else
-	echo 'NG: postgresql.conf does not have the given target timeline.'
-fi
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0005-after.out
+echo "checking recovery_target_timeline..."
+TARGET_TLI_IN_RECOVERY_CONF=`get_guc_value recovery_target_timeline`
+if [ ${TARGET_TLI} = ${TARGET_TLI_IN_RECOVERY_CONF} ]; then
+	echo 'OK: the given target timeline works.'
+else
+	echo 'NG: the given target timeline does not work.'
+fi
 diff ${TEST_BASE}/TEST-0005-before.out ${TEST_BASE}/TEST-0005-after.out
 echo ''
 
@@ -285,7 +330,7 @@ TARGET_TIME=`date +"%Y-%m-%d %H:%M:%S"`
 pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
 pg_ctl stop -m immediate > /dev/null 2>&1
 pg_rman restore -B ${BACKUP_PATH} --recovery-target-time="${TARGET_TIME}" --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0006-after.out
 diff ${TEST_BASE}/TEST-0006-before.out ${TEST_BASE}/TEST-0006-after.out
 echo ''
@@ -300,9 +345,9 @@ pgbench -p ${TEST_PGPORT} pgbench > /dev/null 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0007-before.out
 TARGET_XID=`psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -tAq -c "INSERT INTO tbl0007 VALUES ('inserted') RETURNING (xmin);"`
 pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
-pg_ctl stop -m fast > /dev/null 2>&1
+stop_postgres
 pg_rman restore -B ${BACKUP_PATH} --recovery-target-xid="${TARGET_XID}" --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0007-after.out
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM tbl0007;" > ${TEST_BASE}/TEST-0007-tbl.dump
@@ -324,9 +369,9 @@ pgbench -p ${TEST_PGPORT} pgbench > /dev/null 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0008-before.out
 TARGET_XID=`psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -tAq -c "INSERT INTO tbl0008 VALUES ('inserted') RETURNING (xmin);"`
 pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
-pg_ctl stop -m fast > /dev/null 2>&1
+stop_postgres
 pg_rman restore -B ${BACKUP_PATH} --recovery-target-xid="${TARGET_XID}" --recovery-target-inclusive=false --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0008-after.out
 psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM tbl0008;" > ${TEST_BASE}/TEST-0008-tbl.dump
@@ -378,9 +423,43 @@ fi
 echo ''
 
 echo '###### RESTORE COMMAND TEST-0013 ######'
+echo '###### check if existed recovery configuration is removed and new one is appended ######'
+TARGET_TIMELINE=1
+NEW_TARGET_TIMELINE=2
+RECOVERY_TARGET_ACTION=promote
+
+init_backup
+start_postgres
+full_backup
+stop_postgres
+pg_rman restore -B ${BACKUP_PATH} --recovery-target-timeline="${TARGET_TIMELINE}" \
+	--recovery-target-action="${RECOVERY_TARGET_ACTION}" --quiet;echo $?
+check_recovery_configuration_file recovery_target_action "${RECOVERY_TARGET_ACTION}"
+# Second time to restore. Recovery configuration must be overwritten and be appended
+start_postgres
+sleep 3
+load_with_pgbench
+# Add for checking if the recovery-related parameter is appended.
+echo "recovery_target_timeline = latest" >> ${PGDATA_PATH}/postgresql.conf
+grep "^recovery_target_timeline" ${PGDATA_PATH}/postgresql.conf
+full_backup
+stop_postgres
+pg_rman restore -B ${BACKUP_PATH} --recovery-target-timeline="${NEW_TARGET_TIMELINE}" \
+	--recovery-target-action="${RECOVERY_TARGET_ACTION}" --quiet;echo $?
+check_recovery_configuration_file recovery_target_action "${RECOVERY_TARGET_ACTION}"
+start_postgres
+TARGET_TLI=`get_guc_value recovery_target_timeline`
+if [ ${TARGET_TLI} = "latest" ]; then
+	echo 'NG: old value is configured for recovery_target_timeline.'
+else
+	echo 'OK: new value is configured for recovery_target_timeline.'
+fi
+echo ''
+
+echo '###### RESTORE COMMAND TEST-0014 ######'
 echo '###### recovery from incremental backup after database creation ######'
 init_backup
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 createdb db0013 -p ${TEST_PGPORT}
@@ -389,18 +468,18 @@ pg_rman backup -B ${BACKUP_PATH} -b incremental -Z -p ${TEST_PGPORT} -d postgres
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pgbench -p ${TEST_PGPORT} -d db0013 >> ${TEST_BASE}/TEST-0013-db0013-init.out 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0013 -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0013-before.out
-pg_ctl stop -m fast > /dev/null 2>&1
+stop_postgres
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0013 -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0013-after.out
 diff ${TEST_BASE}/TEST-0013-before.out ${TEST_BASE}/TEST-0013-after.out
 echo ''
 
-echo '###### RESTORE COMMAND TEST-0014 ######'
+echo '###### RESTORE COMMAND TEST-0015 ######'
 echo '###### vacuum shrinks a page between full and incremental backups ######'
 init_backup
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 createdb db0014 -p ${TEST_PGPORT}
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "CREATE TABLE t0014(i int,j int,k varchar);" > /dev/null 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "INSERT INTO t0014 (i,j,k) select generate_series(1,1000),1, repeat('a', 10);" > /dev/null 2>&1
@@ -411,18 +490,18 @@ psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "VACUUM t0014;" > /dev/null 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b incremental -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "SELECT * FROM t0014;" > ${TEST_BASE}/TEST-0014-before.out
-pg_ctl stop -m fast > /dev/null 2>&1
+stop_postgres
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0014 -c "SELECT * FROM t0014;" > ${TEST_BASE}/TEST-0014-after.out
 diff ${TEST_BASE}/TEST-0014-before.out ${TEST_BASE}/TEST-0014-after.out
 echo ''
 
-echo '###### RESTORE COMMAND TEST-0015 ######'
+echo '###### RESTORE COMMAND TEST-0016 ######'
 echo '###### vacuum shrinks a page between full and incremental backups(compressed) ######'
 init_backup
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 createdb db0015 -p ${TEST_PGPORT}
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "CREATE TABLE t0015(i int,j int,k varchar);" > /dev/null 2>&1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "INSERT INTO t0015 (i,j,k) select generate_series(1,1000),1, repeat('a', 10);" > /dev/null 2>&1
@@ -433,9 +512,9 @@ psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "VACUUM t0015;" > /dev/null 2>&1
 pg_rman backup -B ${BACKUP_PATH} -b incremental -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "SELECT * FROM t0015;" > ${TEST_BASE}/TEST-0015-before.out
-pg_ctl stop -m fast > /dev/null 2>&1
+stop_postgres
 pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
-pg_ctl start -w -t 600 > /dev/null 2>&1
+start_postgres
 sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "SELECT * FROM t0015;" > ${TEST_BASE}/TEST-0015-after.out
 diff ${TEST_BASE}/TEST-0015-before.out ${TEST_BASE}/TEST-0015-after.out
