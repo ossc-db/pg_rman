@@ -18,18 +18,26 @@
 #include "common/controldata_utils.h"
 #include "common/fe_memutils.h"
 
+#define POSTGRES_CONF "postgresql.conf"
+#define POSTGRES_CONF_TMP "postgresql.conf.pg_rman.tmp"
+#define PG_RMAN_RECOVERY_CONF "pg_rman_recovery.conf"
+#define PG_RMAN_COMMENT "# added by pg_rman"
+
 static void backup_online_files(bool re_recovery);
 static void restore_online_files(void);
 static void restore_database(pgBackup *backup);
 static void restore_archive_logs(pgBackup *backup, bool is_hard_copy);
 
-static void add_recovery_related_options(const char *target_time,
+static void append_include_directive_for_pg_rman(void);
+static void include_recovery_configuration(void);
+static void create_recovery_configuration_file(const char *target_time,
 										 const char *target_xid,
 										 const char *target_inclusive,
 										 const char *target_action,
 										 TimeLineID target_tli,
 										 bool target_tli_latest);
 static void create_recovery_signal(void);
+static void remove_include_directive_for_pg_rman(void);
 static void remove_standby_signal(void);
 
 static pgRecoveryTarget *checkIfCreateRecoveryConf(const char *target_time,
@@ -123,7 +131,7 @@ do_restore(const char *target_time,
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
 			 errmsg("could not create recovery.conf or"
-					"add recovery related options to postgresql.conf(after PG12)"),
+					"add recovery-related options to postgresql.conf(after PG12)"),
 			 errdetail("The specified options are invalid.")));
 
 	/* get list of backups. (index == 0) is the last backup */
@@ -376,9 +384,26 @@ base_backup_found:
 			printf(_("all necessary files are found.\n"));
 	}
 
-	/* Add recovery related options to postgresql.conf file */
-	add_recovery_related_options(target_time, target_xid, target_inclusive,
-					 target_action, target_tli, target_tli_latest);
+	/*
+	 * Configure recovery-related parameters.
+	 *
+	 * 1. Create the file for recovery-related parameters
+	 *
+	 * 2. Append an 'include' directive to include the file.
+	 * If the 'include' directive configured by pg_rman exists,
+	 * remove it first.  The reason why to use an 'include' directive is to
+	 * make it easy for users to distinguish it.
+	 *
+	 * Note: It keeps the user's configuration. There are two reasons.
+	 * The first is to avoid making a user puzzled.  The second is that
+	 * there is no problem because pg_rman appends the 'include' directive
+	 * at the last of postgresql.conf every time so that the pg_rman's
+	 * configurations work as valid values.
+	 */
+	create_recovery_configuration_file(target_time, target_xid, target_inclusive,
+								 target_action, target_tli, target_tli_latest);
+	include_recovery_configuration();
+
 	/* Create recovery.signal file */
 	create_recovery_signal();
 
@@ -744,7 +769,62 @@ show_progress:
 }
 
 static void
-add_recovery_related_options(const char *target_time,
+remove_include_directive_for_pg_rman()
+{
+	char path[MAXPGPATH];
+	char tmppath[MAXPGPATH];
+	char fline[MAXPGPATH];
+	FILE *r_fd, *w_fd;
+
+	if (verbose && !check)
+	{
+		printf(_("----------------------------------------\n"));
+	}
+
+	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
+	snprintf(tmppath, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF_TMP);
+
+	elog(INFO, "remove an 'include' directive added by pg_rman in %s if exists", POSTGRES_CONF);
+
+	if (!check)
+	{
+		elog(DEBUG, "make temporary file \"%s\"", tmppath);
+
+		if ((r_fd = fopen(path, "rt")) == NULL)
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open file \"%s\": %s", path, strerror(errno))));
+
+		if ((w_fd = fopen(tmppath, "w")) == NULL)
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open file \"%s\": %s", tmppath, strerror(errno))));
+
+		while (r_fd && fgets(fline, sizeof(fline), r_fd) != NULL)
+		{
+			elog(DEBUG, "%s", fline);
+
+			/* skip the lines which pg_rman configured */
+			if (strstr(fline, "include") && strstr(fline, PG_RMAN_RECOVERY_CONF))
+				continue;
+
+			fprintf(w_fd, "%s", fline);
+		}
+
+		fclose(r_fd);
+		fclose(w_fd);
+
+		elog(DEBUG, "overwrite file \"%s\" with \"%s\"", path, tmppath);
+		if (rename(tmppath, path) != 0)
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not overwrite file \"%s\" with \"%s\": %s",
+						path, tmppath, strerror(errno))));
+	}
+}
+
+static void
+create_recovery_configuration_file(const char *target_time,
 							 const char *target_xid,
 							 const char *target_inclusive,
 							 const char *target_action,
@@ -759,20 +839,18 @@ add_recovery_related_options(const char *target_time,
 		printf(_("----------------------------------------\n"));
 	}
 
-	elog(INFO, _("add recovery related options to postgresql.conf"));
+	snprintf(path, lengthof(path), "%s/%s", pgdata, PG_RMAN_RECOVERY_CONF);
+	elog(INFO, "create %s for recovery-related parameters.", PG_RMAN_RECOVERY_CONF);
 
 	if (!check)
 	{
-		snprintf(path, lengthof(path), "%s/postgresql.conf", pgdata);
-		fp = fopen(path, "a");
-		if (fp == NULL)
+		/* overwrite if exists */
+		if ((fp = fopen(path, "w")) == NULL)
 			ereport(ERROR,
-				(errcode(ERROR_SYSTEM),
-				 errmsg("could not open postgresql.conf \"%s\": %s", path,
-					strerror(errno))));
+					(ERROR_SYSTEM,
+					 errmsg("could not create file \"%s\": %s", path, strerror(errno))));
 
-		fprintf(fp, "# added by pg_rman %s\n",
-			PROGRAM_VERSION);
+		fprintf(fp, "%s %s\n", PG_RMAN_COMMENT, PROGRAM_VERSION);
 		fprintf(fp, "restore_command = 'cp %s/%%f %%p'\n", arclog_path);
 		if (target_time)
 			fprintf(fp, "recovery_target_time = '%s'\n", target_time);
@@ -789,6 +867,42 @@ add_recovery_related_options(const char *target_time,
 
 		fclose(fp);
 	}
+}
+
+
+static void
+append_include_directive_for_pg_rman()
+{
+	char path[MAXPGPATH];
+	FILE *fp;
+
+	if (verbose && !check)
+	{
+		printf(_("----------------------------------------\n"));
+	}
+
+	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
+	elog(INFO, "append an 'include' directive in %s for %s", POSTGRES_CONF, PG_RMAN_RECOVERY_CONF);
+
+	if (!check)
+	{
+		fp = fopen(path, "a");
+		if (fp == NULL)
+			ereport(ERROR,
+				(errcode(ERROR_SYSTEM),
+				 errmsg("could not open \"%s\": %s", path, strerror(errno))));
+
+		fprintf(fp, "include = '%s' %s %s\n", PG_RMAN_RECOVERY_CONF, PG_RMAN_COMMENT, PROGRAM_VERSION);
+
+		fclose(fp);
+	}
+}
+
+static void
+include_recovery_configuration(void)
+{
+	remove_include_directive_for_pg_rman();
+	append_include_directive_for_pg_rman();
 }
 
 static void
@@ -1285,7 +1399,7 @@ checkIfCreateRecoveryConf(const char *target_time,
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
 				 errmsg("could not create recovery.conf or"
-						"add recovery related options to postgresql.conf(after PG12) with %s", target_time)));
+						"add recovery-related options to postgresql.conf(after PG12) with %s", target_time)));
 	}
 
 	if(target_xid)
@@ -1298,7 +1412,7 @@ checkIfCreateRecoveryConf(const char *target_time,
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
 				 errmsg("could not create recovery.conf or"
-						" add recovery related options to postgresql.conf(after PG12) with %s", target_xid)));
+						" add recovery-related options to postgresql.conf(after PG12) with %s", target_xid)));
 	}
 
 	if(target_inclusive)
@@ -1309,7 +1423,7 @@ checkIfCreateRecoveryConf(const char *target_time,
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
 				 errmsg("could not create recovery.conf or"
-						"add recovery related options to postgresql.conf(after PG12) with %s", target_inclusive)));
+						"add recovery-related options to postgresql.conf(after PG12) with %s", target_inclusive)));
 	}
 
 	if(target_action)
@@ -1324,7 +1438,7 @@ checkIfCreateRecoveryConf(const char *target_time,
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
 				 errmsg("could not create recovery.conf or"
-						"add recovery related options to postgresql.conf(after PG12) with %s", target_action)));
+						"add recovery-related options to postgresql.conf(after PG12) with %s", target_action)));
 	}
 
 	return rt;
