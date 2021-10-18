@@ -165,32 +165,72 @@ echo ''
 echo '###### COMMAND OPTION TEST-0017 ######'
 echo '###### invalid value in pg_rman.ini ######'
 init_catalog
-echo "SMOOTH_CHECKPOINT=FOO" >> ${BACKUP_PATH}/pg_rman.ini
+echo "KEEP_DATA_GENERATIONS=0" >> ${BACKUP_PATH}/pg_rman.ini
 pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
 echo ''
 
 echo '###### COMMAND OPTION TEST-0018 ######'
 echo '###### invalid value in pg_rman.ini ######'
 init_catalog
+echo "KEEP_DATA_DAYS=0" >> ${BACKUP_PATH}/pg_rman.ini
+pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
+echecho '###### COMMAND OPTION TEST-0019 ######'
+echo '###### invalid value in pg_rman.ini ######'
+init_catalog
+echo "KEEP_SRVLOG_FILES=0" >> ${BACKUP_PATH}/pg_rman.ini
+pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
+echo ''
+
+echo '###### COMMAND OPTION TEST-0020 ######'
+echo '###### invalid value in pg_rman.ini ######'
+init_catalog
+echo "KEEP_SRVLOG_DAYS=0" >> ${BACKUP_PATH}/pg_rman.ini
+pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
+echo ''
+
+echo '###### COMMAND OPTION TEST-0021 ######'
+echo '###### invalid value in pg_rman.ini ######'
+init_catalog
+echo "KEEP_ARCLOG_FILES=0" >> ${BACKUP_PATH}/pg_rman.ini
+pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
+echo ''
+
+echo '###### COMMAND OPTION TEST-0022 ######'
+echo '###### invalid value in pg_rman.ini ######'
+init_catalog
+echo "KEEP_ARCLOG_DAYS=0" >> ${BACKUP_PATH}/pg_rman.ini
+pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
+echo ''
+
+echo '###### COMMAND OPTION TEST-0023 ######'
+echo '###### invalid value in pg_rman.ini ######'
+init_catalog
+echo "SMOOTH_CHECKPOINT=FOO" >> ${BACKUP_PATH}/pg_rman.ini
+pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
+echo ''
+
+echo '###### COMMAND OPTION TEST-0024 ######'
+echo '###### invalid value in pg_rman.ini ######'
+init_catalog
 echo "WITH_SERVERLOG=FOO" >> ${BACKUP_PATH}/pg_rman.ini
 pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
 echo ''
 
-echo '###### COMMAND OPTION TEST-0019 ######'
+echo '###### COMMAND OPTION TEST-0025 ######'
 echo '###### invalid value in pg_rman.ini ######'
 init_catalog
 echo "HARD_COPY=FOO" >> ${BACKUP_PATH}/pg_rman.ini
 pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
 echo ''
 
-echo '###### COMMAND OPTION TEST-0020 ######'
+echo '###### COMMAND OPTION TEST-0026 ######'
 echo '###### invalid option in pg_rman.ini ######'
 init_catalog
 echo "TIMELINEID=1" >> ${BACKUP_PATH}/pg_rman.ini
 pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
 echo ''
 
-echo '###### COMMAND OPTION TEST-0021 ######'
+echo '###### COMMAND OPTION TEST-0027 ######'
 echo '###### check priority of several pg_rman.ini files ######'
 init_catalog
 mkdir -p ${BACKUP_PATH}/conf_path_a

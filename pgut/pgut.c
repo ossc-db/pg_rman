@@ -197,7 +197,7 @@ assign_option(pgut_option *opt, const char *optarg, pgut_optsrc src)
 			case 'i':
 				if (parse_int32(optarg, opt->var))
 					return;
-				message = "a 32bit signed integer";
+				message = "betweent 1 and 2147483647";
 				break;
 			case 'u':
 				if (parse_uint32(optarg, opt->var))
@@ -372,13 +372,17 @@ parse_int32(const char *value, int32 *result)
 		*result = INT_MAX;
 		return true;
 	}
-
+    
 	errno = 0;
 	val = strtol(value, &endptr, 0);
+
 	if (endptr == value || *endptr)
 		return false;
 
 	if (errno == ERANGE || val != (int64) ((int32) val))
+		return false;
+
+    if (val < 0 || val == 0)
 		return false;
 
 	*result = val;
