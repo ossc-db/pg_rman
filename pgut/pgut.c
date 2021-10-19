@@ -358,7 +358,7 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
 }
 
 /*
- * Parse string as positive number..
+ * Parse string as positive number.
  * valid range: 1 ~ 2147483647
  */
 bool
