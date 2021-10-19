@@ -358,8 +358,8 @@ parse_bool_with_len(const char *value, size_t len, bool *result)
 }
 
 /*
- * Parse string as 32bit signed int.
- * valid range: -2147483648 ~ 2147483647
+ * Parse string as positive number..
+ * valid range: 1 ~ 2147483647
  */
 bool
 parse_int32(const char *value, int32 *result)
