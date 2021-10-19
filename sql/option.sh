@@ -174,7 +174,8 @@ echo '###### invalid value in pg_rman.ini ######'
 init_catalog
 echo "KEEP_DATA_DAYS=0" >> ${BACKUP_PATH}/pg_rman.ini
 pg_rman backup -B ${BACKUP_PATH} -A ${ARCLOG_PATH} -b full -p ${TEST_PGPORT};echo $?
-echecho '###### COMMAND OPTION TEST-0019 ######'
+
+echo '###### COMMAND OPTION TEST-0019 ######'
 echo '###### invalid value in pg_rman.ini ######'
 init_catalog
 echo "KEEP_SRVLOG_FILES=0" >> ${BACKUP_PATH}/pg_rman.ini
