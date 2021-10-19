@@ -382,7 +382,7 @@ parse_int32(const char *value, int32 *result)
 	if (errno == ERANGE || val != (int64) ((int32) val))
 		return false;
 
-    if (val < 0 || val == 0)
+        if (val < 0 || val == 0)
 		return false;
 
 	*result = val;
