@@ -372,7 +372,7 @@ parse_int32(const char *value, int32 *result)
 		*result = INT_MAX;
 		return true;
 	}
-	
+
 	errno = 0;
 	val = strtol(value, &endptr, 0);
 
