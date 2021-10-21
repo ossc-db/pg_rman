@@ -572,6 +572,37 @@ psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches
 diff ${TEST_BASE}/TEST-0017-before.out ${TEST_BASE}/TEST-0017-after.out
 echo ''
 
+echo '###### RESTORE COMMAND TEST-0018 ######'
+echo '###### check to work even if the path of tablespace has $PGDATA ######'
+init_backup
+start_postgres
+
+TBLSPC_PATH_HAS_PGDATA_PATH=${PGDATA_PATH}_test_tbl/test
+TEST_DB=test
+
+mkdir -p ${TBLSPC_PATH_HAS_PGDATA_PATH}
+psql --no-psqlrc -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1 << EOF
+CREATE TABLESPACE ${TEST_DB} LOCATION '${TBLSPC_PATH_HAS_PGDATA_PATH}';
+CREATE DATABASE ${TEST_DB} TABLESPACE = ${TEST_DB};
+EOF
+
+pgbench -p ${TEST_PGPORT} -i -s 10 -d ${TEST_DB} > /dev/null 2>&1
+psql -p ${TEST_PGPORT} --no-psqlrc -d ${TEST_DB} -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0018-before.out
+
+pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+stop_postgres
+pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
+start_postgres
+sleep 1
+
+psql -p ${TEST_PGPORT} --no-psqlrc -d ${TEST_DB} -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0018-after.out
+diff ${TEST_BASE}/TEST-0018-before.out ${TEST_BASE}/TEST-0018-after.out
+
+stop_postgres
+rm -r ${TBLSPC_PATH_HAS_PGDATA_PATH}
+echo ''
+
 # clean up the temporal test data
 pg_ctl stop -m immediate > /dev/null 2>&1
 rm -fr ${PGDATA_PATH}
