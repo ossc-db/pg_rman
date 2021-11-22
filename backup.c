@@ -1391,7 +1391,7 @@ backup_cleanup(bool fatal, void *userdata)
 	 */
 	if (current.status == BACKUP_STATUS_RUNNING && current.end_time == 0)
 	{
-		elog(DEBUG, "update bakckup status from RUNNING to ERROR");
+		elog(DEBUG, "update backup status from RUNNING to ERROR");
 		current.end_time = time(NULL);
 		current.status = BACKUP_STATUS_ERROR;
 		pgBackupWriteIni(&current);
