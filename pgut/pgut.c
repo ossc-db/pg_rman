@@ -410,7 +410,7 @@ parse_uint32(const char *value, uint32 *result)
 	if (errno == ERANGE || val != (uint64) ((uint32) val))
 		return false;
 
-	*result = val;
+	*result = (uint32) val;
 
 	return true;
 }
