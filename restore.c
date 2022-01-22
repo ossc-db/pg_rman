@@ -776,13 +776,22 @@ remove_include_directive_for_pg_rman()
 	char fline[MAXPGPATH];
 	FILE *r_fd, *w_fd;
 
+	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
+	snprintf(tmppath, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF_TMP);
+
+	/*
+	 * Check if postgresql.conf exists in the restored data directory
+	 * because a user manages postgrsql's configuration files in a
+	 * directory different from the data directory using the GUC
+	 * `data_directory` parameter.
+	 */
+	if (!fileExists(path))
+		return;
+
 	if (verbose && !check)
 	{
 		printf(_("----------------------------------------\n"));
 	}
-
-	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
-	snprintf(tmppath, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF_TMP);
 
 	elog(INFO, "remove an 'include' directive added by pg_rman in %s if exists", POSTGRES_CONF);
 
