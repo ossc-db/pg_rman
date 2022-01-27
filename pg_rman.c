@@ -23,6 +23,7 @@ char *backup_path;
 char *pgdata;
 char *arclog_path;
 char *srvlog_path;
+char *pgconf_path;
 
 /* common configuration */
 bool verbose = false;
@@ -67,6 +68,7 @@ static pgut_option options[] =
 	{ 's', 'A', "arclog-path"	, &arclog_path	, SOURCE_ENV },
 	{ 's', 'B', "backup-path"	, &backup_path	, SOURCE_ENV },
 	{ 's', 'S', "srvlog-path"	, &srvlog_path	, SOURCE_ENV },
+	{ 's', 'G', "pgconf-path"	, &pgconf_path	, SOURCE_ENV },
 	/* common options */
 	{ 'b', 'v', "verbose"		, &verbose },
 	{ 'b', 'P', "progress"		, &progress },
@@ -195,6 +197,10 @@ main(int argc, char *argv[])
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
 			 errmsg("-S, --srvlog-path must be an absolute path")));
+	if (pgconf_path != NULL && !is_absolute_path(pgconf_path))
+		ereport(ERROR,
+			(errcode(ERROR_ARGS),
+			 errmsg("-G, --pgconf-path must be an absolute path")));
 
 	/* setup exclusion list for file search */
 	for (i = 0; pgdata_exclude[i]; i++)		/* find first empty slot */
@@ -203,6 +209,10 @@ main(int argc, char *argv[])
 		pgdata_exclude[i++] = arclog_path;
 	if (srvlog_path)
 		pgdata_exclude[i++] = srvlog_path;
+
+	/* update pgconf_path if user didn't speficy */
+	if (pgconf_path == NULL)
+		pgconf_path = pgdata;
 
 	/* do actual operation */
 	if (pg_strcasecmp(cmd, "init") == 0)
@@ -262,6 +272,7 @@ pgut_help(bool details)
 	printf(_("  -A, --arclog-path=PATH    location of archive WAL storage area\n"));
 	printf(_("  -S, --srvlog-path=PATH    location of server log storage area\n"));
 	printf(_("  -B, --backup-path=PATH    location of the backup storage area\n"));
+	printf(_("  -G, --pgconf-path=PATH    location of the postgresql.conf\n"));
 	printf(_("  -c, --check               show what would have been done\n"));
 	printf(_("  -v, --verbose             show what detail messages\n"));
 	printf(_("  -P, --progress            show progress of processed files\n"));

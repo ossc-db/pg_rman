@@ -776,8 +776,8 @@ remove_include_directive_for_pg_rman()
 	char fline[MAXPGPATH];
 	FILE *r_fd, *w_fd;
 
-	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
-	snprintf(tmppath, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF_TMP);
+	snprintf(path, lengthof(path), "%s/%s", pgconf_path, POSTGRES_CONF);
+	snprintf(tmppath, lengthof(path), "%s/%s", pgconf_path, POSTGRES_CONF_TMP);
 
 	/*
 	 * Check if postgresql.conf exists in the restored data directory
@@ -786,7 +786,10 @@ remove_include_directive_for_pg_rman()
 	 * `data_directory` parameter.
 	 */
 	if (!fileExists(path))
+	{
+		elog(WARNING, "postgresql.conf doesn't exist in %s", pgconf_path);
 		return;
+	}
 
 	if (verbose && !check)
 	{
@@ -848,7 +851,7 @@ create_recovery_configuration_file(const char *target_time,
 		printf(_("----------------------------------------\n"));
 	}
 
-	snprintf(path, lengthof(path), "%s/%s", pgdata, PG_RMAN_RECOVERY_CONF);
+	snprintf(path, lengthof(path), "%s/%s", pgconf_path, PG_RMAN_RECOVERY_CONF);
 	elog(INFO, "create %s for recovery-related parameters.", PG_RMAN_RECOVERY_CONF);
 
 	if (!check)
@@ -890,7 +893,7 @@ append_include_directive_for_pg_rman()
 		printf(_("----------------------------------------\n"));
 	}
 
-	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
+	snprintf(path, lengthof(path), "%s/%s", pgconf_path, POSTGRES_CONF);
 	elog(INFO, "append an 'include' directive in %s for %s", POSTGRES_CONF, PG_RMAN_RECOVERY_CONF);
 
 	if (!check)
