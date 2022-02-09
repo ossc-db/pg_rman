@@ -210,10 +210,6 @@ main(int argc, char *argv[])
 	if (srvlog_path)
 		pgdata_exclude[i++] = srvlog_path;
 
-	/* update pgconf_path if user didn't speficy */
-	if (pgconf_path == NULL)
-		pgconf_path = pgdata;
-
 	/* do actual operation */
 	if (pg_strcasecmp(cmd, "init") == 0)
 		return do_init();
@@ -272,7 +268,7 @@ pgut_help(bool details)
 	printf(_("  -A, --arclog-path=PATH    location of archive WAL storage area\n"));
 	printf(_("  -S, --srvlog-path=PATH    location of server log storage area\n"));
 	printf(_("  -B, --backup-path=PATH    location of the backup storage area\n"));
-	printf(_("  -G, --pgconf-path=PATH    location of the postgresql.conf\n"));
+	printf(_("  -G, --pgconf-path=PATH    location of the configuration storage area\n"));
 	printf(_("  -c, --check               show what would have been done\n"));
 	printf(_("  -v, --verbose             show what detail messages\n"));
 	printf(_("  -P, --progress            show progress of processed files\n"));
