@@ -199,6 +199,11 @@ assign_option(pgut_option *opt, const char *optarg, pgut_optsrc src)
 					return;
 				message = "a 32bit signed integer";
 				break;
+		        case 'n':
+			        if (parse_posi(optarg, opt->var))
+					return;
+				message = "between 1 and 2147483647";
+				break;
 			case 'u':
 				if (parse_uint32(optarg, opt->var))
 					return;
@@ -384,6 +389,40 @@ parse_int32(const char *value, int32 *result)
 	*result = val;
 
 	return true;
+}
+
+
+/*
+ * Parse string as positive number.
+ * valid range: 1 ~ 2147483647
+ */
+
+bool
+parse_posi(const char *value, int32 *result)
+{
+        int64   val;
+        char   *endptr;
+
+        if (strcmp(value, INFINITE_STR) == 0)
+        {
+                *result = INT_MAX;
+                return true;
+        }
+
+        errno = 0;
+        val = strtol(value, &endptr, 0);
+        if (endptr == value || *endptr)
+                return false;
+
+        if (errno == ERANGE || val != (int64) ((int32) val))
+                return false;
+
+        if (val < 0 || val == 0)
+		return false;
+
+        *result = val;
+
+        return true;
 }
 
 /*

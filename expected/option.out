@@ -74,7 +74,7 @@ Report bugs to <http://github.com/ossc-db/pg_rman/issues>.
 
 ###### COMMAND OPTION TEST-0002 ######
 ###### version option ######
-pg_rman 1.3.13
+pg_rman 1.3.14
 1
 
 ###### COMMAND OPTION TEST-0003 ######
@@ -136,40 +136,55 @@ ERROR: option --keep-arclog-days should be a 32bit signed integer: 'TRUE'
 
 ###### COMMAND OPTION TEST-0014 ######
 ###### invalid value in pg_rman.ini ######
-ERROR: option --keep-srvlog-files should be a 32bit signed integer: 'TRUE'
+ERROR: option --keep-srvlog-files should be between 1 and 2147483647: 'TRUE'
 12
 
 ###### COMMAND OPTION TEST-0015 ######
 ###### invalid value in pg_rman.ini ######
-ERROR: option --keep-srvlog-days should be a 32bit signed integer: 'TRUE'
+ERROR: option --keep-srvlog-days should be between 1 and 2147483647: 'TRUE'
 12
 
 ###### COMMAND OPTION TEST-0016 ######
 ###### invalid value in pg_rman.ini ######
-ERROR: option --keep-data-generations should be a 32bit signed integer: 'TRUE'
+ERROR: option --keep-data-generations should be between 1 and 2147483647: 'TRUE'
 12
 
 ###### COMMAND OPTION TEST-0017 ######
 ###### invalid value in pg_rman.ini ######
-ERROR: option -C, --smooth-checkpoint should be a boolean: 'FOO'
+ERROR: option --keep-data-generations should be between 1 and 2147483647: '0'
 12
 
 ###### COMMAND OPTION TEST-0018 ######
 ###### invalid value in pg_rman.ini ######
-ERROR: option -s, --with-serverlog should be a boolean: 'FOO'
+ERROR: option --keep-srvlog-files should be between 1 and 2147483647: '0'
 12
 
 ###### COMMAND OPTION TEST-0019 ######
 ###### invalid value in pg_rman.ini ######
-ERROR: option --hard-copy should be a boolean: 'FOO'
+ERROR: option --keep-srvlog-days should be between 1 and 2147483647: '0'
 12
 
 ###### COMMAND OPTION TEST-0020 ######
+###### invalid value in pg_rman.ini ######
+ERROR: option -C, --smooth-checkpoint should be a boolean: 'FOO'
+12
+
+###### COMMAND OPTION TEST-0021 ######
+###### invalid value in pg_rman.ini ######
+ERROR: option -s, --with-serverlog should be a boolean: 'FOO'
+12
+
+###### COMMAND OPTION TEST-0022 ######
+###### invalid value in pg_rman.ini ######
+ERROR: option --hard-copy should be a boolean: 'FOO'
+12
+
+###### COMMAND OPTION TEST-0023 ######
 ###### invalid option in pg_rman.ini ######
 ERROR: invalid option "TIMELINEID"
 12
 
-###### COMMAND OPTION TEST-0021 ######
+###### COMMAND OPTION TEST-0024 ######
 ###### check priority of several pg_rman.ini files ######
 ERROR: invalid backup-mode "ENV_PATH"
 12
