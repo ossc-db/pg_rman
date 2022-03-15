@@ -131,7 +131,7 @@ do_restore(const char *target_time,
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
 			 errmsg("could not create recovery.conf or"
-					"add recovery-related options to postgresql.conf(after PG12)"),
+					" add recovery-related options to postgresql.conf(after PG12)"),
 			 errdetail("The specified options are invalid.")));
 
 	/* get list of backups. (index == 0) is the last backup */
