@@ -949,7 +949,7 @@ remove_standby_signal(void)
 			}
 			ereport(INFO,
 				(errmsg("removed standby.signal"),
-				 errhint("if you want to start as standby, additional manual"
+				 errhint("if you want to start as standby, additional manual "
 						"setups to make standby.signal and so on are required")));
 		}
 	}
