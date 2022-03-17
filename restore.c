@@ -1412,7 +1412,7 @@ checkIfCreateRecoveryConf(const char *target_time,
 			ereport(ERROR,
 				(errcode(ERROR_ARGS),
 				 errmsg("could not create recovery.conf or "
-						" add recovery-related options to postgresql.conf(after PG12) with %s", target_xid)));
+						"add recovery-related options to postgresql.conf(after PG12) with %s", target_xid)));
 	}
 
 	if(target_inclusive)
