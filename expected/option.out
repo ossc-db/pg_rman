@@ -18,6 +18,7 @@ Common Options:
   -A, --arclog-path=PATH    location of archive WAL storage area
   -S, --srvlog-path=PATH    location of server log storage area
   -B, --backup-path=PATH    location of the backup storage area
+  -G, --pgconf-path=PATH    location of the configuration storage area
   -c, --check               show what would have been done
   -v, --verbose             show what detail messages
   -P, --progress            show progress of processed files

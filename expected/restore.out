@@ -117,3 +117,8 @@ OK: new value is configured for recovery_target_timeline.
 0
 0
 
+###### RESTORE COMMAND TEST-0017 ######
+###### check to work PITR even if data directory option is specified ######
+0
+0
+

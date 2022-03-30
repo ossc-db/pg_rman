@@ -241,6 +241,7 @@ extern char *backup_path;
 extern char *pgdata;
 extern char *arclog_path;
 extern char *srvlog_path;
+extern char *pgconf_path;
 
 /* common configuration */
 extern bool verbose;
