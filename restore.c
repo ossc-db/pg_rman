@@ -30,6 +30,12 @@ static void restore_archive_logs(pgBackup *backup, bool is_hard_copy);
 
 static void append_include_directive_for_pg_rman(void);
 static void include_recovery_configuration(void);
+static void configure_recovery_options(const char *target_time,
+										 const char *target_xid,
+										 const char *target_inclusive,
+										 const char *target_action,
+										 TimeLineID target_tli,
+										 bool target_tli_latest);
 static void create_recovery_configuration_file(const char *target_time,
 										 const char *target_xid,
 										 const char *target_inclusive,
@@ -100,6 +106,10 @@ do_restore(const char *target_time,
 		ereport(ERROR,
 			(errcode(ERROR_ARGS),
 			 errmsg("required parameter not specified: SRVLOG_PATH (-S, --srvlog-path)")));
+
+	/* update pgconf_path if user didn't specify */
+	if (pgconf_path == NULL)
+		pgconf_path = pgdata;
 
 	if (verbose)
 	{
@@ -384,34 +394,9 @@ base_backup_found:
 			printf(_("all necessary files are found.\n"));
 	}
 
-	/*
-	 * Configure recovery-related parameters.
-	 *
-	 * 1. Create the file for recovery-related parameters
-	 *
-	 * 2. Append an 'include' directive to include the file.
-	 * If the 'include' directive configured by pg_rman exists,
-	 * remove it first.  The reason why to use an 'include' directive is to
-	 * make it easy for users to distinguish it.
-	 *
-	 * Note: It keeps the user's configuration. There are two reasons.
-	 * The first is to avoid making a user puzzled.  The second is that
-	 * there is no problem because pg_rman appends the 'include' directive
-	 * at the last of postgresql.conf every time so that the pg_rman's
-	 * configurations work as valid values.
-	 */
-	create_recovery_configuration_file(target_time, target_xid, target_inclusive,
+	/* configure recovery-related options */
+	configure_recovery_options(target_time, target_xid, target_inclusive,
 								 target_action, target_tli, target_tli_latest);
-	include_recovery_configuration();
-
-	/* Create recovery.signal file */
-	create_recovery_signal();
-
-	/*
-	 * Remove if standby.signal file exists because pg_rman doesn’t treat
-	 * the backup as restoring on standby automatically now.
-	 */
-	remove_standby_signal();
 
 	/* release catalog lock */
 	catalog_unlock();
@@ -769,6 +754,61 @@ show_progress:
 }
 
 static void
+configure_recovery_options(const char *target_time,
+										 const char *target_xid,
+										 const char *target_inclusive,
+										 const char *target_action,
+										 TimeLineID target_tli,
+										 bool target_tli_latest)
+{
+	/*
+	 * Check if postgresql.conf exists in the restored data directory
+	 * because a user manages postgresql's configuration files in a
+	 * directory different from the data directory using the GUC
+	 * `data_directory` parameter. If so, recovery-related parameters
+	 * will not work so that user must manage them manually.
+	 */
+	char path[MAXPGPATH];
+	snprintf(path, lengthof(path), "%s/%s", pgconf_path, POSTGRES_CONF);
+	if (!fileExists(path))
+	{
+		elog(WARNING,
+			"recovery-related configuration is skipped because postgresql.conf doesn't exist in %s",
+			pgconf_path);
+		return;
+	}
+
+	/*
+	 * Configure recovery-related parameters.
+	 *
+	 * 1. Create the file for recovery-related parameters
+	 *
+	 * 2. Append an 'include' directive to include the file.
+	 * If the 'include' directive configured by pg_rman exists,
+	 * remove it first.  The reason why to use an 'include' directive is to
+	 * make it easy for users to distinguish it.
+	 *
+	 * Note: It keeps the user's configuration. There are two reasons.
+	 * The first is to avoid making a user puzzled.  The second is that
+	 * there is no problem because pg_rman appends the 'include' directive
+	 * at the last of postgresql.conf every time so that the pg_rman's
+	 * configurations work as valid values.
+	 */
+	create_recovery_configuration_file(target_time, target_xid, target_inclusive,
+								 target_action, target_tli, target_tli_latest);
+	include_recovery_configuration();
+
+	/* Create recovery.signal file */
+	create_recovery_signal();
+
+	/*
+	 * Remove if standby.signal file exists because pg_rman doesn’t treat
+	 * the backup as restoring on standby automatically now.
+	 */
+	remove_standby_signal();
+}
+
+static void
 remove_include_directive_for_pg_rman()
 {
 	char path[MAXPGPATH];
@@ -781,8 +821,8 @@ remove_include_directive_for_pg_rman()
 		printf(_("----------------------------------------\n"));
 	}
 
-	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
-	snprintf(tmppath, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF_TMP);
+	snprintf(path, lengthof(path), "%s/%s", pgconf_path, POSTGRES_CONF);
+	snprintf(tmppath, lengthof(path), "%s/%s", pgconf_path, POSTGRES_CONF_TMP);
 
 	elog(INFO, "remove an 'include' directive added by pg_rman in %s if exists", POSTGRES_CONF);
 
@@ -839,7 +879,7 @@ create_recovery_configuration_file(const char *target_time,
 		printf(_("----------------------------------------\n"));
 	}
 
-	snprintf(path, lengthof(path), "%s/%s", pgdata, PG_RMAN_RECOVERY_CONF);
+	snprintf(path, lengthof(path), "%s/%s", pgconf_path, PG_RMAN_RECOVERY_CONF);
 	elog(INFO, "create %s for recovery-related parameters.", PG_RMAN_RECOVERY_CONF);
 
 	if (!check)
@@ -881,7 +921,7 @@ append_include_directive_for_pg_rman()
 		printf(_("----------------------------------------\n"));
 	}
 
-	snprintf(path, lengthof(path), "%s/%s", pgdata, POSTGRES_CONF);
+	snprintf(path, lengthof(path), "%s/%s", pgconf_path, POSTGRES_CONF);
 	elog(INFO, "append an 'include' directive in %s for %s", POSTGRES_CONF, PG_RMAN_RECOVERY_CONF);
 
 	if (!check)

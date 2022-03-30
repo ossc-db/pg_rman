@@ -56,6 +56,7 @@ function cleanup()
     # cleanup environment
     pg_ctl stop -m immediate > /dev/null 2>&1
     rm -fr ${PGDATA_PATH}
+    rm -fr ${PGCONF_PATH}
     rm -fr ${BACKUP_PATH}
     rm -fr ${ARCLOG_PATH}
     rm -fr ${SRVLOG_PATH}
@@ -63,6 +64,7 @@ function cleanup()
     mkdir -p ${ARCLOG_PATH}
     mkdir -p ${SRVLOG_PATH}
     mkdir -p ${TBLSPC_PATH}
+    mkdir -p ${PGCONF_PATH}
 }
 
 function init_backup()
@@ -518,6 +520,56 @@ start_postgres
 sleep 1
 psql --no-psqlrc -p ${TEST_PGPORT} -d db0015 -c "SELECT * FROM t0015;" > ${TEST_BASE}/TEST-0015-after.out
 diff ${TEST_BASE}/TEST-0015-before.out ${TEST_BASE}/TEST-0015-after.out
+echo ''
+
+echo '###### RESTORE COMMAND TEST-0017 ######'
+echo '###### check to work PITR even if data directory option is specified ######'
+# initialize
+cleanup
+initdb ${USE_DATA_CHECKSUM} --no-locale -D ${PGDATA_PATH} > ${TEST_BASE}/initdb.log 2>&1
+if [ $? = "1" ]; then
+    echo "initdb did not succeed (--data-checksum not supported on this PostgreSQL version)."
+    echo "Aborting regression tests..."
+    exit
+fi
+mv ${PGDATA_PATH}/{postgresql,pg_hba,pg_ident}.conf ${PGCONF_PATH}/
+cat << EOF >> ${PGCONF_PATH}/postgresql.conf
+port = ${TEST_PGPORT}
+logging_collector = on
+wal_level = replica
+log_directory = '${SRVLOG_PATH}'
+log_filename = 'postgresql-%F_%H%M%S.log'
+archive_mode = on
+archive_command = 'cp %p ${ARCLOG_PATH}/%f'
+max_wal_size = 512MB
+data_directory = '${PGDATA_PATH}'
+EOF
+pg_rman init -B ${BACKUP_PATH} -A ${ARCLOG_PATH} --quiet
+
+pg_ctl start -w -t 600 -D ${PGCONF_PATH} > /dev/null 2>&1
+mkdir -p ${TBLSPC_PATH}/pgbench
+psql --no-psqlrc -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1 << EOF
+CREATE TABLESPACE pgbench LOCATION '${TBLSPC_PATH}/pgbench';
+CREATE DATABASE pgbench TABLESPACE = pgbench;
+EOF
+pgbench -i -s $SCALE -p ${TEST_PGPORT} -d pgbench > ${TEST_BASE}/pgbench.log 2>&1
+
+# expected
+pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0017-before.out
+pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+TARGET_TIME=`date +"%Y-%m-%d %H:%M:%S"`
+
+# not expected
+pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
+
+# restore
+pg_ctl stop -m immediate -D ${PGCONF_PATH} > /dev/null 2>&1
+pg_rman restore -G ${PGCONF_PATH} -B ${BACKUP_PATH} --recovery-target-time="${TARGET_TIME}" --quiet;echo $?
+pg_ctl start -w -t 600 -D ${PGCONF_PATH} > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0017-after.out
+diff ${TEST_BASE}/TEST-0017-before.out ${TEST_BASE}/TEST-0017-after.out
 echo ''
 
 # clean up the temporal test data
