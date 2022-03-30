@@ -638,7 +638,7 @@ $ pg_ctl start
 
 <h2>Restore options</h2>
 
-<p>The parameters which are started with &ndash;recovery are same as parameters in recovery.conf. See also &ldquo;<a href="http://www.postgresql.org/docs/current/static/recovery-config.html">Recovery Configuration</a>&rdquo; for details.</p>
+<p>The parameters which are started with &ndash;&ndash;recovery are same as <a href=" https://www.postgresql.org/docs/current/runtime-config-wal.html#RUNTIME-CONFIG-WAL-RECOVERY-TARGET">Recovery Target</a> parameters.</p>
 
 <ul>
 <li><strong><code>--recovery-target-timeline TIMELINE</code></strong>
@@ -681,6 +681,15 @@ $ pg_ctl start
 
 <ul>
 <li>The archive WAL are copied to archive WAL storage area. If not specified, pg_rman makes symbolic link to archive WAL where are in the backup catalog directory.</li>
+</ul>
+</li>
+</ul>
+
+<ul>
+<li><strong><code>-G PATH</code> / <code>--pgconf-path=PATH</code></strong>
+
+<ul>
+<li>The recovery-related parameters are configured when restoring. If you manage the postgresql.conf in different location of database cluster using <a href="http://www.postgresql.org/docs/current/runtime-config-file-locations.html"><code>data_directory</code></a> and so on, specify the absolute path. This option is provided version higher than 1.3.14.</p></li>
 </ul>
 </li>
 </ul>
