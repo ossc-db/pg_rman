@@ -94,7 +94,7 @@ if grep "RUNNING" ${TEST_BASE}/TEST-0002-show.out > /dev/null ; then
 else
      echo 'NG: RUNNING status is not shown.'
 fi
-sleep 5
+wait
 echo ''
 
 echo '###### SHOW COMMAND TEST-0003 ######'
