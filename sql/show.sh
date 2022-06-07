@@ -86,7 +86,7 @@ echo ''
 echo '###### SHOW COMMAND TEST-0002 ######'
 echo '###### Status RUNNING  ######'
 init_catalog
-pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet &
+pg_rman backup -B ${BACKUP_PATH} -b full -Z -p ${TEST_PGPORT} -d postgres --quiet & # run in background
 sleep 1
 pg_rman show -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0002-show.out 2>&1
 if grep "RUNNING" ${TEST_BASE}/TEST-0002-show.out > /dev/null ; then
@@ -94,7 +94,7 @@ if grep "RUNNING" ${TEST_BASE}/TEST-0002-show.out > /dev/null ; then
 else
      echo 'NG: RUNNING status is not shown.'
 fi
-sleep 5
+wait # wait to finish the backup running in the background with '&'.
 echo ''
 
 echo '###### SHOW COMMAND TEST-0003 ######'
