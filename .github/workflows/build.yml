@@ -41,7 +41,7 @@ jobs:
       shell: bash -xe {0}
       run: |
         declare -A versions=(
-          ["master"]="14.0"
+          ["master"]="15bate1"
           ["REL_14_STABLE"]="14.0"
           ["REL_13_STABLE"]="13.4"
           ["REL_12_STABLE"]="12.8"
