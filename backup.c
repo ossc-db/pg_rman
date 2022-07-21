@@ -1111,7 +1111,6 @@ pg_backup_start(const char *label, bool smooth, pgBackup *backup)
 {
 	PGresult	   *res;
 	const char	   *params[2];
-	// const char	   *params[3];
 	params[0] = label;
 
 	elog(DEBUG, "executing pg_backup_start()");
@@ -1123,13 +1122,16 @@ pg_backup_start(const char *label, bool smooth, pgBackup *backup)
 	 */
 	reconnect();
 
-	/* Assumes PG version >= 8.4 */
-
-	/* 2nd argument is 'fast' (IOW, !smooth) */
+	/* 
+	 * Assumes PG version >= 8.4 
+	 * 
+	 * When second parameter is given as true, 
+	 * it specifies executing pg_backup_start as quickly as possible. 
+	 * This forces an immediate checkpoint which will cause a spike in I/O operations, 
+	 * slowing any concurrently executing queries.
+     */
 	params[1] = smooth ? "false" : "true";
 
-	/* 3rd argument is 'non-exclusive' (assumes PG version >= 9.6) */
-	// params[2] = "false";
 	res = execute("SELECT * from pg_walfile_name_offset(pg_backup_start($1, $2))", 2, params);
 
 	if (backup != NULL)
@@ -1246,10 +1248,6 @@ pg_backup_stop(pgBackup *backup)
 	res = execute("SET client_min_messages = warning;", 0, NULL);
 	PQclear(res);
 
-	/*
-	 * This parameter default is true,pg_backup_stop will wait for WAL
-	 * pg_backup_startto be archived when archiving is enabled.
-	 */
 	params[0] = "true";
 	res = execute("SELECT * FROM pg_backup_stop($1)", 1, params);
 
