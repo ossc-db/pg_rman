@@ -1122,14 +1122,6 @@ pg_backup_start(const char *label, bool smooth, pgBackup *backup)
 	 */
 	reconnect();
 
-	/* 
-	 * Assumes PG version >= 8.4 
-	 * 
-	 * When second parameter is given as true, 
-	 * it specifies executing pg_backup_start as quickly as possible. 
-	 * This forces an immediate checkpoint which will cause a spike in I/O operations, 
-	 * slowing any concurrently executing queries.
-     */
 	params[1] = smooth ? "false" : "true";
 
 	res = execute("SELECT * from pg_walfile_name_offset(pg_backup_start($1, $2))", 2, params);
@@ -1214,7 +1206,7 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
  * either the primary or standby server to successfully archive the last
  * needed WAL segment to be archived.  Returns once that's been done.
  *
- * As of PG version 9.6, pg_backup_stop() returns 2 more fields in addition
+ * As of PG version from 15.0, pg_backup_stop() returns 2 more fields in addition
  * to the backup end LSN: backup_label text and tablespace_map text which
  * need to be written to files in the backup root directory.
  *
