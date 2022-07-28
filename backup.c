@@ -1122,8 +1122,10 @@ pg_backup_start(const char *label, bool smooth, pgBackup *backup)
 	 */
 	reconnect();
 
+	/* 2nd argument is 'fast' (IOW, !smooth) */
 	params[1] = smooth ? "false" : "true";
 
+	/* non-exclusive' mode (assumes PG version >= 15) */
 	res = execute("SELECT * from pg_walfile_name_offset(pg_backup_start($1, $2))", 2, params);
 
 	if (backup != NULL)
@@ -1206,7 +1208,7 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
  * either the primary or standby server to successfully archive the last
  * needed WAL segment to be archived.  Returns once that's been done.
  *
- * As of PG version from 15.0, pg_backup_stop() returns 2 more fields in addition
+ * pg_backup_stop() returns 2 more fields in addition
  * to the backup end LSN: backup_label text and tablespace_map text which
  * need to be written to files in the backup root directory.
  *
@@ -1240,6 +1242,10 @@ pg_backup_stop(pgBackup *backup)
 	res = execute("SET client_min_messages = warning;", 0, NULL);
 	PQclear(res);
 
+	/* 
+	 * PG version < 15, this parameter means exclusive or non-exclusive mode.
+	 * PG version >= 15, this parameter means whether to wait for WAL files to be archived.
+	 */
 	params[0] = "true";
 	res = execute("SELECT * FROM pg_backup_stop($1)", 1, params);
 
