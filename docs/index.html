@@ -384,9 +384,9 @@ The basic usage is the same as when using it with a single master server, so onl
 need attention are described.
 </p>
 
-<p>Archive WALs must also be taken when you take a backup of the standby site.
+<p>Archive WALs must also be taken when you take a backup of the standby-site.
 So, you need to prepare a shared disk and so on so that the archive area of the master can be
-accessed from the standby, or set archive_mode to 'always' at the standby site.
+accessed from the standby, or set archive_mode to 'always' at the standby-site.
 </p>
 
 <p>In the latter case, copy the primary's archive WALs (including history file) 
@@ -415,7 +415,7 @@ to connect standby-site by standby connection options (<code>--standby-host</cod
 <li>the database cluster path of standby-site: /home/postgres/pgdata_sby</li>
 </ul>
 
-<p>Then, the backup from standby site can be done with the below command:</p>
+<p>Then, the backup from standby-site can be done with the below command:</p>
 
 <pre><code>$ pg_rman backup --pgdata=/home/postgres/pgdata_sby --backup-mode=full --host=master --standby-host=localhost --standby-port=5432
 </code></pre>
@@ -763,7 +763,7 @@ $ pg_ctl start
 
 <h2>Standby connection options</h2>
 
-<p>Parameters to connect standby server. They are used only when you get backup from the standby site.</p>
+<p>Parameters to connect standby server. They are used only when you get backup from the standby-site.</p>
 
 <ul>
 <li><strong><code>--standby-host</code></strong>
