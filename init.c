@@ -11,6 +11,7 @@
 
 #include "catalog/pg_control.h"
 #include "common/controldata_utils.h"
+#include "common/logging.h"
 
 #include <unistd.h>
 #include <dirent.h>
@@ -83,6 +84,7 @@ do_init(void)
 	}
 
 	/* get system identifier of the current database.*/
+	pg_logging_init(PROGRAM_NAME);
 	controlFile = get_controlfile(pgdata, &crc_ok);
 
 	if (!crc_ok)
