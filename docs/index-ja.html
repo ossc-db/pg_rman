@@ -670,7 +670,7 @@ $ pg_ctl start
 
 <h2>リストア・オプション</h2>
 
-<p>&ndash;recovery で始まる変数は recovery.conf のパラメータに対応します。詳細は<a href="http://www.postgresql.jp/document/current/html/recovery-config.html">リカバリの設定</a>を参照してください。</p>
+<p>&ndash;&ndash;recovery で始まる変数は、PostgreSQLの<a href="http://www.postgresql.jp/document/current/html/runtime-config-wal.html#RUNTIME-CONFIG-WAL-RECOVERY-TARGET">リカバリターゲット</a>のパラメータに対応します。
 
 <ul>
 <li><strong><code>--recovery-target-timeline TIMELINE</code></strong>
@@ -706,13 +706,22 @@ $ pg_ctl start
 </ul>
 
 
-<p>以下は、リストア時の挙動を指定するパラメータです。</p>
+<p>以下は、リストア時の挙動に関連するパラメータです。</p>
 
 <ul>
 <li><strong><code>--hard-copy</code></strong>
 
 <ul>
 <li>アーカイブ WAL をリストアする際、ファイルをアーカイブ格納領域にコピーします。このオプションを指定しない場合、アーカイブ格納領域には、バックアップカタログ内のアーカイブ WAL へのシンボリックリンクが作られます。</li>
+</ul>
+</li>
+</ul>
+
+<ul>
+<li><strong><code>-G PATH</code> / <code>--pgconf-path=PATH</code></strong>
+
+<ul>
+<li>リストアをする際、リカバリの設定も実施します。<a href="http://www.postgresql.jp/document/current/html/runtime-config-file-locations.html"><code>data_directory</code></a>パラメータなどを利用して、データベースクラスタの保存先と異なる場所にpostgresql.confを保存している場合は、設定ファイルの保存先を絶対パスで指定する必要があります。1.3.14よりも後のバージョンで利用可能です。</p></li>
 </ul>
 </li>
 </ul>
