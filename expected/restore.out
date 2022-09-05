@@ -122,3 +122,8 @@ OK: new value is configured for recovery_target_timeline.
 0
 0
 
+###### RESTORE COMMAND TEST-0018 ######
+###### check to work even if the path of tablespace has $PGDATA ######
+0
+0
+
