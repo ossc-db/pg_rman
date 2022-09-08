@@ -125,6 +125,16 @@ function server_is_running
 	pg_ctl status | grep "server is running" | wc -l
 }
 
+function start_postgres
+{
+	pg_ctl start -w -t 600 > /dev/null 2>&1
+}
+
+function stop_postgres
+{
+	pg_ctl stop -m fast >  /dev/null 2>&1
+}
+
 function pg_is_in_recovery
 {
 	psql -tA -p ${TEST_PGPORT} --no-psqlrc -d pgbench -c "SELECT pg_is_in_recovery();"
