@@ -84,12 +84,12 @@ static pgut_option options[] =
 	/* delete options */
 	{ 'b', 'f', "force"	, &force		, SOURCE_ENV },
 	/* options with only long name (keep-xxx) */
-	{ 'i',  1, "keep-data-generations"	, &keep_data_generations, SOURCE_ENV },
+	{ 'n',  1, "keep-data-generations"	, &keep_data_generations, SOURCE_ENV },
 	{ 'i',  2, "keep-data-days"			, &keep_data_days		, SOURCE_ENV },
 	{ 'i',  3, "keep-arclog-files"		, &keep_arclog_files	, SOURCE_ENV },
 	{ 'i',  4, "keep-arclog-days"		, &keep_arclog_days		, SOURCE_ENV },
-	{ 'i',  5, "keep-srvlog-files"		, &keep_srvlog_files	, SOURCE_ENV },
-	{ 'i',  6, "keep-srvlog-days"		, &keep_srvlog_days		, SOURCE_ENV },
+	{ 'n',  5, "keep-srvlog-files"		, &keep_srvlog_files	, SOURCE_ENV },
+	{ 'n',  6, "keep-srvlog-days"		, &keep_srvlog_days		, SOURCE_ENV },
 	/* restore options */
 	{ 's',  7, "recovery-target-time"		, &target_time		, SOURCE_ENV },
 	{ 's',  8, "recovery-target-xid"		, &target_xid		, SOURCE_ENV },
