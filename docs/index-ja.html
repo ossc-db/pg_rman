@@ -638,7 +638,7 @@ $ pg_ctl start
 <li><strong><code>-Z</code> / <code>--compress-data</code></strong>
 
 <ul>
-<li>zlibを用いてバックアップファイルを圧縮します。省略時は圧縮なしです。</li>
+<li>zlibを用いてバックアップファイルを圧縮します。省略時は圧縮なしです。圧縮時は、設定ファイルやbackup_labelファイルもふくめ、すべてのバックアップファイルが圧縮されます。</li>
 </ul>
 </li>
 <li><strong><code>-C</code> / <code>--smooth-checkpoint</code></strong>
