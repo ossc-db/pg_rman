@@ -625,7 +625,7 @@ $ pg_ctl start
 <li><strong><code>-Z</code> / <code>--compress-data</code></strong>
 
 <ul>
-<li>Compress backup files with zlib if specified.</li>
+<li>Compress backup files with zlib if specified. When the option is omitted, no compression is performed. When compressing, all backup files are compressed, including configuration files and backup_label.</li>
 </ul>
 </li>
 <li><strong><code>-C</code> / <code>--smooth-checkpoint</code></strong>
