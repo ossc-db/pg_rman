@@ -157,7 +157,7 @@ extern FILE *pgut_fopen(const char *path, const char *mode, bool missing_ok);
 #define WARNING		(-1)	/* unexpected by user */
 #define HELP		1		/* show help messages */
 #define ERROR		2		/* ordinal errors */
-#define FATAL		3		/* errors happend by interruption */
+#define FATAL		3		/* errors happened by interruption */
 #define PANIC		4
 
 #define ERROR_SYSTEM			10	/* I/O or system error */

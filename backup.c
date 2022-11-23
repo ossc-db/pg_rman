@@ -538,7 +538,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
  * waits for the minimum WAL location required by this backup to be replayed,
  * and finally performs a restartpoint.
  *
- * Returns false if could not connect to the statndby server, although that
+ * Returns false if could not connect to the standby server, although that
  * currently never happens, because pgut_connect() errors out anyway.
  */
 static bool
@@ -826,7 +826,7 @@ do_backup(pgBackupOption bkupopt)
 	int    ret;
 	char   path[MAXPGPATH];
 
-	/* repack the necesary options */
+	/* repack the necessary options */
 	int	keep_arclog_files = bkupopt.keep_arclog_files;
 	int	keep_arclog_days  = bkupopt.keep_arclog_days;
 	int	keep_srvlog_files = bkupopt.keep_srvlog_files;
