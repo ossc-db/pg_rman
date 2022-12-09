@@ -482,6 +482,54 @@ stop_postgres
 rm -r ${TBLSPC_PATH_HAS_PGDATA_PATH}
 echo ''
 
+echo '###### RESTORE COMMAND TEST-0019 ######'
+echo '###### recovery with hard-copy and without compression option ######'
+init_backup
+pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0012-before.out
+pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+pg_ctl stop -m immediate > /dev/null 2>&1
+pg_rman restore -B ${BACKUP_PATH} --hard-copy --quiet;echo $?
+FLAGS=0
+for FILENAME in `ls ${ARCLOG_PATH}`
+do
+	if [ -L ${ARCLOG_PATH}/${FILENAME} ]; then
+		echo 'NG: hard-copy option does not work well.' ${FILENAME} 'is a symbolic link.'
+		FLAGS=`expr ${FLAGS} + 1`
+	fi
+done
+if [ ${FLAGS} -eq 0 ]; then
+	echo 'OK: hard-copy option works well.'
+else
+	echo 'NG: hard-copy option does not work well.'
+fi
+echo ''
+
+echo '###### RESTORE COMMAND TEST-0020 ######'
+echo '###### recovery without hard-copy and without compression option ######'
+init_backup
+pgbench -p ${TEST_PGPORT} -d pgbench > /dev/null 2>&1
+psql --no-psqlrc -p ${TEST_PGPORT} -d pgbench -c "SELECT * FROM pgbench_branches;" > ${TEST_BASE}/TEST-0012-before.out
+pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman validate -B ${BACKUP_PATH} --quiet
+pg_ctl stop -m immediate > /dev/null 2>&1
+pg_rman restore -B ${BACKUP_PATH} --quiet;echo $?
+FLAGS=0
+for FILENAME in `ls ${ARCLOG_PATH}`
+do
+	if [ ! -L ${ARCLOG_PATH}/${FILENAME} ]; then
+		echo ${FILENAME} 'is not a symbolic link.'
+		FLAGS=`expr ${FLAGS} + 1`
+	fi
+done
+if [ ${FLAGS} -eq 0 ]; then
+	echo 'OK: without hard-copy option works well.'
+else
+	echo 'NG: without hard-copy option does not work well.'
+fi
+echo ''
+
 # clean up the temporal test data
 pg_ctl stop -m immediate > /dev/null 2>&1
 rm -fr ${PGDATA_PATH}

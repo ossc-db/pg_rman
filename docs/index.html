@@ -699,7 +699,8 @@ $ pg_ctl start
 <li><strong><code>--hard-copy</code></strong>
 
 <ul>
-<li>The archive WAL are copied to archive WAL storage area. If not specified, pg_rman makes symbolic link to archive WAL where are in the backup catalog directory.</li>
+<li>The archive WAL are copied to archive WAL storage area. If not specified, pg_rman makes symbolic link to archive WAL where are in the backup catalog directory.
+If the files are compressed using -Z option when to take a backup, the files are always copied to archive WAL storage area after decompressed.</li>
 </ul>
 </li>
 </ul>

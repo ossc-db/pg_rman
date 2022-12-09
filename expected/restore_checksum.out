@@ -105,3 +105,15 @@ OK: hard-copy option works well.
 0
 0
 
+###### RESTORE COMMAND TEST-0019 ######
+###### recovery with hard-copy and without compression option ######
+0
+0
+OK: hard-copy option works well.
+
+###### RESTORE COMMAND TEST-0020 ######
+###### recovery without hard-copy and without compression option ######
+0
+0
+OK: without hard-copy option works well.
+
