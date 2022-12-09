@@ -79,8 +79,8 @@ static pgut_option options[] =
 	{ 'b', 'Z', "compress-data"		    , &current.compress_data	, SOURCE_ENV },
 	{ 'b', 'C', "smooth-checkpoint"	    , &smooth_checkpoint		, SOURCE_ENV },
 	{ 'b', 'F', "full-backup-on-error"	, &current.full_backup_on_error		, SOURCE_ENV },
-	{ 's', 12, "standby-host"	, &standby_host		, SOURCE_ENV },
-	{ 's', 13, "standby-port"	, &standby_port		, SOURCE_ENV },
+	{ 's', 13, "standby-host"	, &standby_host		, SOURCE_ENV },
+	{ 's', 14, "standby-port"	, &standby_port		, SOURCE_ENV },
 	/* delete options */
 	{ 'b', 'f', "force"	, &force		, SOURCE_ENV },
 	/* options with only long name (keep-xxx) */
