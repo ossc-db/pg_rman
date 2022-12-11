@@ -480,6 +480,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 				}
 			}
 			parray_concat(files, snapshot_files);
+			parray_free(snapshot_files);
 		}
 
 		/*
@@ -2074,8 +2075,6 @@ add_files(parray *files, const char *root, bool add_root, bool is_pgdata)
 	}
 	parray_concat(files, list_file);
 
-	if (list_file)
-		parray_walk(list_file, pgFileFree);
 	parray_free(list_file);
 }
 
