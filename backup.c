@@ -2073,6 +2073,10 @@ add_files(parray *files, const char *root, bool add_root, bool is_pgdata)
 		file->is_datafile = true;
 	}
 	parray_concat(files, list_file);
+
+	if (list_file)
+		parray_walk(list_file, pgFileFree);
+	parray_free(list_file);
 }
 
 /*
