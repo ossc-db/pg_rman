@@ -47,6 +47,7 @@ wal_level = hot_standby
 log_directory = '${SRVLOG_PATH}'
 archive_mode = on
 archive_command = 'cp %p ${ARCLOG_PATH}/%f'
+log_checkpoints = off
 EOF
 
 	# start PostgreSQL

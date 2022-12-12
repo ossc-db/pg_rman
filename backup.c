@@ -46,8 +46,8 @@ static parray *do_backup_database(parray *backup_list, pgBackupOption bkupopt);
 static parray *do_backup_arclog(parray *backup_list);
 static parray *do_backup_srvlog(parray *backup_list);
 static void confirm_block_size(const char *name, int blcksz);
-static void pg_start_backup(const char *label, bool smooth, pgBackup *backup);
-static parray *pg_stop_backup(pgBackup *backup);
+static void pg_backup_start(const char *label, bool smooth, pgBackup *backup);
+static parray *pg_backup_stop(pgBackup *backup);
 static void pg_switch_wal(pgBackup *backup);
 static void get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn);
 static void get_xid(PGresult *res, uint32 *xid);
@@ -135,14 +135,14 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 	/* notify start of backup to PostgreSQL server */
 	time2iso(label, lengthof(label), current.start_time);
 	strncat(label, " with pg_rman", lengthof(label) - strlen(label) - 1);
-	pg_start_backup(label, smooth_checkpoint, &current);
+	pg_backup_start(label, smooth_checkpoint, &current);
 
 	/* Execute restartpoint on standby once replay reaches the backup LSN */
 	if (current.is_from_standby && !execute_restartpoint(bkupopt, &current))
 	{
 		/*
 		 * Disconnecting automatically aborts a non-exclusive backup, so no
-		 * need to call pg_stop_backup() do it for us.
+		 * need to call pg_backup_stop() do it for us.
 		 */
 		disconnect();
 		ereport(ERROR,
@@ -266,7 +266,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		 * Notify end of backup and save the backup_label and tablespace_map
 		 * files.
 		 */
-		stop_backup_files = pg_stop_backup(&current);
+		stop_backup_files = pg_backup_stop(&current);
 
 		/* stop_backup_files must be listed in file_database.txt. */
 		files = parray_concat(stop_backup_files, files);
@@ -284,14 +284,14 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		parray		*tblspc_list;	/* list of name of TABLESPACE backup from snapshot */
 		parray		*tblspcmp_list;	/* list of mounted directory of TABLESPACE in snapshot volume */
 		PGresult	*tblspc_res;	/* contain spcname and oid in TABLESPACE */
-		parray		*stop_backup_files;	/* list of files that pg_stop_backup() wrote */
+		parray		*stop_backup_files;	/* list of files that pg_backup_stop() wrote */
 
 		/* if backup is from standby, snapshot backup is unsupported */
 		if (current.is_from_standby)
 		{
 			/*
 			 * Disconnecting automatically aborts a non-exclusive backup, so no
-			 * need to call pg_stop_backup() do it for us.
+			 * need to call pg_backup_stop() do it for us.
 			 */
 			disconnect();
 			ereport(ERROR,
@@ -384,7 +384,7 @@ do_backup_database(parray *backup_list, pgBackupOption bkupopt)
 		 * Notify end of backup and write backup_label and tablespace_map
 		 * files to backup destination directory.
 		 */
-		stop_backup_files = pg_stop_backup(&current);
+		stop_backup_files = pg_backup_stop(&current);
 		files = parray_concat(stop_backup_files, files);
 
 		/* create file list of non-snapshot objects */
@@ -569,7 +569,7 @@ execute_restartpoint(pgBackupOption bkupopt, pgBackup *backup)
 
 		/*
 		 * Wait for standby server to replay WAL up to the LSN returned by
-		 * pg_start_backup()
+		 * pg_backup_start()
 		 */
 		res = execute("SELECT * FROM pg_last_wal_replay_lsn()", 0, NULL);
 		sscanf(PQgetvalue(res, 0, 0), "%X/%X", &xlogid, &xrecoff);
@@ -647,7 +647,7 @@ do_backup_arclog(parray *backup_list)
 	files = parray_new();
 	dir_list_file(files, arclog_path, NULL, true, false);
 
-	/* remove WALs archived after pg_stop_backup()/pg_switch_wal() */
+	/* remove WALs archived after pg_backup_stop()/pg_switch_wal() */
 	xlog_fname(last_wal, lengthof(last_wal), current.tli, &current.stop_lsn,
 			   wal_segment_size);
 	for (i = 0; i < parray_num(files); i++)
@@ -922,7 +922,7 @@ do_backup(pgBackupOption bkupopt)
 
 	/* initialize backup result */
 	current.status = BACKUP_STATUS_RUNNING;
-	current.tli = 0;		/* get from result of pg_start_backup() */
+	current.tli = 0;		/* get from result of pg_backup_start() */
 	current.start_lsn = current.stop_lsn = (XLogRecPtr) 0;
 	current.start_time = time(NULL);
 	current.end_time = (time_t) 0;
@@ -1107,13 +1107,13 @@ confirm_block_size(const char *name, int blcksz)
  * case of taking a backup from standby.
  */
 static void
-pg_start_backup(const char *label, bool smooth, pgBackup *backup)
+pg_backup_start(const char *label, bool smooth, pgBackup *backup)
 {
 	PGresult	   *res;
-	const char	   *params[3];
+	const char	   *params[2];
 	params[0] = label;
 
-	elog(DEBUG, "executing pg_start_backup()");
+	elog(DEBUG, "executing pg_backup_start()");
 
 	/*
 	 * Establish new connection to send backup control commands.  The same
@@ -1122,14 +1122,11 @@ pg_start_backup(const char *label, bool smooth, pgBackup *backup)
 	 */
 	reconnect();
 
-	/* Assumes PG version >= 8.4 */
-
 	/* 2nd argument is 'fast' (IOW, !smooth) */
 	params[1] = smooth ? "false" : "true";
 
-	/* 3rd argument is 'non-exclusive' (assumes PG version >= 9.6) */
-	params[2] = "false";
-	res = execute("SELECT * from pg_walfile_name_offset(pg_start_backup($1, $2, $3))", 3, params);
+	/* non-exclusive' mode (assumes PG version >= 15) */
+	res = execute("SELECT * from pg_walfile_name_offset(pg_backup_start($1, $2))", 2, params);
 
 	if (backup != NULL)
 		get_lsn(res, &backup->tli, &backup->start_lsn);
@@ -1207,11 +1204,11 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
 /*
  * Notify the end of backup to PostgreSQL server.
  *
- * Contacts the primary server and issues pg_stop_backup(), then waits for
+ * Contacts the primary server and issues pg_backup_stop(), then waits for
  * either the primary or standby server to successfully archive the last
  * needed WAL segment to be archived.  Returns once that's been done.
  *
- * As of PG version 9.6, pg_stop_backup() returns 2 more fields in addition
+ * pg_backup_stop() returns 2 more fields in addition
  * to the backup end LSN: backup_label text and tablespace_map text which
  * need to be written to files in the backup root directory.
  *
@@ -1219,7 +1216,7 @@ wait_for_archive(pgBackup *backup, const char *sql, int nParams,
  * it to the backup file list.
  */
 static parray *
-pg_stop_backup(pgBackup *backup)
+pg_backup_stop(pgBackup *backup)
 {
 	parray		   *result = parray_new();
 	pgFile		   *file;
@@ -1231,12 +1228,12 @@ pg_stop_backup(pgBackup *backup)
 	int				tblspcmap_len;
 	const char	   *params[1];
 
-	elog(DEBUG, "executing pg_stop_backup()");
+	elog(DEBUG, "executing pg_backup_stop()");
 
 	/*
 	 * Non-exclusive backup requires to use same connection as the one
-	 * used to issue pg_start_backup().  Remember we did not disconnect
-	 * in pg_start_backup() nor did we lose our connection when issuing
+	 * used to issue pg_backup_start().  Remember we did not disconnect
+	 * in pg_backup_start() nor did we lose our connection when issuing
 	 * commands to standby.
 	 */
 	Assert(connection != NULL);
@@ -1245,13 +1242,14 @@ pg_stop_backup(pgBackup *backup)
 	res = execute("SET client_min_messages = warning;", 0, NULL);
 	PQclear(res);
 
-	params[0] = "false";
-	res = execute("SELECT * FROM pg_stop_backup($1)", 1, params);
+	/* wait for WAL files to be archived */
+	params[0] = "true";
+	res = execute("SELECT * FROM pg_backup_stop($1)", 1, params);
 
 	if (res == NULL || PQntuples(res) != 1 || PQnfields(res) != 3)
 		ereport(ERROR,
 			(errcode(ERROR_PG_COMMAND),
-			 errmsg("result of pg_stop_backup($1) is invalid: %s",
+			 errmsg("result of pg_backup_stop($1) is invalid: %s",
 				PQerrorMessage(connection))));
 
 	backup_lsn = PQgetvalue(res, 0, 0);
@@ -1313,7 +1311,7 @@ get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
 			 errmsg("result of pg_walfile_name_offset() is invalid: %s",
 				PQerrorMessage(connection))));
 
-	/* get TimeLineID, LSN from result of pg_stop_backup() */
+	/* get TimeLineID, LSN from result of pg_backup_stop() */
 	if (sscanf(PQgetvalue(res, 0, 0), "%08X%08X%08X",
 			timeline, &xlogid, &off_upper) != 3 ||
 		sscanf(PQgetvalue(res, 0, 1), "%u", &xrecoff) != 1)
@@ -1332,7 +1330,7 @@ get_lsn(PGresult *res, TimeLineID *timeline, XLogRecPtr *lsn)
 }
 
 /*
- * Get XID from result of txid_current() after pg_stop_backup().
+ * Get XID from result of txid_current() after pg_backup_stop().
  */
 static void
 get_xid(PGresult *res, uint32 *xid)
