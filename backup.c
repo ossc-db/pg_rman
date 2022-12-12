@@ -1242,10 +1242,7 @@ pg_backup_stop(pgBackup *backup)
 	res = execute("SET client_min_messages = warning;", 0, NULL);
 	PQclear(res);
 
-	/* 
-	 * PG version < 15, this parameter means exclusive or non-exclusive mode.
-	 * PG version >= 15, this parameter means whether to wait for WAL files to be archived.
-	 */
+	/* wait for WAL files to be archived */
 	params[0] = "true";
 	res = execute("SELECT * FROM pg_backup_stop($1)", 1, params);
 
