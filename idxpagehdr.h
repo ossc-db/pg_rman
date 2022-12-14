@@ -13,7 +13,7 @@
  * file!!!  Although, incompatible changes to the definitions in this file
  * will be rare.
  *
- * Copyright (c) 2009-2021, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+ * Copyright (c) 2009-2022, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
  *
  *-------------------------------------------------------------------------
  */
