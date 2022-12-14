@@ -7,20 +7,6 @@ and PITR that is as easy as pg_dump. Also, it maintains a backup catalog
 per database cluster. Users can maintain old backups including archive
 logs with one command.
 
-Branches
---------
-There are several branches within pg_rman repository in order to work with
-different PostgreSQL server versions without introducing server version
-check code blocks.  Please choose a branch to match the PostgreSQL version
-you will be building pg_rman against.
-
-* master : branch for PostgreSQL 15 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_15_STABLE : branch for PostgreSQL 15 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_14_STABLE : branch for PostgreSQL 14 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_14_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_13_STABLE : branch for PostgreSQL 13 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_13_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_12_STABLE : branch for PostgreSQL 12 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_12_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_11_STABLE : branch for PostgreSQL 11 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_11_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-
 How to use
 ----------
 
