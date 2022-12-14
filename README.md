@@ -65,7 +65,7 @@ recovery_target_timeline = '1'
 $ pg_ctl start
 ````
 
-After to PostgreSQL12, note that pg_rman itself added PostgreSQL PITR related options to `postgresql.conf` file and generates the `recovery.signal` file in sub directory of PGBASE.
+After to PostgreSQL12, note that pg_rman itself added PostgreSQL PITR related options to `postgresql.conf` file and generates the `recovery.signal` file in $PGDATA.
 
 To see more options to use with each command, run `pg_rman --help`.
 
