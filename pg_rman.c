@@ -14,7 +14,7 @@
 #include <time.h>
 #include <sys/stat.h>
 
-const char *PROGRAM_VERSION	= "1.3.14";
+const char *PROGRAM_VERSION	= "1.3.15";
 const char *PROGRAM_URL		= "http://github.com/ossc-db/pg_rman";
 const char *PROGRAM_ISSUES	= "http://github.com/ossc-db/pg_rman/issues";
 
