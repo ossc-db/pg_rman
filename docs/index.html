@@ -304,6 +304,8 @@ and <code>$PGDATA/pg_rman_recovery.conf</code>.
 
 <p>When specifying <code>--recovery-target-time</code>, make sure to specify a timestamp greater than (or equal to) the EndTime of the full backup that you want to use as the base.</p>
 
+<p>If the archive WALs are not compressed at the time of backup, archive WALs that do not exist in the archive storage area will be restored as symbolic links. When used in combination with peripheral tools (ex. PG-REX) that are not designed for this behavior, please specify the option (<code>--hard-copy</code>) to perform physical copying.</p>
+
 <h2>Delete backups</h2>
 
 <p>The delete command deletes all backup files before the specified date not required by other incremental backups. Incremental backups depend on earlier validated full backup.</p>
