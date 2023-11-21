@@ -121,17 +121,17 @@ function setup_standby()
 port = ${TEST_SBYPGPORT}
 hot_standby = on
 logging_collector = on
-wal_level = hot_standby
+wal_level = replica
 EOF
 	touch ${SBYDATA_PATH}/standby.signal
 
 	cat >> ${SBYDATA_PATH}/postgresql.conf << EOF
 restore_command = 'cp "${ARCLOG_PATH}/%f" "%p"'
-primary_conninfo = 'port=${TEST_PGPORT} application_name=slave'
+primary_conninfo = 'port=${TEST_PGPORT} application_name=standby'
 EOF
 
 	cat >> ${PGDATA_PATH}/postgresql.conf << EOF
-synchronous_standby_names = 'slave'
+synchronous_standby_names = 'standby'
 EOF
 	pg_ctl -D ${PGDATA_PATH} reload > /dev/null 2>&1
 	pg_ctl -D ${SBYDATA_PATH} start -w -t 600 > /dev/null 2>&1
