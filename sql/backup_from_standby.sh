@@ -63,10 +63,8 @@ function cleanup()
     rm -fr ${BACKUP_PATH}
     rm -fr ${ARCLOG_PATH}
     rm -fr ${SRVLOG_PATH}
-    rm -fr ${TBLSPC_PATH}
     mkdir -p ${ARCLOG_PATH}
     mkdir -p ${SRVLOG_PATH}
-    mkdir -p ${TBLSPC_PATH}
 }
 
 function init_backup()
@@ -101,10 +99,8 @@ EOF
 
     # start PostgreSQL
     pg_ctl start -D ${PGDATA_PATH} -w -t 300 > /dev/null 2>&1
-	mkdir -p ${TBLSPC_PATH}/pgbench	
 	psql --no-psqlrc -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1 << EOF
-CREATE TABLESPACE pgbench LOCATION '${TBLSPC_PATH}/pgbench';
-CREATE DATABASE pgbench TABLESPACE = pgbench;
+CREATE DATABASE pgbench;
 EOF
 
     pgbench -i -s $SCALE -p ${TEST_PGPORT} -d pgbench > ${TEST_BASE}/pgbench.log 2>&1
@@ -119,32 +115,23 @@ function init_catalog()
 
 function setup_standby()
 {
-	psql --no-psqlrc -p ${TEST_PGPORT} -d postgres -c "SELECT pg_start_backup('sby-bkp-test', true)"  > /dev/null 2>&1
-
-	rm -rf ${SBYDATA_PATH}
-	cp -r ${PGDATA_PATH} ${SBYDATA_PATH}
-	rm ${SBYDATA_PATH}/postmaster.*
-
-	psql --no-psqlrc -p ${TEST_PGPORT} -d postgres > /dev/null 2>&1 << EOF
-SELECT pg_stop_backup();
-EOF
-
+	pg_basebackup -d "dbname=pgbench host=localhost port=${TEST_PGPORT}" -D ${SBYDATA_PATH}  --checkpoint=fast > /dev/null 2>&1
 	cp ${SBYDATA_PATH}/postgresql.conf_org ${SBYDATA_PATH}/postgresql.conf
 	cat >> ${SBYDATA_PATH}/postgresql.conf << EOF
 port = ${TEST_SBYPGPORT}
 hot_standby = on
 logging_collector = on
-wal_level = hot_standby
+wal_level = replica
 EOF
 
 	cat >> ${SBYDATA_PATH}/recovery.conf << EOF
 standby_mode = on
 restore_command = 'cp "${ARCLOG_PATH}/%f" "%p"'
-primary_conninfo = 'port=${TEST_PGPORT} application_name=slave'
+primary_conninfo = 'port=${TEST_PGPORT} application_name=standby'
 EOF
 
 	cat >> ${PGDATA_PATH}/postgresql.conf << EOF
-synchronous_standby_names = 'slave'
+synchronous_standby_names = 'standby'
 EOF
 	pg_ctl -D ${PGDATA_PATH} reload > /dev/null 2>&1
 	pg_ctl -D ${SBYDATA_PATH} start -w -t 600 > /dev/null 2>&1
@@ -203,4 +190,4 @@ rm -rf ${SBYDATA_PATH}
 rm -fr ${BACKUP_PATH}
 rm -fr ${ARCLOG_PATH}
 rm -fr ${SRVLOG_PATH}
-rm -fr ${TBLSPC_PATH}
+
