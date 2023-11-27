@@ -9,6 +9,7 @@ on:
       - REL_14_STABLE
       - REL_13_STABLE
       - REL_12_STABLE
+      - REL_11_STABLE
   pull_request:
     branches:
       - master
@@ -17,6 +18,7 @@ on:
       - REL_14_STABLE
       - REL_13_STABLE
       - REL_12_STABLE
+      - REL_11_STABLE
   schedule:
     - cron: "0 1 * * SUN"      # only master
 
