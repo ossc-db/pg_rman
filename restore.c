@@ -1230,9 +1230,8 @@ readTimeLineHistory(TimeLineID targetTLI)
 	elog(DEBUG, "the calculated branch history is as below;");
 	for (i = 0; i < parray_num(result); i++)
 	{
-		pgTimeLine *timeline2 = parray_get(result, i);
 		elog(DEBUG, "stage %d: timeline ID = %d",
-			(int)parray_num(result) - i, timeline2->tli);
+			(int)parray_num(result) - i, ((pgTimeLine *)(parray_get(result,i)))->tli);
 	}
 
 	return result;
