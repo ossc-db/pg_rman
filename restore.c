@@ -270,7 +270,7 @@ base_backup_found:
 	 */
 	if (!check)
 	{
-		int i;
+		int x;
 
 		if (verbose)
 			printf(_("----------------------------------------\n"));
@@ -280,7 +280,7 @@ base_backup_found:
 		dir_list_file(files, pgdata, NULL, false, false);
 		parray_qsort(files, pgFileComparePathDesc);	/* delete from leaf */
 
-		for (i = 0; i < parray_num(files); i++)
+		for (x = 0; x < parray_num(files); x++)
 		{
 			pgFile *file = (pgFile *) parray_get(files, i);
 			pgFileDelete(file);
@@ -1230,9 +1230,8 @@ readTimeLineHistory(TimeLineID targetTLI)
 	elog(DEBUG, "the calculated branch history is as below;");
 	for (i = 0; i < parray_num(result); i++)
 	{
-		pgTimeLine *timeline = parray_get(result, i);
 		elog(DEBUG, "stage %d: timeline ID = %d",
-			(int)parray_num(result) - i, timeline->tli);
+			(int)parray_num(result) - i, ((pgTimeLine *)(parray_get(result,i)))->tli);
 	}
 
 	return result;

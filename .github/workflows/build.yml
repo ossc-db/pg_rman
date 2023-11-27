@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - REL_16_STABLE
       - REL_15_STABLE
       - REL_14_STABLE
       - REL_13_STABLE
@@ -12,6 +13,7 @@ on:
   pull_request:
     branches:
       - master
+      - REL_16_STABLE
       - REL_15_STABLE
       - REL_14_STABLE
       - REL_13_STABLE
@@ -41,11 +43,11 @@ jobs:
       shell: bash -xe {0}
       run: |
         declare -A versions=(
-          ["master"]="15.1"
-          ["REL_15_STABLE"]="15.1"
-          ["REL_14_STABLE"]="14.6"
-          ["REL_13_STABLE"]="13.9"
-          ["REL_12_STABLE"]="12.13"
+          ["master"]="16.1"
+          ["REL_15_STABLE"]="15.5"
+          ["REL_14_STABLE"]="14.10"
+          ["REL_13_STABLE"]="13.13"
+          ["REL_12_STABLE"]="12.17"
           ["REL_11_STABLE"]="11.18"
         )
         [ -z "${versions[${{ env.BRANCH }}]}" ] && exit 1         # check if the key exists

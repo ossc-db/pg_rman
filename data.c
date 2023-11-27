@@ -217,8 +217,8 @@ parse_page(int blkno,
 	 */
 	*lsn = PageXLogRecPtrGet(header->pd_lsn);
 
-	if (PageGetPageSize(header) == BLCKSZ &&
-		PageGetPageLayoutVersion(header) == PG_PAGE_LAYOUT_VERSION &&
+	if (PageGetPageSize(pagedata) == BLCKSZ &&
+		PageGetPageLayoutVersion(pagedata) == PG_PAGE_LAYOUT_VERSION &&
 		(header->pd_flags & ~PD_VALID_FLAG_BITS) == 0 &&
 		header->pd_lower >= SizeOfPageHeaderData &&
 		header->pd_lower <= header->pd_upper &&
@@ -270,7 +270,7 @@ backup_data_file(const char *from_root,
 	BlockNumber			blknum;
 	BlockNumber			segno;
 	size_t				read_len;
-	int					errno_tmp;
+	int					errno_tmp = 0;
 	pg_crc32c			crc;
 #ifdef HAVE_LIBZ
 	z_stream			z;
@@ -308,7 +308,7 @@ backup_data_file(const char *from_root,
 	out = fopen(to_path, "w");
 	if (out == NULL)
 	{
-		int errno_tmp = errno;
+		errno_tmp = errno;
 		fclose(in);
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
@@ -417,7 +417,7 @@ backup_data_file(const char *from_root,
 				fwrite(page.data, 1, header.hole_offset, out) != header.hole_offset ||
 				fwrite(page.data + upper_offset, 1, upper_length, out) != upper_length)
 			{
-				int errno_tmp = errno;
+				errno_tmp = errno;
 				/* oops */
 				fclose(in);
 				fclose(out);
@@ -474,7 +474,7 @@ backup_data_file(const char *from_root,
 			{
 				if (fwrite(&header, 1, sizeof(header), out) != sizeof(header))
 				{
-					int errno_tmp = errno;
+					errno_tmp = errno;
 					/* oops */
 					fclose(in);
 					fclose(out);
@@ -498,7 +498,7 @@ backup_data_file(const char *from_root,
 		{
 			if (fwrite(page.data, 1, read_len, out) != read_len)
 			{
-				int errno_tmp = errno;
+				errno_tmp = errno;
 				/* oops */
 				fclose(in);
 				fclose(out);
@@ -539,7 +539,7 @@ backup_data_file(const char *from_root,
 		{
 		    if (fwrite(&header, 1, sizeof(header), out) != sizeof(header))
 			{
-				int errno_tmp = errno;
+				errno_tmp = errno;
 				/* oops */
 				fclose(in);
 				fclose(out);
@@ -588,7 +588,7 @@ backup_data_file(const char *from_root,
 	 */
 	if (!check && chmod(to_path, FILE_PERMISSION) == -1)
 	{
-		int errno_tmp = errno;
+		errno_tmp = errno;
 
 		fclose(in);
 		fclose(out);
@@ -879,7 +879,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 	FILE	   *in;
 	FILE	   *out;
 	size_t		read_len = 0;
-	int			errno_tmp;
+	int			errno_tmp = 0;
 	char		buf[8192];
 	struct stat	st;
 	pg_crc32c	crc;
@@ -921,7 +921,7 @@ copy_file(const char *from_root, const char *to_root, pgFile *file,
 	out = fopen(to_path, "w");
 	if (out == NULL)
 	{
-		int errno_tmp = errno;
+		errno_tmp = errno;
 		fclose(in);
 		ereport(ERROR,
 			(errcode(ERROR_SYSTEM),
