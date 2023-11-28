@@ -64,6 +64,7 @@ $ cat data/pg_rman_recovery.conf
 # added by pg_rman 1.3.16
 restore_command = 'cp /home/postgres/arclog/%f %p'
 recovery_target_timeline = '1'
+$ pg_ctl start
 ````
 
 After to PostgreSQL12, note that pg_rman itself added PostgreSQL PITR related options to `postgresql.conf` file and generates the `recovery.signal` file in $PGDATA.
