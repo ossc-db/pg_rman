@@ -44,6 +44,7 @@ jobs:
       run: |
         declare -A versions=(
           ["master"]="16.1"
+          ["REL_16_STABLE"]="16.1"
           ["REL_15_STABLE"]="15.5"
           ["REL_14_STABLE"]="14.10"
           ["REL_13_STABLE"]="13.13"
