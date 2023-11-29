@@ -173,27 +173,27 @@ $ pg_rman validate     # 未検証のすべてのバックアップを検証
 </p>
 
 <pre><code>$ pg_rman show
- =====================================================================
- StartTime            EndTime              Mode    Size   TLI  Status
- =====================================================================
- 2015-03-27 11:43:31  2015-03-27 11:43:32  INCR    54kB     1  OK
- 2015-03-27 11:43:19  2015-03-27 11:43:20  INCR    69kB     1  OK
- 2015-03-27 11:43:04  2015-03-27 11:43:06  INCR   151kB     1  OK
- 2015-03-27 11:42:56  2015-03-27 11:42:57  INCR    96kB     1  OK
- 2015-03-27 11:34:55  2015-03-27 11:34:58  FULL  5312kB     1  OK
+=====================================================================
+ StartTime           EndTime              Mode    Size   TLI  Status
+=====================================================================
+2023-11-28 12:13:24  2023-11-28 12:13:26  FULL   375MB     1  OK
+2023-11-28 12:13:15  2023-11-28 12:13:17  INCR    33MB     1  OK
+2023-11-28 12:12:48  2023-11-28 12:12:50  INCR    33MB     1  OK
+2023-11-28 12:12:36  2023-11-28 12:12:38  INCR    33MB     1  OK
+2023-11-28 12:11:51  2023-11-28 12:12:00  FULL  3366MB     1  OK
 </code></pre>
 
 <p><code>show detail</code> コマンドにて、各バックアップのより詳細な情報を一覧表示できます。</p>
 
 <pre><code>$ pg_rman show detail
- ======================================================================================================================
- StartTime            EndTime              Mode    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status
- ======================================================================================================================
- 2015-03-27 11:43:31  2015-03-27 11:43:32  INCR    16kB    33MB    ----    54kB        true       1          0  OK
- 2015-03-27 11:43:19  2015-03-27 11:43:20  INCR   148kB    33MB    ----    69kB        true       1          0  OK
- 2015-03-27 11:43:04  2015-03-27 11:43:06  INCR   173kB    83MB    ----   151kB        true       1          0  OK
- 2015-03-27 11:42:56  2015-03-27 11:42:57  INCR   173kB    50MB    ----    96kB        true       1          0  OK
- 2015-03-27 11:34:55  2015-03-27 11:34:58  FULL    28MB    83MB    ----  5312kB        true       1          0  OK
+======================================================================================================================
+ StartTime           EndTime              Mode    Data  ArcLog  SrvLog   Total  Compressed  CurTLI  ParentTLI  Status
+======================================================================================================================
+2023-11-28 12:13:24  2023-11-28 12:13:26  FULL   369MB    67MB    66kB   375MB       false       1          0  OK
+2023-11-28 12:13:15  2023-11-28 12:13:17  INCR   297kB    33MB    63kB    33MB       false       1          0  OK
+2023-11-28 12:12:48  2023-11-28 12:12:50  INCR   297kB    33MB    60kB    33MB       false       1          0  OK
+2023-11-28 12:12:36  2023-11-28 12:12:38  INCR   297kB    33MB    57kB    33MB       false       1          0  OK
+2023-11-28 12:11:51  2023-11-28 12:12:00  FULL   369MB  3053MB  3909kB  3366MB       false       1          0  OK
 </code></pre>
 
 <p>ここで、表示される列の意味は以下の通りです。</p>
@@ -231,25 +231,25 @@ $ pg_rman validate     # 未検証のすべてのバックアップを検証
 
 <p>個別のバックアップについての詳細な情報は、「Start」に表示される日付を <code>show</code> コマンドに指定することで表示できます。</p>
 
-<pre><code>$ pg_rman show '2015-03-10 13:25:05'
+<pre><code>$ pg_rman show '2023-11-28 12:14:03'
 # configuration
 BACKUP_MODE=FULL
 FULL_BACKUP_ON_ERROR=false
 WITH_SERVERLOG=true
-COMPRESS_DATA=true
+COMPRESS_DATA=false
 # result
 TIMELINEID=1
-START_LSN=0/32000028
-STOP_LSN=0/320000f8
-START_TIME='2015-03-10 13:25:05'
-END_TIME='2015-03-10 13:25:13'
-RECOVERY_XID=1836
-RECOVERY_TIME='2015-03-10 13:25:08'
-TOTAL_DATA_BYTES=28920624
-READ_DATA_BYTES=28920624
-READ_ARCLOG_BYTES=838868754
-READ_SRVLOG_BYTES=150
-WRITE_BYTES=6549216
+START_LSN=0/c2000028
+STOP_LSN=0/c2000ee0
+START_TIME='2023-11-28 12:14:03'
+END_TIME='2023-11-28 12:14:05'
+RECOVERY_XID=22719
+RECOVERY_TIME='2023-11-28 12:14:05'
+TOTAL_DATA_BYTES=369864268
+READ_DATA_BYTES=369864034
+READ_ARCLOG_BYTES=33554780
+READ_SRVLOG_BYTES=68692
+WRITE_BYTES=342403000
 BLOCK_SIZE=8192
 XLOG_BLOCK_SIZE=8192
 STATUS=OK
@@ -297,9 +297,9 @@ recovery_target_timeline = '1'
 
 # PostgreSQLが12以上、pg_rmanが1.3.12よりも後のバージョンの場合
 $ tail -n 1 $PGDATA/postgresql.conf
-include = 'pg_rman_recovery.conf' # added by pg_rman 1.3.13
+include = 'pg_rman_recovery.conf' # added by pg_rman 1.3.16
 $ cat $PGDATA/pg_rman_recovery.conf
-# added by pg_rman 1.3.13
+# added by pg_rman 1.3.16
 restore_command = 'cp /home/postgres/arclog/%f %p'
 recovery_target_timeline = '1'
 </code></pre>
@@ -327,33 +327,31 @@ pg_control が存在しない場合は、リストアのベースとなる全体
 =====================================================================
  StartTime           EndTime              Mode    Size   TLI  Status
 =====================================================================
-2015-07-30 13:31:08  2015-07-30 13:31:10  FULL    14MB    15  OK
-2015-07-30 13:30:37  2015-07-30 13:30:38  ARCH    53kB    15  OK
-2015-07-30 13:30:32  2015-07-30 13:30:33  ARCH    26kB    15  OK
-2015-07-30 13:30:11  2015-07-30 13:30:13  FULL    14MB    15  OK
-2015-07-30 13:28:10  2015-07-30 13:28:11  INCR   120kB    14  OK
-2015-07-30 13:27:45  2015-07-30 13:27:46  INCR    54kB    14  OK
-2015-07-30 13:27:32  2015-07-30 13:27:33  INCR    54kB    14  OK
-2015-07-30 13:27:25  2015-07-30 13:27:26  INCR    54kB    14  OK
-2015-07-30 13:24:02  2015-07-30 13:24:04  FULL    14MB    14  OK
+2023-11-28 12:14:03  2023-11-28 12:14:05  FULL   342MB     1  OK
+2023-11-28 12:13:56  2023-11-28 12:13:57  ARCH    16MB     1  OK
+2023-11-28 12:13:52  2023-11-28 12:13:53  ARCH    16MB     1  OK
+2023-11-28 12:13:24  2023-11-28 12:13:26  FULL   375MB     1  OK
+2023-11-28 12:13:15  2023-11-28 12:13:17  INCR    33MB     1  OK
+2023-11-28 12:12:48  2023-11-28 12:12:50  INCR    33MB     1  OK
+2023-11-28 12:12:36  2023-11-28 12:12:38  INCR    33MB     1  OK
+2023-11-28 12:11:51  2023-11-28 12:12:00  FULL  3366MB     1  OK
 
-$ pg_rman delete 2015-07-30 13:30:30
-WARNING: cannot delete backup with start time "2015-07-30 13:30:11"
+$ pg_rman delete 2023-11-28 12:13:30
+WARNING: cannot delete backup with start time "2023-11-28 12:13:24"
 DETAIL: This is the latest full backup necessary for successful recovery.
-INFO: delete the backup with start time: "2015-07-30 13:28:10"
-INFO: delete the backup with start time: "2015-07-30 13:27:45"
-INFO: delete the backup with start time: "2015-07-30 13:27:32"
-INFO: delete the backup with start time: "2015-07-30 13:27:25"
-INFO: delete the backup with start time: "2015-07-30 13:24:02"
+INFO: delete the backup with start time: "2023-11-28 12:13:15"
+INFO: delete the backup with start time: "2023-11-28 12:12:48"
+INFO: delete the backup with start time: "2023-11-28 12:12:36"
+INFO: delete the backup with start time: "2023-11-28 12:11:51"
  
 $ pg_rman show
 =====================================================================
  StartTime           EndTime              Mode    Size   TLI  Status
 =====================================================================
-2015-07-30 13:31:08  2015-07-30 13:31:10  FULL    14MB    15  OK
-2015-07-30 13:30:37  2015-07-30 13:30:38  ARCH    53kB    15  OK
-2015-07-30 13:30:32  2015-07-30 13:30:33  ARCH    26kB    15  OK
-2015-07-30 13:30:11  2015-07-30 13:30:13  FULL    14MB    15  OK
+2023-11-28 12:14:03  2023-11-28 12:14:05  FULL   342MB     1  OK
+2023-11-28 12:13:56  2023-11-28 12:13:57  ARCH    16MB     1  OK
+2023-11-28 12:13:52  2023-11-28 12:13:53  ARCH    16MB     1  OK
+2023-11-28 12:13:24  2023-11-28 12:13:26  FULL   375MB     1  OK
 </code></pre>
 
 <h3>削除済みバックアップの消去</h3>
@@ -363,31 +361,29 @@ $ pg_rman show
 =====================================================================
  StartTime           EndTime              Mode    Size   TLI  Status
 =====================================================================
-2015-07-30 13:31:08  2015-07-30 13:31:10  FULL    14MB    15  OK
-2015-07-30 13:30:37  2015-07-30 13:30:38  ARCH    53kB    15  OK
-2015-07-30 13:30:32  2015-07-30 13:30:33  ARCH    26kB    15  OK
-2015-07-30 13:30:11  2015-07-30 13:30:13  FULL    14MB    15  OK
-2015-07-30 13:28:10  2015-07-30 13:28:11  INCR   120kB    14  DELETED
-2015-07-30 13:27:45  2015-07-30 13:27:46  INCR    54kB    14  DELETED
-2015-07-30 13:27:32  2015-07-30 13:27:33  INCR    54kB    14  DELETED
-2015-07-30 13:27:25  2015-07-30 13:27:26  INCR    54kB    14  DELETED
-2015-07-30 13:24:02  2015-07-30 13:24:04  FULL    14MB    14  DELETED
+2023-11-28 12:14:03  2023-11-28 12:14:05  FULL   342MB     1  OK
+2023-11-28 12:13:56  2023-11-28 12:13:57  ARCH    16MB     1  OK
+2023-11-28 12:13:52  2023-11-28 12:13:53  ARCH    16MB     1  OK
+2023-11-28 12:13:24  2023-11-28 12:13:26  FULL   375MB     1  OK
+2023-11-28 12:13:15  2023-11-28 12:13:17  INCR    33MB     1  DELETED
+2023-11-28 12:12:48  2023-11-28 12:12:50  INCR    33MB     1  DELETED
+2023-11-28 12:12:36  2023-11-28 12:12:38  INCR    33MB     1  DELETED
+2023-11-28 12:11:51  2023-11-28 12:12:00  FULL  3366MB     1  DELETED
 
 $ pg_rman purge
-INFO: DELETED backup "2015-07-30 13:28:10" is purged
-INFO: DELETED backup "2015-07-30 13:27:45" is purged
-INFO: DELETED backup "2015-07-30 13:27:32" is purged
-INFO: DELETED backup "2015-07-30 13:27:25" is purged
-INFO: DELETED backup "2015-07-30 13:24:02" is purged
+INFO: DELETED backup "2023-11-28 12:13:15" is purged
+INFO: DELETED backup "2023-11-28 12:12:48" is purged
+INFO: DELETED backup "2023-11-28 12:12:36" is purged
+INFO: DELETED backup "2023-11-28 12:11:51" is purged
 
 $ pg_rman show -a
 =====================================================================
  StartTime           EndTime              Mode    Size   TLI  Status
 =====================================================================
-2015-07-30 13:31:08  2015-07-30 13:31:10  FULL    14MB    15  OK
-2015-07-30 13:30:37  2015-07-30 13:30:38  ARCH    53kB    15  OK
-2015-07-30 13:30:32  2015-07-30 13:30:33  ARCH    26kB    15  OK
-2015-07-30 13:30:11  2015-07-30 13:30:13  FULL    14MB    15  OK
+2023-11-28 12:14:03  2023-11-28 12:14:05  FULL   342MB     1  OK
+2023-11-28 12:13:56  2023-11-28 12:13:57  ARCH    16MB     1  OK
+2023-11-28 12:13:52  2023-11-28 12:13:53  ARCH    16MB     1  OK
+2023-11-28 12:13:24  2023-11-28 12:13:26  FULL   375MB     1  OK
 </code></pre>
 
 <h3>スタンバイサイトでのバックアップ</h3>
@@ -496,30 +492,27 @@ KEEP_SRVLOG_FILES = 10
 
 <pre><code>$ pg_rman backup --backup-mode=full --with-serverlog --progress
 INFO: copying database files
-Processed 1760 of 1760 files, skipped 0
-NOTICE:  pg_stop_backup complete, all required WAL segments have been archived
+Processed 2049 of 2049 files, skipped 0
 INFO: copying archived WAL files
 Processed 21 of 21 files, skipped 0
 INFO: copying server log files
-Processed 1 of 1 files, skipped 0
+Processed 10 of 10 files, skipped 0
 INFO: backup complete
-HINT: Please execute 'pg_rman validate' to verify the files are correctly copied.
+INFO: Please execute 'pg_rman validate' to verify the files are correctly copied.
 INFO: start deleting old archived WAL files from ARCLOG_PATH (keep files = 10)
-INFO: delete "0000000E0000000100000092"
-INFO: delete "0000000E0000000100000092.00000028.backup"
-INFO: delete "0000000E0000000100000093"
+INFO: delete "0000000300000000000000E2"
+INFO: delete "0000000300000000000000E2.00000028.backup"
+INFO: delete "0000000300000000000000E1"
 INFO: start deleting old server files from SRVLOG_PATH (keep files = 10)
 INFO: start deleting old backup (keep generations = 3)
 INFO: does not include the backup just taken
 </code></pre>
 
-
-
 <pre><code>$ pg_rman show
 =====================================================================
  StartTime           EndTime              Mode    Size   TLI  Status
 =====================================================================
-2015-07-30 13:36:38  2015-07-30 13:36:41  FULL    15MB    15  DONE
+2023-11-29 16:04:17  2023-11-29 16:04:26  FULL    50MB     5  DONE
 </code></pre>
 
 <p>
@@ -528,14 +521,14 @@ Status列の値がDONEになっているのは、バックアップ取得は完�
 </p>
 
 <pre><code>$ pg_rman validate
-INFO: validate: "2015-07-30 13:36:38" backup, archive log files and server log files by CRC
-INFO: backup "2015-07-30 13:36:38" is valid
+INFO: validate: "2023-11-29 16:04:17" backup, archive log files and server log files by CRC
+INFO: backup "2023-11-29 16:04:17" is valid
 
 $ pg_rman show
 =====================================================================
  StartTime           EndTime              Mode    Size   TLI  Status
 =====================================================================
-2015-07-30 13:36:38  2015-07-30 13:36:41  FULL    15MB    15  OK
+2023-11-29 16:04:17  2023-11-29 16:04:26  FULL    50MB     5  OK
 </code></pre>
 
 <p>
@@ -552,10 +545,10 @@ $ pg_rman restore
 今回の場合は、最新の状態までリカバリするため特に修正せず、そのままPostgreSQLを起動してPITRを実施させます。
 </p>
 
-<pre><code>$ cat $PGDATA/recovery.conf
-# recovery.conf generated by pg_rman 1.2.11
-restore_command = 'cp /home/postgres/arclog/%f %p'
-recovery_target_timeline = '1'
+<pre><code>$ cat $PGDATA/pg_rman_recovery.conf
+# added by pg_rman 1.3.16
+restore_command = 'cp /dbfp/pgarch/arc1/%f %p'
+recovery_target_timeline = '4'
 $ pg_ctl start
 </code></pre>
 
@@ -1465,7 +1458,7 @@ $ make install
 <h1 id="requirement">動作環境</h2>
 <dl>
 <dt>PostgreSQLバージョン</dt>
-<dd>PostgreSQL 11, 12, 13, 14, 15</dd>
+<dd>PostgreSQL 12, 13, 14, 15, 16</dd>
 <dt>OS</dt>
 <dd>RHEL 7, 8, 9</dd>
 </dl>
@@ -1476,7 +1469,7 @@ $ make install
 
 <hr />
 
-<p class="footer">Copyright (c) 2009-2022, NIPPON TELEGRAPH AND TELEPHONE CORPORATION</p>
+<p class="footer">Copyright (c) 2009-2023, NIPPON TELEGRAPH AND TELEPHONE CORPORATION</p>
 
 </body>
 </html>
