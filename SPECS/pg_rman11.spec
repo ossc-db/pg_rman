@@ -16,7 +16,7 @@ Group:      Applications/Databases
 Source0:    %{name}-%{version}-pg11.tar.gz
 URL:        https://github.com/ossc-db/pg_rman
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-%(%{__id_u} -n)
-Vendor:	    NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+Vendor:     NIPPON TELEGRAPH AND TELEPHONE CORPORATION
 
 ## We use postgresql-devel package
 BuildRequires:  postgresql11-devel, zlib-devel
@@ -58,7 +58,7 @@ rm -rf %{buildroot}
 
 # History of pg_rman.
 %changelog
-* Thu Dec  4 2023 - NTT OSS Center <zuowei.yan.tb@hco.ntt.co.jp> 1.3.16-1
+* Mon Dec  4 2023 - NTT OSS Center <zuowei.yan.tb@hco.ntt.co.jp> 1.3.16-1
 * Thu Dec 15 2022 - NTT OSS Center <zuowei.yan.tb@hco.ntt.co.jp> 1.3.15-1
 * Mon Dec 13 2021 - NTT OSS Center <masahiro.ikeda.us@hco.ntt.co.jp> 1.3.14-1
 * Mon Aug 23 2021 - NTT OSS Center <masahiro.ikeda.us@hco.ntt.co.jp> 1.3.13-1
