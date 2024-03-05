@@ -501,6 +501,8 @@ int do_purge(void)
 			else
 				elog(INFO, _("DELETED backup \"%s\" is purged"), timestamp);
 		}
+
+		parray_free(files);
 	}
 	return 0;
 }
