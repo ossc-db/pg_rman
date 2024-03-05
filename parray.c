@@ -94,7 +94,7 @@ parray_insert(parray *array, size_t index, void *elem)
 }
 
 /*
- * Concatinate two parray.
+ * Concatenate two parray.
  * parray_concat() appends the copy of the content of src to the end of dest.
  */
 parray *

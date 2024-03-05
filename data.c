@@ -182,7 +182,7 @@ typedef union DataPage
 	PageHeaderData		header;
 
 	/*
-	 * The whole page (execpt the portion deemed unnecessary (hole), all of
+	 * The whole page (except the portion deemed unnecessary (hole), all of
 	 * it is written to the backup as is.
 	 */
 	char				data[BLCKSZ];
@@ -197,7 +197,7 @@ typedef union DataPage
  * false is returned so that caller can simply copy the page as is
  * without performing any additional processing.
  *
- * XXX - If we are are able to determine that a page coming from the 0th
+ * XXX - If we are able to determine that a page coming from the 0th
  * block of a file is a GIN metapage, we return false to ask the caller
  * to copy the whole file.
  */
@@ -383,7 +383,7 @@ backup_data_file(const char *from_root,
 
 		/*
 		 * Re-calculate checksum disregarding the hole portion of the page
-		 * and overwrite the value curently present in pd_checksum.
+		 * and overwrite the value currently present in pd_checksum.
 		 *
 		 * Note: Zero'ing the hole portion is necessary, because that's what
 		 * it will contain once the page is restored into the target
