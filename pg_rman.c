@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/stat.h>
+#include "common/logging.h"
 
 const char *PROGRAM_VERSION	= "1.3.16";
 const char *PROGRAM_URL		= "http://github.com/ossc-db/pg_rman";
@@ -123,6 +124,7 @@ main(int argc, char *argv[])
 
 	/* overwrite configuration with command line arguments */
 	i = pgut_getopt(argc, argv, options);
+	pg_logging_init(PROGRAM_NAME);
 
 	/* BACKUP_PATH is always required */
 	if (backup_path == NULL)
