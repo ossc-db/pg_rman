@@ -19,8 +19,6 @@ on:
       - REL_13_STABLE
       - REL_12_STABLE
       - REL_11_STABLE
-  schedule:
-    - cron: "0 1 * * SUN"      # only master
 
 jobs:
   build:
