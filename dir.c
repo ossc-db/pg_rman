@@ -7,6 +7,7 @@
  *-------------------------------------------------------------------------
  */
 
+#include "c.h"
 #include "pg_rman.h"
 
 #include <libgen.h>
@@ -559,7 +560,7 @@ dir_read_file_list(const char *root, const char *file_txt)
 
 	while (fgets(buf, lengthof(buf), fp))
 	{
-		char			path[MAXPGPATH];
+		char			path[MAXPGPATH + 1];
 		char			type;
 		unsigned long	write_size;
 		pg_crc32c		crc;
@@ -568,7 +569,7 @@ dir_read_file_list(const char *root, const char *file_txt)
 		pgFile		   *file;
 
 		memset(&tm, 0, sizeof(tm));
-		if (sscanf(buf, "%s %c %lu %u %o %d-%d-%d %d:%d:%d",
+		if (sscanf(buf, "%" CppAsString2(MAXPGPATH) "s %c %lu %u %o %d-%d-%d %d:%d:%d",
 			path, &type, &write_size, &crc, &mode,
 			&tm.tm_year, &tm.tm_mon, &tm.tm_mday,
 			&tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 11)
