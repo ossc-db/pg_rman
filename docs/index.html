@@ -1104,7 +1104,7 @@ If the files are compressed using -Z option when to take a backup, the files are
 <li>Because pg_rman judges performing full backup or incremental backup by update time for files. If files don&rsquo;t have update time because of storage snapshot specification, pg_rman performs full backup every time.</li>
 <li>You can&rsquo;t backup for one side works storage with split mirror snapshot.</li>
 <li>Before you execute pg_rman, you should perform storage &ldquo;RESYNC&rdquo;.</li>
-<li>After pg_rman performs backup with split mirror snapshot, storeage will be &ldquo;SPLITTED&rdquo;(works on one side).
+<li>After pg_rman performs backup with split mirror snapshot, storage will be &ldquo;SPLITTED&rdquo;(works on one side).
 
 <ul>
 <li>pg_rman perform SPLIT command for getting snapshot, but doesn&rsquo;t perform RESYNC command.</li>
