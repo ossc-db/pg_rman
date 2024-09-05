@@ -91,9 +91,9 @@ EOF
 local   replication     postgres                                trust
 host    replication     postgres        127.0.0.1/32            trust
 host    replication     postgres        ::1/128                 trust
-local   replication     $USER                                trust
-host    replication     $USER        127.0.0.1/32            trust
-host    replication     $USER        ::1/128                 trust
+local   replication     $(whoami)                               trust
+host    replication     $(whoami)       127.0.0.1/32            trust
+host    replication     $(whoami)       ::1/128                 trust
 EOF
 
 
