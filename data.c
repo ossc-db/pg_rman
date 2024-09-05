@@ -1267,11 +1267,13 @@ figure_out_segno(char *filepath)
 
 	if ((filename = strrchr(filepath, '/')) != NULL)
 	{
-		int		scanned;
 		unsigned int	relfilenode = 0;
-
-		scanned = sscanf((char *) filename + 1, "%u.%d", &relfilenode, &segno);
+#ifdef USE_ASSERT_CHECKING
+		int scanned = sscanf((char *) filename + 1, "%u.%d", &relfilenode, &segno);
 		Assert(scanned > 0);
+#else
+		sscanf((char *) filename + 1, "%u.%d", &relfilenode, &segno);
+#endif
 	}
 
 	return segno;
