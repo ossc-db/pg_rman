@@ -660,6 +660,12 @@ $ pg_ctl start
 <li>バックアップ済みのサーバログの保持期限を指定します。<code>--keep-srvlog-files</code> では保存ファイル数を、<code>--keep-srvlog-days</code> では保存日数を指定します。これらのオプションを明示的に指定した場合、閾値を超えたファイルがサーバログが保存されるディレクトリ (log_directory) から削除されます。 本オプションは、<code>--with-serverlog</code>、<code>--srvlog-path</code> を指定してバックアップを取得した場合に限ります。 これらのオプションを同時に指定した場合は両方の閾値を超えたファイルが削除されます。</li>
 </ul>
 </li>
+<li><strong><code>--exclude-tmpdir</code></strong>
+
+<ul>
+<li>一時ファイル用に使われる <code>pgsql_tmp</code> ディレクトリ内と、ロジカルレプリケーションで使われる <code>snapshots</code> ディレクトリ内をバックアップ対象から除外します。</li>
+</ul>
+</li>
 </ul>
 
 
@@ -1069,6 +1075,14 @@ $ pg_ctl start
 <td>HARD_COPY</td>
 <td>指定可</td>
 <td>アーカイブWALのリストア方法</td>
+<td>環境変数、設定ファイルにはboolean型で指定</td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;exclude-tmpdir</td>
+<td>EXCLUDE_TMPDIR</td>
+<td>指定可</td>
+<td>一時ファイルとロジカルスナップショットをバックアップから除外</td>
 <td>環境変数、設定ファイルにはboolean型で指定</td>
 </tr>
 </tbody>

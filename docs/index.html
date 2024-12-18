@@ -651,6 +651,12 @@ $ pg_ctl start
 <li>Specify how long backuped serverlog files will be kept. <code>--keep-srvlog-files</code> means number of files. <code>--keep-srvlog-days</code> means days to be kept. When you do backup, only files exceeded specified condition are deleted from server log directory (log_directory). This option works when you specify <code>--with-serverlog</code> and <code>--srvlog-path</code> options in backup command. If these two options are given toghether, pg_rman deletes files which are old enough against both conditions.</li>
 </ul>
 </li>
+<li><strong><code>--exclude-tmpdir</code></strong>
+
+<ul>
+<li>Exclude the <code>pgsql_tmp</code> directory, which is used for temporary files, and the <code>snapshots</code> directory, which is used for logical replication.</li>
+</ul>
+</li>
 </ul>
 
 
@@ -1060,6 +1066,14 @@ If the files are compressed using -Z option when to take a backup, the files are
 <td>HARD_COPY</td>
 <td>Yes</td>
 <td>how to restore archive WAL</td>
+<td>specify boolean type in environmental variable or configuration file</td>
+</tr>
+<tr>
+<td></td>
+<td>&ndash;exclude-tmpdir</td>
+<td>EXCLUDE_TMPDIR</td>
+<td>Yes</td>
+<td>Exclude temporary files and logical snapshots from backup</td>
 <td>specify boolean type in environmental variable or configuration file</td>
 </tr>
 </tbody>
