@@ -18,7 +18,6 @@ const char *PROGRAM_VERSION	= "1.3.16";
 const char *PROGRAM_URL		= "http://github.com/ossc-db/pg_rman";
 const char *PROGRAM_ISSUES	= "http://github.com/ossc-db/pg_rman/issues";
 const char *SNAPSHOTS_DIR   = "snapshots";
-const char *PGSQL_TMP_DIR   = "pgsql_tmp";
 
 /* path configuration */
 char *backup_path;
@@ -34,7 +33,7 @@ bool check = false;
 
 /* directory configuration */
 pgBackup	current;
-static bool exclude_tmpdir = false;
+static bool exclude_snapshots = false;
 
 /* backup configuration */
 static bool		smooth_checkpoint;
@@ -100,7 +99,7 @@ static pgut_option options[] =
 	{ 's', 10, "recovery-target-timeline"	, &target_tli_string, SOURCE_ENV },
 	{ 's', 11, "recovery-target-action"		, &target_action	, SOURCE_ENV },
 	{ 'b', 12, "hard-copy"	, &is_hard_copy		, SOURCE_ENV },
-	{ 'b', 15, "exclude-tmpdir", &exclude_tmpdir, SOURCE_ENV },
+	{ 'b', 15, "exclude-snapshots", &exclude_snapshots, SOURCE_ENV },
 	/* catalog options */
 	{ 'b', 'a', "show-all"		, &show_all },
 	{ 0 }
@@ -213,10 +212,9 @@ main(int argc, char *argv[])
 		pgdata_exclude[i++] = arclog_path;
 	if (srvlog_path)
 		pgdata_exclude[i++] = srvlog_path;
-	if (exclude_tmpdir)
+	if (exclude_snapshots)
 	{
 		pgdata_exclude[i++] = SNAPSHOTS_DIR;
-		pgdata_exclude[i++] = PGSQL_TMP_DIR;
 	}
 
 	/* do actual operation */
@@ -298,7 +296,7 @@ pgut_help(bool details)
 	printf(_("  --keep-srvlog-days=DAY    keep serverlog modified in DAY days\n"));
 	printf(_("  --standby-host=HOSTNAME   standby host when taking backup from standby\n"));
 	printf(_("  --standby-port=PORT       standby port when taking backup from standby\n"));
-	printf(_("  --exclude-tmpdir          exclude pgsql_tmp and pg_logical/snapshots\n"));
+	printf(_("  --exclude-snapshots       exclude pg_logical/snapshots\n"));
 	printf(_("\nRestore options:\n"));
 	printf(_("  --recovery-target-time    time stamp up to which recovery will proceed\n"));
 	printf(_("  --recovery-target-xid     transaction ID up to which recovery will proceed\n"));

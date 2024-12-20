@@ -207,15 +207,13 @@ init_database
 pg_rman backup -B ${BACKUP_PATH} -b full -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 
 echo '###### BACKUP COMMAND TEST-0011 ######'
-echo '###### full backup with --exclude-tmpdir option ######'
+echo '###### full backup with --exclude-snapshots option ######'
 init_catalog
 mkdir -p $PGDATA_PATH/base/pgsql_tmp
-touch $PGDATA_PATH/base/pgsql_tmp/012345
 touch $PGDATA_PATH/pg_logical/snapshots/012345
-pg_rman backup -B ${BACKUP_PATH} -b full -s --exclude-tmpdir -p ${TEST_PGPORT} -d postgres --quiet;echo $?
+pg_rman backup -B ${BACKUP_PATH} -b full -s --exclude-snapshots -p ${TEST_PGPORT} -d postgres --quiet;echo $?
 pg_rman validate -B ${BACKUP_PATH} --quiet
 pg_rman show detail -B ${BACKUP_PATH} > ${TEST_BASE}/TEST-0011.log 2>&1
-test -f ${BACKUP_PATH}/????????/??????/database/base/pgsql_tmp/012345 || echo OK >> ${TEST_BASE}/TEST-0011.log
 test -f ${BACKUP_PATH}/????????/??????/database/pg_logical/snapshots/012345 || echo OK >> ${TEST_BASE}/TEST-0011.log
 grep -c OK ${TEST_BASE}/TEST-0011.log
 

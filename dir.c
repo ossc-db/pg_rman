@@ -28,7 +28,6 @@ const char *pgdata_exclude[] =
 	NULL,			/* srvlog_path will be set later */
 	NULL,			/* 'pg_tblspc' will be set later */
 	NULL,			/* 'pg_logical' will be set later */
-	NULL,			/* 'pgsql_tmp' will be set later */
 	NULL,			/* sentinel */
 };
 
