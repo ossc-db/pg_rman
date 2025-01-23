@@ -1453,7 +1453,7 @@ elog(int elevel, const char *fmt, ...)
 }
 
 /*
- * unlike the server code, this function automaticcaly extend buffer.
+ * unlike the server code, this function automatically extend buffer.
  */
 bool
 appendStringInfoVA_c(StringInfo str, const char *fmt, va_list args)
