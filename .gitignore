@@ -25,3 +25,6 @@
 /regression.diffs
 /regression.out
 /results
+
+# Bitcodes
+*.bc
