@@ -459,7 +459,7 @@ By this, the configuration file for pg_rman, named <code>pg_rman.init</code>, is
 All the commands of pg_rman load configurations from this file as default.
 </p>
 
-<p>For this example, we use the following configurtaions.</p>
+<p>For this example, we use the following configurations.</p>
 
 <pre><code>$ cat $BACKUP_PATH/pg_rman.ini
 ARCLOG_PATH = /home/postgres/arclog
@@ -506,7 +506,7 @@ INFO: does not include the backup just taken
 
 <p>
 The status of the backup we have just taken is DONE.
-This is because we does not do validate yet.
+This is because we do not do validate yet.
 So, do <code>validate</code> command next.
 </p>
 
@@ -580,7 +580,7 @@ $ pg_ctl start
 <li><strong><code>-c</code> / <code>--check</code></strong>
 
 <ul>
-<li>If specifed, pg_rman doesn&rsquo;t perform actual jobs but only checks parameters and required resources. The option is typically used with <code>--verbose</code> option to verify the operation.</li>
+<li>If specified, pg_rman doesn&rsquo;t perform actual jobs but only checks parameters and required resources. The option is typically used with <code>--verbose</code> option to verify the operation.</li>
 </ul>
 </li>
 <li><strong><code>-v</code> / <code>--verbose</code></strong>
@@ -646,7 +646,7 @@ $ pg_ctl start
 <li><strong><code>--keep-srvlog-files</code> / <code>--keep-srvlog-days</code></strong>
 
 <ul>
-<li>Specify how long backuped serverlog files will be kept. <code>--keep-srvlog-files</code> means number of files. <code>--keep-srvlog-days</code> means days to be kept. When you do backup, only files exceeded specified condition are deleted from server log directory (log_directory). This option works when you specify <code>--with-serverlog</code> and <code>--srvlog-path</code> options in backup command. If these two options are given toghether, pg_rman deletes files which are old enough against both conditions.</li>
+<li>Specify how long backuped serverlog files will be kept. <code>--keep-srvlog-files</code> means number of files. <code>--keep-srvlog-days</code> means days to be kept. When you do backup, only files exceeded specified condition are deleted from server log directory (log_directory). This option works when you specify <code>--with-serverlog</code> and <code>--srvlog-path</code> options in backup command. If these two options are given together, pg_rman deletes files which are old enough against both conditions.</li>
 </ul>
 </li>
 </ul>
@@ -1103,14 +1103,14 @@ If the files are compressed using -Z option when to take a backup, the files are
 <li>Because pg_rman judges performing full backup or incremental backup by update time for files. If files don&rsquo;t have update time because of storage snapshot specification, pg_rman performs full backup every time.</li>
 <li>You can&rsquo;t backup for one side works storage with split mirror snapshot.</li>
 <li>Before you execute pg_rman, you should perform storage &ldquo;RESYNC&rdquo;.</li>
-<li>After pg_rman performs backup with split mirror snapshot, storeage will be &ldquo;SPLITTED&rdquo;(works on one side).
+<li>After pg_rman performs backup with split mirror snapshot, storage will be &ldquo;SPLITTED&rdquo;(works on one side).
 
 <ul>
 <li>pg_rman perform SPLIT command for getting snapshot, but doesn&rsquo;t perform RESYNC command.</li>
 </ul>
 </li>
-<li>You cant&rsquo;t get snapshot from different vendor storages in a time.</li>
-<li>You cant&rsquo;t use some vendor storages which have different commands for getting snapshot.</li>
+<li>You can&rsquo;t get snapshot from different vendor storages in a time.</li>
+<li>You can&rsquo;t use some vendor storages which have different commands for getting snapshot.</li>
 <li>The script and commands for getting storage snapshot should be executable.</li>
 <li>It&rsquo;s expected to have authority of root for getting snapshot or mounting volumes. So a user, performs pg_rman, is granted to execute any commands in the script.</li>
 <li>If you use LVM(Logical Volume Manager), it&rsquo;s needed root authority for mount, umount, lvcreate, lvremove, lvscan commands. You should granted to these commands with sudo command to non-password executable.</li>
@@ -1372,7 +1372,7 @@ If the files are compressed using -Z option when to take a backup, the files are
 <pre><code>  $ sudo /usr/sbin/lvcreate --snapshot --size=2G --name snap00 /dev/VolGroup00/LogVolume00
 </code></pre></li>
 <li><p>Above example is getting snapshot for logical volume &ldquo;LogVolume00&rdquo;.</p></li>
-<li>Snapshot name, snapshot size and logical volume for getting snapshot are parameterable.</li>
+<li>Snapshot name, snapshot size and logical volume for getting snapshot are parameterizable.</li>
 <li>Output tablespace names for backup to standard output.</li>
 </ul>
 </li>
@@ -1394,7 +1394,7 @@ If the files are compressed using -Z option when to take a backup, the files are
 </code></pre></li>
 <li><p>Above example is mounting snapshot volume made by split operation to &ldquo;/mnt/snapshot_lvm/pgdata&rdquo;.</p></li>
 <li>Mounting directory name can be parameterized.</li>
-<li>Output tablespace names and corresponding mounting direcotry name to standard output.</li>
+<li>Output tablespace names and corresponding mounting directory name to standard output.</li>
 </ul>
 </li>
 <li><p><code>umount</code></p>
