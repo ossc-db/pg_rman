@@ -1083,6 +1083,7 @@ If the files are compressed using -Z option when to take a backup, the files are
 <li>Block sizes of pg_rman and server should be matched. BLCKSZ and XLOG_BLCKSZ also should be matched.</li>
 <li>If there are some unreadable files/directories in database cluster directory, WAL directory or archived WAL directory, the backup or restore would be failed.</li>
 <li>When taking an incremental backup, pg_rman check the timeline ID of the target database whether it is the same with the one of the full backup in backup list. But, pg_rman does not check whether the data itself is same with the full backup in backup list. So, you can take an incremental backup over the full backup against the database which has the same timeline ID but has different data.</li>
+<li>When pg_rman backup with <code>--keep-data-generations 0</code>, all backup files will be deleted, including the current backup file. <code>--keep-srvlog-files</code>、<code>--keep-srvlog-days</code> is same to <code>--keep-data-generations</code>.</li>
 </ul>
 
 
