@@ -35,6 +35,7 @@ do_init(void)
 	char	path[MAXPGPATH];
 	char   *log_directory = NULL;
 	char   *archive_command = NULL;
+	char	controlFilePath[MAXPGPATH];
 	FILE   *fp;
 
 	struct dirent **dp;
@@ -83,14 +84,23 @@ do_init(void)
 	}
 
 	/* get system identifier of the current database.*/
-	controlFile = get_controlfile(pgdata, &crc_ok);
-
-	if (!crc_ok)
-		ereport(WARNING,
-				(errmsg("control file appears to be corrupt"),
-				 errdetail("Calculated CRC checksum does not match value stored in file.")));
-	sysid = controlFile->system_identifier;
-	pg_free(controlFile);
+	snprintf(controlFilePath, MAXPGPATH, "%s/global/pg_control", pgdata);
+	if (fileExists(controlFilePath))
+	{
+		controlFile = get_controlfile(pgdata, &crc_ok);
+		if (!crc_ok)
+			ereport(WARNING,
+					(errmsg("control file appears to be corrupt"),
+					 errdetail("Calculated CRC checksum does not match value stored in file.")));
+		sysid = controlFile->system_identifier;
+		pg_free(controlFile);
+	}
+	else
+	{
+		ereport(ERROR,
+				(errmsg("pg_controldata file \"%s\" does not exist", controlFilePath),
+				 errhint("Make sure the path to the data cluster directory is correct.")));
+	}
 
 	/* register system identifier of target database. */
 	join_path_components(path, backup_path, SYSTEM_IDENTIFIER_FILE);

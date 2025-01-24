@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      CACHE_VERSION: 20210426  # to identify cache version
+      CACHE_VERSION: 20250124  # to identify cache version
 
     steps:
     - name: get current branch name
