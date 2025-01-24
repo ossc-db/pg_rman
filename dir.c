@@ -293,6 +293,8 @@ dir_list_file(parray *files, const char *root, const char *exclude[], bool omit_
 		fclose(black_list_file);
 		parray_qsort(black_list, BlackListCompare);
 		dir_list_file_internal(files, root, exclude, omit_symlink, add_root, black_list);
+
+		parray_free(black_list);
 	}
 	else
 		dir_list_file_internal(files, root, exclude, omit_symlink, add_root, NULL);
