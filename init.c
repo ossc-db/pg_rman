@@ -97,8 +97,9 @@ do_init(void)
 	}
 	else
 	{
-		elog(ERROR, _("pg_controldata file \"%s\" does not exist"),
-			 controlFilePath);
+		ereport(ERROR,
+				(errmsg("pg_controldata file \"%s\" does not exist", controlFilePath),
+				 errhint("Make sure the path to the data cluster directory is correct.")));
 	}
 
 	/* register system identifier of target database. */
