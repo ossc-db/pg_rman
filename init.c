@@ -40,7 +40,7 @@ do_init(void)
 
 	struct dirent **dp;
 	int results;
-	uint64      sysid;
+	uint64      sysid = 0;
 	ControlFileData *controlFile;
 	bool crc_ok;
 
