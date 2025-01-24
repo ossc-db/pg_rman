@@ -63,6 +63,11 @@ rm -rf ${BACKUP_PATH}
 pg_rman --backup-path=resuts/init/backup init;echo $?
 echo ''
 
+echo '###### INIT COMMAND TEST-0006 ######'
+echo '###### failure with empty or non-existence data directory ######'
+pg_rman -B ${BACKUP_PATH} -D /tmp/pg_rman/test init;echo $?
+echo ''
+
 
 # clean up the temporal test data
 pg_ctl stop -m immediate > /dev/null 2>&1
