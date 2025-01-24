@@ -42,3 +42,9 @@ ERROR: backup catalog already exist and it's not empty
 ERROR: -B, --backup-path must be an absolute path
 12
 
+###### INIT COMMAND TEST-0006 ######
+###### failure with empty or non-existence data directory ######
+ERROR: pg_controldata file "/tmp/pg_rman/test/global/pg_control" does not exist
+HINT: Make sure the path to the data cluster directory is correct.
+1
+
