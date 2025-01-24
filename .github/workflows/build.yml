@@ -54,7 +54,7 @@ jobs:
 
     - name: cache builded resources
       id: cache-postgresql-core
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: "~/pgsql/${{ env.PGVERSION }}"
         key: ${{ env.PGVERSION }}-${{ env.CACHE_VERSION }}
