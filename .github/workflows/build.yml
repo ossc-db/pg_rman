@@ -4,28 +4,26 @@ on:
   push:
     branches:
       - master
+      - REL_17_STABLE
+      - REL_16_STABLE
       - REL_15_STABLE
       - REL_14_STABLE
       - REL_13_STABLE
-      - REL_12_STABLE
-      - REL_11_STABLE
   pull_request:
     branches:
       - master
+      - REL_17_STABLE
+      - REL_16_STABLE
       - REL_15_STABLE
       - REL_14_STABLE
       - REL_13_STABLE
-      - REL_12_STABLE
-      - REL_11_STABLE
-  schedule:
-    - cron: "0 1 * * SUN"      # only master
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      CACHE_VERSION: 20250124  # to identify cache version
+      CACHE_VERSION: 20250128  # to identify cache version
 
     steps:
     - name: get current branch name
@@ -41,12 +39,12 @@ jobs:
       shell: bash -xe {0}
       run: |
         declare -A versions=(
-          ["master"]="15.1"
-          ["REL_15_STABLE"]="15.1"
-          ["REL_14_STABLE"]="14.6"
-          ["REL_13_STABLE"]="13.9"
-          ["REL_12_STABLE"]="12.13"
-          ["REL_11_STABLE"]="11.18"
+          ["master"]="17.2"
+          ["REL_17_STABLE"]="17.2"
+          ["REL_16_STABLE"]="16.6"
+          ["REL_15_STABLE"]="15.10"
+          ["REL_14_STABLE"]="14.15"
+          ["REL_13_STABLE"]="13.18"
         )
         [ -z "${versions[${{ env.BRANCH }}]}" ] && exit 1         # check if the key exists
         echo "PGVERSION=${versions[${{ env.BRANCH }}]}" >> $GITHUB_ENV
