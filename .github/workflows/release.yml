@@ -1,0 +1,38 @@
+name: Build RPMs and upload its to release draft
+
+on:
+  push:
+    tags:
+      - 'V*'
+
+jobs:
+  build_rpms:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        RHEL_VERSION: ["8", "9"]
+        PG_VERSION: ["13", "14", "15", "16", "17"]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: REL_${{ matrix.PG_VERSION }}_STABLE
+
+    - name: Build PostgreSQL ${{ matrix.PG_VERSION }} RPMs for RHEL ${{ matrix.RHEL_VERSION }}
+      run: |
+        export PG_RMAN_VERSION=${GITHUB_REF_NAME#V}
+        docker build .github/workflows/ -t pg_rman \
+          --build-arg RHEL_VERSION=${{ matrix.RHEL_VERSION }} \
+          --build-arg PG_VERSION=${{ matrix.PG_VERSION }} \
+          --build-arg PG_RMAN_VERSION=${PG_RMAN_VERSION}
+        container_id=$(docker create pg_rman)
+        docker cp $container_id:/var/lib/pgsql/rpmbuild/RPMS/x86_64 ./RPMS
+
+    - name: Create release draft and upload the RPMs
+      uses: softprops/action-gh-release@v2
+      with:
+        name: Release draft
+        draft: true
+        files: ./RPMS/*.rpm
