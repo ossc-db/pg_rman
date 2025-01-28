@@ -2,7 +2,7 @@
  *
  * dir.c: directory operation utility.
  *
- * Copyright (c) 2009-2023, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+ * Copyright (c) 2009-2025, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
  *
  *-------------------------------------------------------------------------
  */
