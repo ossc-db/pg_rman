@@ -1200,7 +1200,7 @@ write_stop_backup_file(pgBackup *backup, const char *buf, int len, const char *f
 #ifdef HAVE_LIBZ
 		if (backup->compress_data)
 			doDeflate(&z, write_len, sizeof(outbuf), (void *) writebuf, outbuf, NULL,
-					  fp, &crc, &write_size, Z_FINISH);
+					  fp, &crc, &write_size, Z_NO_FLUSH);
 		else
 #endif
 		{
@@ -1221,6 +1221,11 @@ write_stop_backup_file(pgBackup *backup, const char *buf, int len, const char *f
 #ifdef HAVE_LIBZ
 	if (backup->compress_data)
 	{
+		while (doDeflate(&z, 0, sizeof(outbuf), NULL, outbuf, NULL,
+				  fp, &crc, &write_size, Z_FINISH) != Z_STREAM_END)
+		{
+		}
+
 		if (deflateEnd(&z) != Z_OK)
 		{
 			fclose(fp);
