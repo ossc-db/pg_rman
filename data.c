@@ -90,7 +90,7 @@ doDeflate(z_stream *zp, size_t in_size, size_t out_size, void *inbuf,
 
 		zp->next_out = outbuf;
 		zp->avail_out = out_size;
-	} while (zp->avail_in != 0);
+	} while (zp->avail_in != 0 && status != Z_STREAM_END);
 
 	return status;
 }
