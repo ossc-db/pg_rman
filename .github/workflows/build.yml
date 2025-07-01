@@ -39,12 +39,12 @@ jobs:
       shell: bash -xe {0}
       run: |
         declare -A versions=(
-          ["master"]="17.2"
-          ["REL_17_STABLE"]="17.2"
-          ["REL_16_STABLE"]="16.6"
-          ["REL_15_STABLE"]="15.10"
-          ["REL_14_STABLE"]="14.15"
-          ["REL_13_STABLE"]="13.18"
+          ["master"]="17.5"
+          ["REL_17_STABLE"]="17.5"
+          ["REL_16_STABLE"]="16.9"
+          ["REL_15_STABLE"]="15.13"
+          ["REL_14_STABLE"]="14.18"
+          ["REL_13_STABLE"]="13.21"
         )
         [ -z "${versions[${{ env.BRANCH }}]}" ] && exit 1         # check if the key exists
         echo "PGVERSION=${versions[${{ env.BRANCH }}]}" >> $GITHUB_ENV
