@@ -11,8 +11,9 @@ jobs:
     permissions:
       contents: write
     strategy:
+      fail-fast: false
       matrix:
-        RHEL_VERSION: ["8", "9"]
+        RHEL_VERSION: ["8", "9", "10"]
         PG_VERSION: ["13", "14", "15", "16", "17"]
     steps:
     - name: Checkout repository
