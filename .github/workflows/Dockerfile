@@ -1,5 +1,5 @@
 ARG RHEL_VERSION
-FROM rockylinux/rockylinux:${RHEL_VERSION}
+FROM rockylinux/rockylinux:${RHEL_VERSION:-10}
 
 ARG RHEL_VERSION
 ARG PG_VERSION
