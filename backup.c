@@ -1740,7 +1740,8 @@ delete_old_files(const char *root,
 		for (j = parray_num(files) - 1; j >= 0; j--)
 		{
 			pgFile *file2 = (pgFile *)parray_get(files, j);
-			if (strstr(file2->path, file->path) == file2->path)
+			if (file->path[0] != '\0' && file2->path[0] != '\0' &&
+				strstr(file2->path, file->path) == file2->path)
 			{
 				file2 = (pgFile *)parray_remove(files, j);
 				elog(INFO, "delete \"%s\"",
