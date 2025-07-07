@@ -29,7 +29,7 @@ RUN if [ "${RHEL_VERSION}" = "8" ]; then \
         dnf install -y --enablerepo=crb perl-IPC-Run; \
     fi
 RUN dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-${RHEL_VERSION}-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-RUN if [ "${RHEL_VERSION}" = "8" ] || ["${RHEL_VERSION}" = "9" ]; then \
+RUN if [ "${RHEL_VERSION}" = "8" ] || [ "${RHEL_VERSION}" = "9" ]; then \
         dnf -qy module disable postgresql; \
     fi
 RUN dnf install -y postgresql${PG_VERSION}-server postgresql${PG_VERSION}-devel
