@@ -3,7 +3,7 @@
  * data.c: utilities for backing up and restoring database files along with
  * the support for compression/decompression of individual data file pages
  *
- * Copyright (c) 2009-2025, NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+ * Copyright (c) 2009-2026, NTT, Inc.
  *
  *-------------------------------------------------------------------------
  */
