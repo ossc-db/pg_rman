@@ -1,5 +1,5 @@
 # SPEC file for pg_rman
-# Copyright(C) 2009-2025 NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+# Copyright(C) 2009-2026 NTT, Inc.
 
 %define _pgdir   /usr/pgsql-15
 %define _bindir  %{_pgdir}/bin
@@ -16,7 +16,7 @@ Group:      Applications/Databases
 Source0:    %{name}-%{version}-pg15.tar.gz
 URL:        https://github.com/ossc-db/pg_rman
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-%(%{__id_u} -n)
-Vendor:     NIPPON TELEGRAPH AND TELEPHONE CORPORATION
+Vendor:     NTT, Inc.
 
 ## We use postgresql-devel package
 BuildRequires:  postgresql15-devel, zlib-devel
