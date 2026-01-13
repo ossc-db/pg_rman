@@ -5,6 +5,10 @@ on:
     tags:
       - 'V*'
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_rpms:
     runs-on: ubuntu-latest
@@ -27,7 +31,8 @@ jobs:
         docker build .github/workflows/ -t pg_rman \
           --build-arg RHEL_VERSION=${{ matrix.RHEL_VERSION }} \
           --build-arg PG_VERSION=${{ matrix.PG_VERSION }} \
-          --build-arg PG_RMAN_VERSION=${PG_RMAN_VERSION}
+          --build-arg PG_RMAN_VERSION=${PG_RMAN_VERSION} \
+          --build-arg REPO_URL=https://github.com/${{ github.repository }}.git
         container_id=$(docker create pg_rman)
         docker cp $container_id:/var/lib/pgsql/rpmbuild/RPMS/x86_64 ./RPMS
 
