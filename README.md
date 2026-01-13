@@ -14,12 +14,12 @@ different PostgreSQL server versions without introducing server version
 check code blocks.  Please choose a branch to match the PostgreSQL version
 you will be building pg_rman against.
 
-* master : branch for PostgreSQL 18 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
+* master : branch for PostgreSQL 19 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=master&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
+* REL_18_STABLE : branch for PostgreSQL 18 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_18_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 * REL_17_STABLE : branch for PostgreSQL 17 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_17_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 * REL_16_STABLE : branch for PostgreSQL 16 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_16_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 * REL_15_STABLE : branch for PostgreSQL 15 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_15_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 * REL_14_STABLE : branch for PostgreSQL 14 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_14_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
-* REL_13_STABLE : branch for PostgreSQL 13 [![Test](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml/badge.svg?branch=REL_13_STABLE&event=push)](https://github.com/ossc-db/pg_rman/actions/workflows/build.yml)
 
 How to use
 ----------
