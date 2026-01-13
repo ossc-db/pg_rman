@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         RHEL_VERSION: ["8", "9", "10"]
-        PG_VERSION: ["13", "14", "15", "16", "17"]
+        PG_VERSION: ["14", "15", "16", "17", "18"]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
