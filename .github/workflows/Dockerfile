@@ -4,6 +4,7 @@ FROM rockylinux/rockylinux:${RHEL_VERSION:-10}
 ARG RHEL_VERSION
 ARG PG_VERSION
 ARG PG_RMAN_VERSION
+ARG REPO_URL
 
 ENV PATH=/usr/pgsql-${PG_VERSION}/bin:$PATH
 ENV PGDATA=/var/lib/pgsql/${PG_VERSION}/data
@@ -47,7 +48,7 @@ WORKDIR /var/lib/pgsql/
 
 # Deploy the files required for the build
 RUN rpmdev-setuptree
-RUN git clone -b REL_${PG_VERSION}_STABLE https://github.com/ossc-db/pg_rman.git
+RUN git clone -b REL_${PG_VERSION}_STABLE ${REPO_URL}
 RUN cp -a pg_rman/SPECS/pg_rman${PG_VERSION}.spec rpmbuild/SPECS
 RUN cd pg_rman && \
     git archive HEAD \
