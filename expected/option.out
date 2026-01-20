@@ -40,6 +40,7 @@ Backup options:
   --keep-srvlog-days=DAY    keep serverlog modified in DAY days
   --standby-host=HOSTNAME   standby host when taking backup from standby
   --standby-port=PORT       standby port when taking backup from standby
+  --exclude-snapshots       exclude pg_logical/snapshots
 
 Restore options:
   --recovery-target-time    time stamp up to which recovery will proceed
