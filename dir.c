@@ -599,7 +599,7 @@ dir_read_file_list(const char *root, const char *file_txt)
 		file->read_size = 0;
 		file->write_size = write_size;
 		file->crc = crc;
-		file->is_datafile = (type == 'F' ? true : false);
+		file->is_datafile = (type == 'F');
 		file->linked = NULL;
 		if (root)
 			sprintf(file->path, "%s/%s", root, path);
