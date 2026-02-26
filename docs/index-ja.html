@@ -24,6 +24,7 @@
 <li><a href="#externalscript">外部スクリプトとの連携</a></li>
 <li><a href="#download">ダウンロード</a></li>
 <li><a href="#install">インストール方法</a></li>
+<li><a href="#migration">pg_basebackupへの移行</a></li>
 <li><a href="#requirement">動作環境</a></li>
 <li><a href="#seealso">関連項目</a></li>
 </ol>
@@ -1457,7 +1458,234 @@ $ make install
 <pre><code># rpm -ivh pg_rman-x.x.xx-x.pgxx.rhelx.x86_64.rpm
 </code></pre>
 
-<h1 id="requirement">動作環境</h2>
+<h1 id="migration">pg_basebackupへの移行</h1>
+<p>以下の表は、バックアップ・リカバリ処理をpg_rmanからPostgreSQL標準のpg_basebackupへ切り替えるための機能比較表です。</p>
+<p>近年のpg_basebackupの機能向上（増分バックアップ対応等）によりpg_rmanの代替が可能となったケースや、pg_rmanが利用できない環境への移行などを想定しています。</p>
+
+<table>
+  <thead>
+  <tr>
+  <th>カテゴリ</th>
+  <th>項目</th>
+  <th>pg_rman</th>
+  <th>pg_basebackup</th>
+  <th>注意点</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td rowspan="14">バックアップ</td>
+    <td>全体バックアップ</td>
+    <td><code>pg_rman backup -b full</code></td>
+    <td><code>pg_basebackup -D /path/to/backup</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>増分バックアップ</td>
+    <td><code>pg_rman backup -b incremental</code></td>
+    <td><code>pg_basebackup -i /path/to/backup/backup_manifest -D /path/to/backup</code></td>
+    <td><code>pg_basebackup</code>の増分バックアップはPostgreSQL 17以降で使用可能。<code>-i</code>には前回バックアップの<code>backup_manifest</code>を指定する。</td>
+  </tr>
+  <tr>
+    <td>アーカイブWAL</td>
+    <td><code>pg_rman backup -b archive</code></td>
+    <td><code>cp</code>コマンド等OSコマンドで実施可能<br>例: <code>cp $ARCLOG_PATH/* /path/to/backup/arclog/</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>サーバログ</td>
+    <td><code>pg_rman backup -b full -s</code></td>
+    <td><code>cp</code>コマンド等OSコマンドで実施可能<br>例: <code>cp $SRVLOG_PATH/* /path/to/backup/srvlog/</code></td>
+    <td><code>pg_basebackup</code>自体にサーバログのバックアップ機能はないが、<code>log_directory</code>をデータベースクラスタ配下に指定すれば<code>pg_basebackup</code>実行時にバックアップされる。</td>
+  </tr>
+  <tr>
+    <td>テーブル空間</td>
+    <td><code>pg_rman backup -b full</code></td>
+    <td><code>pg_basebackup -D /path/to/backup</code></td>
+    <td><code>pg_rman</code>、<code>pg_basebackup</code>ともにテーブル空間は自動的にバックアップされるためオプション指定は不要。<code>pg_basebackup</code>のplain形式でテーブル空間のパスを変更する場合は<code>--tablespace-mapping</code>オプションを使用する。</td>
+  </tr>
+  <tr>
+    <td>zlib圧縮</td>
+    <td><code>pg_rman backup -b full -Z</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -Z gzip</code></td>
+    <td><code>pg_basebackup</code>はzlib形式をサポートしないが、gzip（zlibと同じdeflateアルゴリズム）、lz4、zstdによる圧縮が可能</td>
+  </tr>
+  <tr>
+    <td>サーバーサイド圧縮</td>
+    <td><code>pg_rman backup -b full -Z</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -F t -Z server-gzip</code></td>
+    <td><code>pg_rman</code>はサーバサイドで動作するため、圧縮は常にサーバサイドで行われる。<code>pg_basebackup</code>はクライアントサイドでの圧縮（デフォルト）もサポート。</td>
+  </tr>
+  <tr>
+    <td>チェックポイントの実行</td>
+    <td><code>pg_rman backup -b full -C</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -c {fast|spread}</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>保持世代数の指定</td>
+    <td><code>pg_rman backup -b full --keep-data-generations 7</code></td>
+    <td><code>cron</code>などで実行<br>例: <code>ls -dt /path/to/backup/*/ | tail -n +8 | xargs rm -rf</code></td>
+    <td>バックアップを7世代残すコマンド例</td>
+  </tr>
+  <tr>
+    <td>保持日数の指定</td>
+    <td><code>pg_rman backup -b full --keep-data-days 7</code></td>
+    <td><code>cron</code>などで実行<br>例: <code>find /path/to/backup -maxdepth 1 -mindepth 1 -type d -mtime +7 -exec rm -rf {} +</code></td>
+    <td>バックアップを7日間残すコマンド例</td>
+  </tr>
+  <tr>
+    <td>アーカイブWALの保持ファイル数</td>
+    <td><code>pg_rman backup -b full --keep-arclog-files 7</code></td>
+    <td><code>cron</code>などで実行<br>例: <code>pg_archivecleanup $ARCLOG_PATH $(basename "$(ls -t $ARCLOG_PATH/*.backup | sed -n '7p')")</code></td>
+    <td><code>pg_basebackup</code>の例は直近7世代分のバックアップに必要なWALを残すコマンド例。フルバックアップごとに<code>.backup</code>ファイルがアーカイブされる前提で、7番目に新しい<code>.backup</code>ファイルを指定し、それより古いWALを削除する。</td>
+  </tr>
+  <tr>
+    <td>アーカイブWALの保持日数</td>
+    <td><code>pg_rman backup -b full --keep-arclog-days 7</code></td>
+    <td><code>cron</code>などで実行<br>例: <code>pg_archivecleanup $ARCLOG_PATH $(basename "$(find $ARCLOG_PATH -maxdepth 1 -name '*.backup' -mtime +7 | sort | tail -1)")</code></td>
+    <td><code>pg_basebackup</code>の例は7日分のWALを残すコマンド例。フルバックアップごとに<code>.backup</code>ファイルがアーカイブされる前提で、7日より古い<code>.backup</code>ファイルのうち最新のものを指定し、それより古いWALを削除する。</td>
+  </tr>
+  <tr>
+    <td>サーバログの保持ファイル数</td>
+    <td><code>pg_rman backup -b full -s --keep-srvlog-files 7</code></td>
+    <td><code>cron</code>などで実行<br>例: <code>ls -t $SRVLOG_PATH/* | tail -n +8 | xargs rm -f</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>サーバログの保持日数</td>
+    <td><code>pg_rman backup -b full -s --keep-srvlog-days 7</code></td>
+    <td><code>cron</code>などで実行<br>例: <code>find $SRVLOG_PATH -maxdepth 1 -mindepth 1 -type f -mtime +7 -delete</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td rowspan="10">リカバリ</td>
+    <td>ターゲットにタイムラインを指定</td>
+    <td><code>pg_rman restore --recovery-target-timeline 2</code></td>
+    <td><code>postgresql.conf</code>に<code>recovery_target_timeline = '2'</code>を指定してリストアを実行</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>ターゲットにタイムスタンプを指定</td>
+    <td><code>pg_rman restore --recovery-target-time '2025-07-04 16:00:00'</code></td>
+    <td><code>postgresql.conf</code>に<code>recovery_target_time = '2025-07-04 16:00:00'</code>を指定してリストアを実行</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>ターゲットにトランザクションIDを指定</td>
+    <td><code>pg_rman restore --recovery-target-xid 480000</code></td>
+    <td><code>postgresql.conf</code>に<code>recovery_target_xid = '480000'</code>を指定してリストアを実行</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>ターゲットの直後に停止</td>
+    <td><code>pg_rman restore --recovery-target-time &quot;2025-07-04 16:00:00&quot; --recovery-target-inclusive true</code></td>
+    <td><code>postgresql.conf</code>に<code>recovery_target_inclusive = on</code>を指定してリストアを実行（デフォルトon）</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>ターゲットの直前に停止</td>
+    <td><code>pg_rman restore --recovery-target-time &quot;2025-07-04 16:00:00&quot; --recovery-target-inclusive false</code></td>
+    <td><code>postgresql.conf</code>に<code>recovery_target_inclusive = off</code>を指定してリストアを実行</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>ターゲット到達後に休止</td>
+    <td><code>pg_rman restore --recovery-target-action pause</code></td>
+    <td><code>postgresql.conf</code>に<code>recovery_target_action = 'pause'</code>を指定してリストアを実行</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>ターゲット到達後にサーバー受付開始</td>
+    <td><code>pg_rman restore --recovery-target-action promote</code></td>
+    <td><code>postgresql.conf</code>に<code>recovery_target_action = 'promote'</code>を指定してリストアを実行</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>ターゲット到達後にシャットダウン</td>
+    <td><code>pg_rman restore --recovery-target-action shutdown</code></td>
+    <td><code>postgresql.conf</code>に<code>recovery_target_action = 'shutdown'</code>を指定してリストアを実行</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>アーカイブWALをアーカイブ格納領域にコピー</td>
+    <td><code>pg_rman restore --hard-copy</code></td>
+    <td><code>cp</code>コマンド等OSコマンドで実施可能<br>例: <code>cp /path/to/backup/arclog/* $ARCLOG_PATH/</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>アーカイブWALへのシンボリックリンク</td>
+    <td><code>pg_rman restore</code>（デフォルト動作）</td>
+    <td><code>ln -s</code>コマンド等OSコマンドで実施可能<br>例: <code>ln -s /path/to/backup/arclog/* $ARCLOG_PATH/</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>スタンバイサイトでのバックアップ</td>
+    <td>スタンバイサーバー側の情報をバックアップ</td>
+    <td><code>pg_rman backup -D /home/postgres/pgdata_sby -b full -h master --standby-host=192.168.0.20 --standby-port=5433</code></td>
+    <td><code>pg_basebackup -h 192.168.0.20 -p 5433 -D /path/to/backup_sby</code></td>
+    <td>例はスタンバイサイトのホスト: 192.168.0.20、スタンバイサイトのポート番号: 5433</td>
+  </tr>
+  <tr>
+    <td rowspan="6">バックアップカタログ管理</td>
+    <td>カタログの初期化</td>
+    <td><code>pg_rman init -B ${PWD}/rman_backup</code></td>
+    <td>-</td>
+    <td><code>pg_basebackup</code>にはバックアップカタログの概念がないため不要</td>
+  </tr>
+  <tr>
+    <td>過去のバックアップ履歴を表示</td>
+    <td><code>pg_rman show</code><br><code>pg_rman show detail</code></td>
+    <td><code>ls</code>コマンド等OSコマンドで実施可能<br>例: <code>ls -lt /path/to/backup/</code></td>
+    <td><code>pg_basebackup</code>にはバックアップカタログがないため、ディレクトリ一覧（<code>ls</code>等）で見えるバックアップのみが対象となる。</td>
+  </tr>
+  <tr>
+    <td>バックアップデータの検証</td>
+    <td><code>pg_rman validate</code></td>
+    <td><code>pg_verifybackup /path/to/backup/2025-07-04_153000</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>バックアップを削除</td>
+    <td><code>pg_rman delete 2025-07-04 15:30:00</code></td>
+    <td><code>rm</code>コマンド等OSコマンドで実施可能<br>例: <code>rm -rf /path/to/backup/2025-07-04_153000</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>削除済みバックアップの消去</td>
+    <td><code>pg_rman purge</code></td>
+    <td>-</td>
+    <td><code>pg_basebackup</code>にはバックアップカタログの概念がないため不要</td>
+  </tr>
+  <tr>
+    <td>削除済みも含めて一覧表示</td>
+    <td><code>pg_rman show -a</code></td>
+    <td>-</td>
+    <td><code>pg_basebackup</code>にはバックアップカタログの概念がないため不要</td>
+  </tr>
+  <tr>
+    <td rowspan="3">その他</td>
+    <td>処理内容を確認</td>
+    <td><code>pg_rman backup -b full -c -v</code></td>
+    <td><code>pg_basebackup -t blackhole -Xfetch -v</code></td>
+    <td><code>pg_rman</code>の<code>-c</code>オプションはサーバ側の処理を行わない真のドライランだが、<code>pg_basebackup</code>の<code>-t blackhole</code>はサーバ側でバックアップ処理が実行され、クライアント側で受信データを破棄するのみ。<code>pg_basebackup</code>には厳密なドライラン機能はない。</td>
+  </tr>
+  <tr>
+    <td>処理内容を表示</td>
+    <td><code>pg_rman backup -b full -v</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -v</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>処理の進捗を表示</td>
+    <td><code>pg_rman backup -b full -P</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -P</code></td>
+    <td></td>
+  </tr>
+  </tbody>
+</table>
+
+<h1 id="requirement">動作環境</h1>
 <dl>
 <dt>PostgreSQLバージョン</dt>
 <dd>PostgreSQL 14, 15, 16, 17, 18</dd>
@@ -1466,7 +1694,7 @@ $ make install
 </dl>
 
 
-<h1 id="seealso">関連項目</h2>
+<h1 id="seealso">関連項目</h1>
 <a href="http://www.postgresql.jp/document/current/html/backup.html">バックアップとリストア</a>
 
 <hr />

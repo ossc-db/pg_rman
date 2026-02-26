@@ -25,6 +25,7 @@
 <li><a href="#externalscript">External Scripts</a></li>
 <li><a href="#download">Download</a></li>
 <li><a href="#install">Installation</a></li>
+<li><a href="#migration">Migration to pg_basebackup</a></li>
 <li><a href="#requirement">Requirements</a></li>
 <li><a href="#seealso">See Also</a></li>
 </ol>
@@ -1446,6 +1447,232 @@ $ make install
 <pre><code># rpm -ivh pg_rman-x.x.xx-x.pgxx.rhelx.x86_64.rpm
 </code></pre>
 
+<h1 id="migration">Migration to pg_basebackup</h1>
+<p>The following table provides a feature comparison for migrating backup and recovery processes from pg_rman to the standard pg_basebackup command.</p>
+<p>This is intended for cases where pg_rman can be replaced due to recent improvements in pg_basebackup functionality and performance, or for migration to cloud environments where pg_rman is not available.</p>
+
+<table>
+  <thead>
+  <tr>
+  <th>Category</th>
+  <th>Item</th>
+  <th>pg_rman</th>
+  <th>pg_basebackup</th>
+  <th>Notes</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td rowspan="14">Backup</td>
+    <td>Full backup</td>
+    <td><code>pg_rman backup -b full</code></td>
+    <td><code>pg_basebackup -D /path/to/backup</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Incremental backup</td>
+    <td><code>pg_rman backup -b incremental</code></td>
+    <td><code>pg_basebackup -i /path/to/backup/backup_manifest -D /path/to/backup</code></td>
+    <td>Incremental backup in <code>pg_basebackup</code> is available in PostgreSQL 17 and later. Specify the previous backup's <code>backup_manifest</code> with <code>-i</code>.</td>
+  </tr>
+  <tr>
+    <td>Archive WAL</td>
+    <td><code>pg_rman backup -b archive</code></td>
+    <td>Use OS commands such as <code>cp</code><br>e.g. <code>cp $ARCLOG_PATH/* /path/to/backup/arclog/</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Server log</td>
+    <td><code>pg_rman backup -b full -s</code></td>
+    <td>Use OS commands such as <code>cp</code><br>e.g. <code>cp $SRVLOG_PATH/* /path/to/backup/srvlog/</code></td>
+    <td><code>pg_basebackup</code> does not back up server logs by itself, but if <code>log_directory</code> is under the database cluster, logs are included when running <code>pg_basebackup</code>.</td>
+  </tr>
+  <tr>
+    <td>Tablespace</td>
+    <td><code>pg_rman backup -b full</code></td>
+    <td><code>pg_basebackup -D /path/to/backup</code></td>
+    <td>Both <code>pg_rman</code> and <code>pg_basebackup</code> back up tablespaces automatically; no option is required. For plain format, use <code>--tablespace-mapping</code> to change tablespace paths.</td>
+  </tr>
+  <tr>
+    <td>zlib compression</td>
+    <td><code>pg_rman backup -b full -Z</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -Z gzip</code></td>
+    <td><code>pg_basebackup</code> does not support zlib format but supports gzip (same deflate algorithm as zlib), lz4, and zstd.</td>
+  </tr>
+  <tr>
+    <td>Server-side compression</td>
+    <td><code>pg_rman backup -b full -Z</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -F t -Z server-gzip</code></td>
+    <td><code>pg_rman</code> runs on the server, so compression is always server-side. <code>pg_basebackup</code> also supports client-side compression (default).</td>
+  </tr>
+  <tr>
+    <td>Checkpoint execution</td>
+    <td><code>pg_rman backup -b full -C</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -c {fast|spread}</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Retention by number of generations</td>
+    <td><code>pg_rman backup -b full --keep-data-generations 7</code></td>
+    <td>Use <code>cron</code> etc.<br>e.g. <code>ls -dt /path/to/backup/*/ | tail -n +8 | xargs rm -rf</code></td>
+    <td>Example to keep 7 generations of backups</td>
+  </tr>
+  <tr>
+    <td>Retention by number of days</td>
+    <td><code>pg_rman backup -b full --keep-data-days 7</code></td>
+    <td>Use <code>cron</code> etc.<br>e.g. <code>find /path/to/backup -maxdepth 1 -mindepth 1 -type d -mtime +7 -exec rm -rf {} +</code></td>
+    <td>Example to keep backups for 7 days</td>
+  </tr>
+  <tr>
+    <td>Archive WAL retention (file count)</td>
+    <td><code>pg_rman backup -b full --keep-arclog-files 7</code></td>
+    <td>Use <code>cron</code> etc.<br>e.g. <code>pg_archivecleanup $ARCLOG_PATH $(basename "$(ls -t $ARCLOG_PATH/*.backup | sed -n '7p')")</code></td>
+    <td><code>pg_basebackup</code> example keeps WAL needed for the latest 7 backups. Assumes a <code>.backup</code> file is archived per full backup; specifies the 7th newest <code>.backup</code> and removes older WAL.</td>
+  </tr>
+  <tr>
+    <td>Archive WAL retention (days)</td>
+    <td><code>pg_rman backup -b full --keep-arclog-days 7</code></td>
+    <td>Use <code>cron</code> etc.<br>e.g. <code>pg_archivecleanup $ARCLOG_PATH $(basename "$(find $ARCLOG_PATH -maxdepth 1 -name '*.backup' -mtime +7 | sort | tail -1)")</code></td>
+    <td><code>pg_basebackup</code> example keeps 7 days of WAL. Assumes a <code>.backup</code> file is archived per full backup; specifies the newest <code>.backup</code> older than 7 days and removes older WAL.</td>
+  </tr>
+  <tr>
+    <td>Server log retention (file count)</td>
+    <td><code>pg_rman backup -b full -s --keep-srvlog-files 7</code></td>
+    <td>Use <code>cron</code> etc.<br>e.g. <code>ls -t $SRVLOG_PATH/* | tail -n +8 | xargs rm -f</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Server log retention (days)</td>
+    <td><code>pg_rman backup -b full -s --keep-srvlog-days 7</code></td>
+    <td>Use <code>cron</code> etc.<br>e.g. <code>find $SRVLOG_PATH -maxdepth 1 -mindepth 1 -type f -mtime +7 -delete</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td rowspan="10">Recovery</td>
+    <td>Specify timeline as recovery target</td>
+    <td><code>pg_rman restore --recovery-target-timeline 2</code></td>
+    <td>Set <code>recovery_target_timeline = '2'</code> in <code>postgresql.conf</code> and run restore</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Specify timestamp as recovery target</td>
+    <td><code>pg_rman restore --recovery-target-time '2025-07-04 16:00:00'</code></td>
+    <td>Set <code>recovery_target_time = '2025-07-04 16:00:00'</code> in <code>postgresql.conf</code> and run restore</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Specify transaction ID as recovery target</td>
+    <td><code>pg_rman restore --recovery-target-xid 480000</code></td>
+    <td>Set <code>recovery_target_xid = '480000'</code> in <code>postgresql.conf</code> and run restore</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Stop after target</td>
+    <td><code>pg_rman restore --recovery-target-time &quot;2025-07-04 16:00:00&quot; --recovery-target-inclusive true</code></td>
+    <td>Set <code>recovery_target_inclusive = on</code> in <code>postgresql.conf</code> and run restore (default is on)</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Stop before target</td>
+    <td><code>pg_rman restore --recovery-target-time &quot;2025-07-04 16:00:00&quot; --recovery-target-inclusive false</code></td>
+    <td>Set <code>recovery_target_inclusive = off</code> in <code>postgresql.conf</code> and run restore</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Pause after reaching target</td>
+    <td><code>pg_rman restore --recovery-target-action pause</code></td>
+    <td>Set <code>recovery_target_action = 'pause'</code> in <code>postgresql.conf</code> and run restore</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Promote after reaching target</td>
+    <td><code>pg_rman restore --recovery-target-action promote</code></td>
+    <td>Set <code>recovery_target_action = 'promote'</code> in <code>postgresql.conf</code> and run restore</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Shutdown after reaching target</td>
+    <td><code>pg_rman restore --recovery-target-action shutdown</code></td>
+    <td>Set <code>recovery_target_action = 'shutdown'</code> in <code>postgresql.conf</code> and run restore</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Copy archive WAL to archive storage</td>
+    <td><code>pg_rman restore --hard-copy</code></td>
+    <td>Use OS commands such as <code>cp</code><br>e.g. <code>cp /path/to/backup/arclog/* $ARCLOG_PATH/</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Symbolic links to archive WAL</td>
+    <td><code>pg_rman restore</code> (default)</td>
+    <td>Use OS commands such as <code>ln -s</code><br>e.g. <code>ln -s /path/to/backup/arclog/* $ARCLOG_PATH/</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Backup at standby site</td>
+    <td>Backup standby server data</td>
+    <td><code>pg_rman backup -D /home/postgres/pgdata_sby -b full -h master --standby-host=192.168.0.20 --standby-port=5433</code></td>
+    <td><code>pg_basebackup -h 192.168.0.20 -p 5433 -D /path/to/backup_sby</code></td>
+    <td>Example: standby host 192.168.0.20, standby port 5433</td>
+  </tr>
+  <tr>
+    <td rowspan="6">Backup catalog management</td>
+    <td>Catalog initialization</td>
+    <td><code>pg_rman init -B ${PWD}/rman_backup</code></td>
+    <td>-</td>
+    <td>Not needed; <code>pg_basebackup</code> has no backup catalog concept</td>
+  </tr>
+  <tr>
+    <td>Show backup history</td>
+    <td><code>pg_rman show</code><br><code>pg_rman show detail</code></td>
+    <td>Use OS commands such as <code>ls</code><br>e.g. <code>ls -lt /path/to/backup/</code></td>
+    <td>With <code>pg_basebackup</code> there is no catalog; only backups visible in the directory listing (<code>ls</code> etc.) are relevant.</td>
+  </tr>
+  <tr>
+    <td>Validate backup data</td>
+    <td><code>pg_rman validate</code></td>
+    <td><code>pg_verifybackup /path/to/backup/2025-07-04_153000</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Delete backup</td>
+    <td><code>pg_rman delete 2025-07-04 15:30:00</code></td>
+    <td>Use OS commands such as <code>rm</code><br>e.g. <code>rm -rf /path/to/backup/2025-07-04_153000</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Purge deleted backups</td>
+    <td><code>pg_rman purge</code></td>
+    <td>-</td>
+    <td>Not needed; <code>pg_basebackup</code> has no backup catalog concept</td>
+  </tr>
+  <tr>
+    <td>List including deleted</td>
+    <td><code>pg_rman show -a</code></td>
+    <td>-</td>
+    <td>Not needed; <code>pg_basebackup</code> has no backup catalog concept</td>
+  </tr>
+  <tr>
+    <td rowspan="3">Other</td>
+    <td>Verify operation (dry run)</td>
+    <td><code>pg_rman backup -b full -c -v</code></td>
+    <td><code>pg_basebackup -t blackhole -Xfetch -v</code></td>
+    <td><code>pg_rman</code>'s <code>-c</code> is a true dry run (no server-side work). <code>pg_basebackup</code>'s <code>-t blackhole</code> runs the backup on the server and only discards received data on the client; <code>pg_basebackup</code> has no strict dry-run mode.</td>
+  </tr>
+  <tr>
+    <td>Show operation details</td>
+    <td><code>pg_rman backup -b full -v</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -v</code></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Show progress</td>
+    <td><code>pg_rman backup -b full -P</code></td>
+    <td><code>pg_basebackup -D /path/to/backup -P</code></td>
+    <td></td>
+  </tr>
+  </tbody>
+</table>
 
 <h1 id="requirement">Requirements</h1>
 <dl>
@@ -1456,7 +1683,7 @@ $ make install
 </dl>
 
 
-<h1 id="seealso">See Also</h2>
+<h1 id="seealso">See Also</h1>
 <a href="http://www.postgresql.org/docs/current/interactive/backup.html">Backup and Restore</a>
 
 <hr />
