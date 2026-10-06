@@ -35,8 +35,8 @@ const char	   *dbname = NULL;
 const char	   *host = NULL;
 const char	   *port = NULL;
 const char	   *username = NULL;
-char			*password = NULL;
-bool			debug = false;
+static char			*password = NULL;
+static bool			debug = false;
 bool			quiet = false;
 
 #ifndef PGUT_NO_PROMPT
@@ -45,7 +45,7 @@ YesNo	prompt_password = DEFAULT;
 
 /* Database connections */
 PGconn	   *connection = NULL;
-PGconn	   *saved_connection = NULL;
+static PGconn	   *saved_connection = NULL;
 static PGcancel *volatile cancel_conn = NULL;
 
 /* Interrupted by SIGINT (Ctrl+C) ? */
@@ -53,8 +53,8 @@ bool			interrupted = false;
 static bool		in_cleanup = false;
 
 /* log min messages */
-int		pgut_log_level = INFO;
-int		pgut_abort_level = ERROR;
+static int		pgut_log_level = INFO;
+static int		pgut_abort_level = ERROR;
 
 
 /* Connection routines */
@@ -1035,13 +1035,13 @@ restore_saved_connection(void)
 
 /*  set/get host and port for connecting standby server */
 const char *
-pgut_get_host()
+pgut_get_host(void)
 {
 	return host;
 }
 
 const char *
-pgut_get_port()
+pgut_get_port(void)
 {
 	return port;
 }

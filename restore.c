@@ -809,7 +809,7 @@ configure_recovery_options(const char *target_time,
 }
 
 static void
-remove_include_directive_for_pg_rman()
+remove_include_directive_for_pg_rman(void)
 {
 	char path[MAXPGPATH];
 	char tmppath[MAXPGPATH];
@@ -911,7 +911,7 @@ create_recovery_configuration_file(const char *target_time,
 
 
 static void
-append_include_directive_for_pg_rman()
+append_include_directive_for_pg_rman(void)
 {
 	char path[MAXPGPATH];
 	FILE *fp;

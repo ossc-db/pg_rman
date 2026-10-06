@@ -2115,7 +2115,7 @@ create_file_list(parray *files, const char *root, const char *prefix, bool is_ap
  * data_checksum_version from the PG control file.
  */
 static void
-init_data_checksum_enabled()
+init_data_checksum_enabled(void)
 {
 	char				controlFilePath[MAXPGPATH];
 	ControlFileData    *controlFile;

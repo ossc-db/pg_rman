@@ -32,7 +32,7 @@ static int lock_fd = -1;
 /*
  * system_identifier as read from the control file of the database cluster
  */
-uint64	system_identifier = 0;
+static uint64	system_identifier = 0;
 
 /*
  * Lock of the catalog with pg_rman.ini file and return 0.
@@ -667,7 +667,7 @@ catalog_init_config(pgBackup *backup)
 }
 
 void
-check_system_identifier()
+check_system_identifier(void)
 {
 	FILE   *fp;
 	char	path[MAXPGPATH];
